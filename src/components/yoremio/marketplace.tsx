@@ -190,6 +190,10 @@ function productImage(product: ProductDto) {
   const firstImage = product.resimler?.[0]?.url;
   if (firstImage?.startsWith("/products/")) return firstImage;
 
+  if (firstImage && !/^https?:\/\//i.test(firstImage)) {
+    return localFallbackImages[product.id % localFallbackImages.length];
+  }
+
   const remote = mediaUrl(firstImage);
   if (remote) return remote;
 
