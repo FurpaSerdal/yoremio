@@ -4,6 +4,7 @@
 
 import { HubConnectionState, type HubConnection } from "@microsoft/signalr";
 import Image from "next/image";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -169,6 +170,20 @@ function productLocation(product: ProductDto) {
 
 function roleLabel(role: UserRole) {
   return role === "SATICI" ? "Satıcı" : "Alıcı";
+}
+
+function accountDisplayName(
+  authUser: AuthState | null,
+  sellerProfile?: SellerProfileDto | null,
+) {
+  if (!authUser) return "";
+  if (authUser.role === "SATICI") {
+    return sellerProfile?.magazaAdi?.trim() || "Satıcı hesabı";
+  }
+
+  return authUser.userName && !authUser.userName.includes("@")
+    ? authUser.userName
+    : "Alıcı hesabı";
 }
 
 export function YoremioMarketplace() {
@@ -524,7 +539,7 @@ export function YoremioMarketplace() {
         setSignalRState("Canlı");
       })
       .catch(() => {
-        if (!disposed) setSignalRState("REST");
+        if (!disposed) setSignalRState("Bağlantı yok");
       });
 
     return () => {
@@ -914,11 +929,11 @@ export function YoremioMarketplace() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader
         authUser={authUser}
+        sellerProfile={sellerProfile}
         onLoginClick={() => {
           setAuthPreferredRole("ALICI");
           setAuthOpen(true);
         }}
-        onSellerPanelClick={openSellerWorkspace}
         onLogout={clearSession}
       />
 
@@ -954,7 +969,7 @@ export function YoremioMarketplace() {
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-foreground/[0.75] sm:text-xl">
                 Yerel üreticiden taze ürünü keşfet, güven skorunu gör,
-                satıcıyla konuş ve talebini gerçek API akışıyla netleştir.
+                satıcıyla konuş ve talebini güvenli pazar akışıyla netleştir.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -1239,43 +1254,40 @@ function HeroSignal({
 
 function AppHeader({
   authUser,
+  sellerProfile,
   onLoginClick,
-  onSellerPanelClick,
   onLogout,
 }: {
   authUser: AuthState | null;
+  sellerProfile: SellerProfileDto | null;
   onLoginClick: () => void;
-  onSellerPanelClick: () => void;
   onLogout: () => void;
 }) {
+  const displayName = accountDisplayName(authUser, sellerProfile);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 shadow-[0_8px_30px_rgba(32,24,15,0.05)] backdrop-blur-xl">
       <div className="mx-auto flex h-[76px] max-w-[1680px] items-center justify-between gap-3 px-4 sm:px-6">
         <BrandLogo compact />
-        <nav className="hidden items-center gap-1 rounded-md border border-border bg-background/80 p-1 text-sm font-semibold text-muted-foreground lg:flex">
-          <a className="rounded-md px-4 py-2 transition hover:bg-white hover:text-primary" href="#kesif">
-            Pazar
-          </a>
-          <a className="rounded-md px-4 py-2 transition hover:bg-white hover:text-primary" href="#paneller">
-            Panel
-          </a>
-        </nav>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="hidden sm:inline-flex"
-            onClick={onSellerPanelClick}
-          >
-            <PackagePlus aria-hidden />
-            Ürün ekle
-          </Button>
           {authUser ? (
             <>
-              <Button variant="outline" className="hidden max-w-72 md:inline-flex">
-                <UserRound aria-hidden />
-                <span className="truncate">
-                  {authUser.email} · {roleLabel(authUser.role)}
-                </span>
+              <Button variant="outline" size="icon" className="md:hidden" asChild>
+                <Link href="/profil" title="Profil">
+                  <UserRound aria-hidden />
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden max-w-72 md:inline-flex"
+                asChild
+              >
+                <Link href="/profil">
+                  <UserRound aria-hidden />
+                  <span className="truncate">
+                    {displayName} · {roleLabel(authUser.role)}
+                  </span>
+                </Link>
               </Button>
               <Button
                 variant="default"
@@ -1730,7 +1742,7 @@ function MarketEmptyState({
             <Icon className="size-6" aria-hidden />
           </div>
           <p className="mt-4 text-sm font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            {hasError ? "API bağlantısı kontrol edilmeli" : "Vitrin boş"}
+            {hasError ? "Bağlantı kontrol edilmeli" : "Vitrin boş"}
           </p>
           <h3 className="mt-2 text-2xl font-black tracking-normal text-brand-brown">
             {title ?? "Henüz yayında ürün yok."}
@@ -1755,7 +1767,7 @@ function MarketEmptyState({
           <div className="mt-3 space-y-3 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
               <Check className="size-4 text-primary" aria-hidden />
-              API boş dönerse demo ürün gösterilmez.
+              Kayıt yoksa demo ürün gösterilmez.
             </p>
             <p className="flex items-center gap-2">
               <Check className="size-4 text-primary" aria-hidden />
@@ -3367,7 +3379,7 @@ function ProductStrip({
   onSelectProduct: (id: number) => void;
 }) {
   return (
-    <Panel title={title} description="Canlı API listesinden">
+    <Panel title={title} description="Canlı listeden">
       {products.length > 0 ? (
         <div className="grid gap-3 p-4 md:grid-cols-2">
           {products.slice(0, 6).map((product) => (
@@ -3400,7 +3412,7 @@ function ProductStrip({
         <EmptyState
           icon={Inbox}
           title="Liste boş."
-          description="Bu alan giriş yapılan kullanıcının API verisiyle dolar."
+          description="Bu alan giriş yapılan kullanıcının verileriyle dolar."
         />
       )}
     </Panel>
@@ -3488,8 +3500,7 @@ function LockedPanel({
         {anyRole ? "Giriş gerekli" : `${roleLabel(role)} girişi gerekli`}
       </h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        Bu panel gerçek API verilerini kullandığı için JWT oturumu ve doğru rol
-        gerekir.
+        Bu panel güvenli oturum ve doğru hesap rolü gerektirir.
       </p>
       {role === "SATICI" && !anyRole ? (
         <div className="mx-auto mt-5 grid max-w-3xl gap-2 sm:grid-cols-2 lg:grid-cols-3">
