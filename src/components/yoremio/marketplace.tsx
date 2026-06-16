@@ -407,29 +407,35 @@ export function YoremioMarketplace() {
 
   useEffect(() => {
     const token = window.localStorage.getItem("yoremio-token");
-    const storedUser = window.localStorage.getItem("yoremio-user");
-    if (!token || !storedUser) return;
+    if (!token) return;
 
-    try {
-      const cached = JSON.parse(storedUser) as LoginResponse;
-      setAuthUser({
-        token,
-        userId: cached.userId,
-        email: cached.email,
-        role: cached.role,
-        userName: cached.email,
-        emailConfirmed: false,
-        phoneNumberConfirmed: false,
-      });
-    } catch {
-      clearSession();
-      return;
-    }
+    let ignore = false;
 
     yoremioApi
       .me(token)
-      .then((user) => setAuthUser({ ...user, token }))
-      .catch(() => clearSession());
+      .then((user) => {
+        if (ignore) return;
+
+        const session: LoginResponse = {
+          token,
+          userId: user.userId,
+          email: user.email,
+          role: user.role,
+        };
+
+        window.localStorage.setItem("yoremio-user", JSON.stringify(session));
+        setAuthUser({
+          ...user,
+          token,
+        });
+      })
+      .catch(() => {
+        if (!ignore) clearSession();
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [clearSession]);
 
   useEffect(() => {
