@@ -1,0 +1,12 @@
+<svg width="900" height="720" viewBox="0 0 900 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="720" fill="#F4F7F2"/>
+  <rect x="80" y="72" width="740" height="576" rx="28" fill="#FFFEFA" stroke="#D9DECE" stroke-width="4"/>
+  <circle cx="450" cy="318" r="118" fill="#E7EFE4"/>
+  <path d="M391 335C391 300 417 274 450 274C483 274 509 300 509 335V398H391V335Z" fill="#155436"/>
+  <path d="M362 398H538" stroke="#155436" stroke-width="22" stroke-linecap="round"/>
+  <path d="M390 260C408 219 448 196 497 200C478 231 442 255 390 260Z" fill="#D39B32"/>
+  <path d="M512 250C552 248 586 269 604 305C560 308 529 289 512 250Z" fill="#21724A"/>
+  <path d="M312 478H588" stroke="#D9DECE" stroke-width="16" stroke-linecap="round"/>
+  <path d="M356 520H544" stroke="#D9DECE" stroke-width="16" stroke-linecap="round"/>
+  <text x="450" y="590" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="#697060">Urun gorseli bekleniyor</text>
+</svg>

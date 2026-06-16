@@ -75,10 +75,6 @@ import {
   type SessionUser,
   type UserRole,
 } from "@/lib/api";
-import {
-  categories as demoCategories,
-  type Category as DemoCategory,
-} from "@/lib/data";
 import { cn, formatPrice, formatShortDate } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
@@ -105,14 +101,7 @@ const categoryTones = [
   "bg-amber-50 text-amber-900 border-amber-200",
 ];
 
-const localFallbackImages = [
-  "/products/photo-yayla-bali.jpg",
-  "/products/photo-koy-yumurtasi.jpg",
-  "/products/photo-tulum-peyniri.jpg",
-  "/products/photo-kocbasi-nohut.jpg",
-  "/products/photo-amasya-elmasi.jpg",
-  "/products/photo-tarla-domatesi.jpg",
-];
+const productPlaceholderImage = "/products/product-placeholder.svg";
 
 type Workspace = (typeof workspaces)[number]["id"];
 type SortKey = "newest" | "rating" | "price";
@@ -123,16 +112,6 @@ type ToastState = {
   message: string;
 } | null;
 type LoadState = "idle" | "loading" | "error";
-
-function toApiCategory(category: DemoCategory): CategoryDto {
-  return {
-    id: category.id,
-    adi: category.name,
-    aciklama: category.description,
-  };
-}
-
-const fallbackCategories = demoCategories.map(toApiCategory);
 
 function emptyProductsResult(page = 1): Paginated<ProductDto> {
   return {
@@ -159,17 +138,16 @@ function apiErrorMessage(error: unknown) {
 }
 
 function productImage(product: ProductDto) {
-  const firstImage = product.resimler?.[0]?.url;
-  if (firstImage?.startsWith("/products/")) return firstImage;
+  const firstImage = product.resimler?.[0]?.url?.trim();
 
-  if (firstImage && !/^https?:\/\//i.test(firstImage)) {
-    return localFallbackImages[product.id % localFallbackImages.length];
+  if (!firstImage || firstImage.startsWith("/products/")) {
+    return productPlaceholderImage;
   }
 
   const remote = mediaUrl(firstImage);
   if (remote) return remote;
 
-  return localFallbackImages[product.id % localFallbackImages.length];
+  return productPlaceholderImage;
 }
 
 function categoryTone(categoryId: number) {
@@ -199,7 +177,7 @@ export function YoremioMarketplace() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authPreferredRole, setAuthPreferredRole] = useState<UserRole>("ALICI");
   const [authUser, setAuthUser] = useState<AuthState | null>(null);
-  const [categories, setCategories] = useState<CategoryDto[]>(fallbackCategories);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [productsPage, setProductsPage] =
     useState<Paginated<ProductDto>>(emptyProductsPage);
   const [marketState, setMarketState] = useState<LoadState>("idle");
@@ -372,7 +350,7 @@ export function YoremioMarketplace() {
       })
       .catch((error) => {
         if (!ignore) {
-          setCategories(fallbackCategories);
+          setCategories([]);
           showToast(apiErrorMessage(error), "error");
         }
       });
