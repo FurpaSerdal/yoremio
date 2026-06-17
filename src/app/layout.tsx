@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
+import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://yoremio.com";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -58,8 +71,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className="h-full scroll-smooth">
-      <body className="min-h-full antialiased">{children}</body>
+    <html lang="tr" className={`h-full scroll-smooth ${manrope.variable} ${fraunces.variable}`}>
+      <body className="min-h-full bg-background font-sans text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }

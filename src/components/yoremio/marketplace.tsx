@@ -1423,39 +1423,43 @@ function AuthDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/[0.42] px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/[0.42] px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-6">
       <div
-        className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-lg border border-border bg-white shadow-[0_30px_100px_rgba(0,0,0,0.28)]"
+        className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-white shadow-[0_30px_100px_rgba(0,0,0,0.28)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
       >
-        <div className="flex items-center justify-between border-b border-border bg-background px-5 py-4">
-          <div>
+        <div className="flex flex-col gap-4 border-b border-border bg-[linear-gradient(135deg,rgba(23,90,56,0.08),rgba(197,138,46,0.08),rgba(255,255,255,0.98))] px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+          <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Yöremio hesabı
+              Güvenli oturum
             </p>
-            <h2 id="auth-title" className="mt-1 text-xl font-black text-brand-brown">
+            <h2 id="auth-title" className="mt-1 text-2xl font-black text-brand-brown sm:text-3xl">
               {mode === "login"
-                ? "Giriş yap"
+                ? "Hesabına geri dön"
                 : mode === "buyer"
-                  ? "Alıcı kaydı"
+                  ? "Alıcı kaydını başlat"
                   : mode === "seller"
-                    ? "Satıcı kaydı"
-                    : "Doğrulama"}
+                    ? "Satıcı vitrini oluştur"
+                    : "Email ve telefon doğrulaması"}
             </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Hesabın doğrulandıktan sonra favori, teklif, chat ve ürün yönetimi tek akışta açılır.
+            </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} title="Kapat">
+          <Button variant="ghost" size="icon" onClick={onClose} title="Kapat" className="shrink-0 self-end">
             <X aria-hidden />
           </Button>
         </div>
 
-        <form className="space-y-4 p-5" onSubmit={handleSubmit}>
-          <div className="grid gap-2 sm:grid-cols-4">
+        <form className="space-y-5 p-4 sm:p-6" onSubmit={handleSubmit}>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <Button
               type="button"
               variant={mode === "login" && role === "ALICI" ? "default" : "outline"}
               onClick={() => chooseLoginRole("ALICI")}
+              className="justify-start"
             >
               <Heart aria-hidden />
               Alıcı
@@ -1464,6 +1468,7 @@ function AuthDialog({
               type="button"
               variant={mode === "login" && role === "SATICI" ? "default" : "outline"}
               onClick={() => chooseLoginRole("SATICI")}
+              className="justify-start"
             >
               <Store aria-hidden />
               Satıcı
@@ -1475,6 +1480,7 @@ function AuthDialog({
                 setRole("ALICI");
                 setMode("buyer");
               }}
+              className="justify-start"
             >
               <Plus aria-hidden />
               Alıcı kayıt
@@ -1486,10 +1492,26 @@ function AuthDialog({
                 setRole("SATICI");
                 setMode("seller");
               }}
+              className="justify-start"
             >
               <UploadCloud aria-hidden />
               Satıcı kayıt
             </Button>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+              Hızlı giriş
+              <p className="mt-1 text-xs font-normal text-muted-foreground">Mevcut kullanıcı için en kısa yol.</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+              Yeni kayıt
+              <p className="mt-1 text-xs font-normal text-muted-foreground">Alıcı veya satıcı hesabı oluştur.</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+              Doğrulama
+              <p className="mt-1 text-xs font-normal text-muted-foreground">Email ve telefon onayını tamamla.</p>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1511,7 +1533,7 @@ function AuthDialog({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                placeholder="En az 6 karakter"
+                placeholder="En az 8 karakter, güçlü şifre"
                 required={mode !== "verify"}
               />
             </Field>
@@ -1796,7 +1818,7 @@ function ProductDetailDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/45 p-3 backdrop-blur-sm sm:p-5">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/45 p-2 backdrop-blur-sm sm:p-5">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -1804,16 +1826,17 @@ function ProductDetailDialog({
         onClick={onClose}
       />
       <div
-        className="relative ml-auto flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
+        className="relative ml-auto flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
         role="dialog"
         aria-modal="true"
         aria-label="Ürün detayı"
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-4 sm:px-5">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Ürün detayı
             </p>
+            <p className="truncate text-sm font-semibold text-brand-brown">Detay, talep ve mesajlaşma tek panelde</p>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={onClose} title="Kapat">
             <X aria-hidden />
@@ -1851,13 +1874,13 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-card text-left shadow-sm outline-none transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(32,24,15,0.13)] focus-visible:ring-2 focus-visible:ring-ring",
+        "group min-w-0 cursor-pointer overflow-hidden rounded-2xl border bg-card text-left shadow-sm outline-none transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(32,24,15,0.13)] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
       )}
     >
-      <div className="relative aspect-[1.22] overflow-hidden bg-muted">
+      <div className="relative aspect-[1.08] overflow-hidden bg-muted sm:aspect-[1.18]">
         <Image
           src={productImage(product)}
           alt={product.adi}
@@ -1865,12 +1888,12 @@ function ProductCard({
           sizes="(min-width: 1536px) 290px, (min-width: 768px) 45vw, 100vw"
           className="object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.45] to-transparent" />
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/[0.58] to-transparent" />
+        <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
           {category ? (
             <span
               className={cn(
-                "rounded-md border px-2 py-1 text-xs font-bold shadow-sm",
+                "rounded-full border px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur",
                 categoryTone(category.id),
               )}
             >
@@ -1880,6 +1903,7 @@ function ProductCard({
           {product.stokMiktari === 0 ? (
             <Badge variant="gold">Ön sipariş</Badge>
           ) : null}
+          {product.saticiDogrulanmis ? <Badge variant="green">Doğrulanmış</Badge> : null}
         </div>
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3 text-white">
           <div className="min-w-0">
@@ -1903,14 +1927,14 @@ function ProductCard({
         </div>
       </div>
 
-      <div className="space-y-4 p-4">
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+      <div className="space-y-4 p-4 sm:p-5">
+        <p className="line-clamp-2 min-h-10 text-sm leading-6 text-muted-foreground sm:min-h-12">
           {product.aciklama}
         </p>
 
         <div className="grid grid-cols-[1fr_auto] gap-3">
           <div className="min-w-0">
-            <p className="text-xl font-black text-primary">
+            <p className="text-xl font-black text-primary sm:text-[1.7rem]">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -3242,10 +3266,13 @@ function ChatWorkspace({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between px-1 py-2">
-          <h3 className="font-bold">Konuşmalar</h3>
+    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="rounded-2xl border border-border bg-white p-3 shadow-sm">
+        <div className="flex items-center justify-between gap-2 px-1 py-2">
+          <div>
+            <h3 className="font-bold">Konuşmalar</h3>
+            <p className="text-xs text-muted-foreground">Canlı chat ve okunma bilgisi</p>
+          </div>
           <Badge variant={signalRState === "Canlı" ? "green" : "outline"}>
             {signalRState}
           </Badge>
@@ -3259,9 +3286,9 @@ function ChatWorkspace({
                 type="button"
                 onClick={() => onTargetChange(conversation.userId)}
                 className={cn(
-                  "w-full rounded-lg border p-3 text-left transition",
+                  "w-full rounded-2xl border p-3 text-left transition",
                   currentTarget === conversation.userId
-                    ? "border-primary bg-primary text-primary-foreground"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : "border-border bg-white hover:bg-muted",
                 )}
               >
@@ -3287,27 +3314,27 @@ function ChatWorkspace({
               </button>
             ))
           ) : (
-            <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-              Konuşma yok. Ürün satıcısına mesaj gönderebilirsin.
+            <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+              Henüz konuşma yok. Bir ürünün satıcısına mesaj gönderince burada görünür.
             </div>
           )}
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-bold">
               {currentName}
             </p>
             <p className="truncate text-sm text-muted-foreground">
-              {currentTarget ? "Güvenli mesajlaşma açık" : "Bir ürün detayından mesaj başlat"}
+              {currentTarget ? "Güvenli mesajlaşma açık" : "Önce ürün detayından bir görüşme başlat"}
             </p>
           </div>
           <Badge variant="green">{signalRState}</Badge>
         </div>
 
-        <div className="grid min-h-80 content-end gap-3 bg-[linear-gradient(180deg,#f7f9f4,#fffefa)] p-4">
+        <div className="grid min-h-[24rem] content-end gap-3 bg-[linear-gradient(180deg,#f7f9f4,#fffefa)] p-4 sm:min-h-[32rem]">
           {chatState === "loading" ? (
             <div className="grid place-items-center py-10 text-sm font-semibold text-muted-foreground">
               <Loader2 className="mb-2 size-5 animate-spin" aria-hidden />
