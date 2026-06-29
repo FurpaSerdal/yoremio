@@ -241,9 +241,9 @@ export function YoremioProfilePage() {
 
   return (
     <ProfileShell onLogout={logout}>
-      <main className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6">
-        <Card className="overflow-hidden border-white/60 bg-white/75 shadow-[0_24px_80px_rgba(39,32,17,0.08)] backdrop-blur-xl">
-          <div className="bg-[linear-gradient(135deg,rgba(23,90,56,0.06),rgba(197,138,46,0.08),transparent)] px-5 py-5 sm:px-6 sm:py-6">
+      <main className="mx-auto max-w-[1360px] px-3 py-8 sm:px-5">
+        <Card className="overflow-hidden border-white/70 bg-white/88 backdrop-blur-xl">
+          <div className="bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.12),rgba(255,255,255,0.98))] px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-5 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
@@ -253,7 +253,7 @@ export function YoremioProfilePage() {
                   </Badge>
                   <Badge variant="outline">Canlı oturum yönetimi</Badge>
                 </div>
-                <h1 className="mt-3 font-serif text-4xl font-black tracking-tight text-brand-brown sm:text-5xl">
+                <h1 className="mt-3 text-4xl font-black tracking-normal text-brand-brown sm:text-5xl">
                   {name}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
@@ -302,8 +302,8 @@ export function YoremioProfilePage() {
         </div>
 
         {authUser?.role === "SATICI" ? (
-          <div className="mt-6 grid gap-5 lg:grid-cols-[420px_minmax(0,1fr)]">
-            <Card className="p-5">
+          <div className="mt-6 grid gap-5 lg:grid-cols-[430px_minmax(0,1fr)]">
+            <Card className="p-5 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black text-brand-brown">Mağaza profili</h2>
@@ -401,8 +401,8 @@ function ProfileShell({
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-[76px] max-w-[1280px] items-center justify-between gap-3 px-4 sm:px-6">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-[#fbfaf7]/88 shadow-[0_10px_34px_rgba(32,39,52,0.08)] backdrop-blur-xl">
+        <div className="mx-auto flex h-[76px] max-w-[1360px] items-center justify-between gap-3 px-3 sm:px-5">
           <Link href="/">
             <BrandLogo compact />
           </Link>
@@ -429,7 +429,7 @@ function ProfileStat({
   value: string;
 }) {
   return (
-    <Card className="p-4 shadow-sm">
+    <Card className="p-4">
       <Icon className="size-5 text-primary" aria-hidden />
       <p className="mt-3 text-2xl font-black text-brand-brown">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -445,7 +445,7 @@ function ProfilePill({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-white/85 px-4 py-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-white/85 px-4 py-3 shadow-sm">
       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
@@ -465,7 +465,7 @@ function ProfileActivity({
 }) {
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+      <div className="flex items-center justify-between border-b border-border bg-[#fbfaf7] px-5 py-4">
         <h2 className="font-black text-brand-brown">{title}</h2>
         <Users className="size-5 text-primary" aria-hidden />
       </div>

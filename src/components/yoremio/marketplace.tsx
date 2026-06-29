@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BadgeCheck,
+  Bell,
   Check,
   CircleDollarSign,
   Clock3,
@@ -32,7 +33,6 @@ import {
   LogOut,
   MapPin,
   MessageCircle,
-  PackageCheck,
   PackagePlus,
   Plus,
   RefreshCw,
@@ -49,7 +49,6 @@ import {
   UserRound,
   Users,
   Video,
-  Wheat,
   X,
 } from "lucide-react";
 
@@ -86,14 +85,6 @@ const workspaces = [
   { id: "chat", label: "Chat", icon: MessageCircle },
 ] as const;
 
-const categoryIcons: Record<number, LucideIcon> = {
-  1: Leaf,
-  2: Sparkles,
-  3: PackageCheck,
-  4: Wheat,
-  5: ShoppingBasket,
-};
-
 const categoryTones = [
   "bg-emerald-50 text-emerald-800 border-emerald-200",
   "bg-rose-50 text-rose-800 border-rose-200",
@@ -103,6 +94,14 @@ const categoryTones = [
 ];
 
 const productPlaceholderImage = "/products/product-placeholder.svg";
+const categoryImages = [
+  "/products/photo-tulum-peyniri.jpg",
+  "/products/photo-yayla-bali.jpg",
+  "/products/photo-koy-yumurtasi.jpg",
+  "/products/photo-tarla-domatesi.jpg",
+  "/products/photo-kocbasi-nohut.jpg",
+  "/products/photo-amasya-elmasi.jpg",
+];
 
 type Workspace = (typeof workspaces)[number]["id"];
 type SortKey = "newest" | "rating" | "price";
@@ -199,7 +198,7 @@ export function YoremioMarketplace() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [productsPage, setProductsPage] =
     useState<Paginated<ProductDto>>(emptyProductsPage);
-  const [marketState, setMarketState] = useState<LoadState>("idle");
+  const [, setMarketState] = useState<LoadState>("idle");
   const [marketError, setMarketError] = useState<string | null>(null);
   const [activeProductId, setActiveProductId] = useState<number | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -930,6 +929,14 @@ export function YoremioMarketplace() {
       <AppHeader
         authUser={authUser}
         sellerProfile={sellerProfile}
+        query={query}
+        onQueryChange={setQuery}
+        onSearchSubmit={() =>
+          document.getElementById("kesif")?.scrollIntoView({
+            behavior: "smooth",
+          })
+        }
+        onSellerClick={openSellerWorkspace}
         onLoginClick={() => {
           setAuthPreferredRole("ALICI");
           setAuthOpen(true);
@@ -938,109 +945,78 @@ export function YoremioMarketplace() {
       />
 
       <main>
-        <section className="relative isolate overflow-hidden border-b border-border">
-          <Image
-            src="/hero-market-1600.jpg"
-            alt="Yöremio yerel ürün vitrini"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,254,250,0.96)_0%,rgba(255,254,250,0.86)_29%,rgba(255,254,250,0.36)_58%,rgba(16,42,32,0.1)_100%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+        <section className="mx-auto max-w-[1760px] px-3 pt-3 sm:px-5">
+          <div className="relative isolate overflow-hidden rounded-lg border border-white/70 bg-ink text-white shadow-[0_28px_90px_rgba(32,39,52,0.22)]">
+            <Image
+              src="/hero-market-1600.jpg"
+              alt="Yöremio yerel ürün vitrini"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,26,23,0.88)_0%,rgba(25,26,23,0.72)_38%,rgba(25,26,23,0.24)_70%,rgba(25,26,23,0.06)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-36 bg-[linear-gradient(0deg,rgba(25,26,23,0.72),transparent)]" />
 
-          <div className="relative mx-auto flex min-h-[660px] max-w-[1680px] flex-col justify-between px-4 py-9 sm:px-6 lg:py-12">
-            <div className="max-w-3xl pt-8 lg:pt-16">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="green">
-                  <Leaf className="size-3.5" aria-hidden />
-                  Canlı yerel pazar
-                </Badge>
-                <Badge variant="outline">
-                  {productsPage.totalCount > 0
-                    ? `${productsPage.totalCount} ürün yayında`
-                    : "Vitrin ürün bekliyor"}
-                </Badge>
-              </div>
+            <div className="relative grid min-h-[min(660px,calc(100vh-92px))] content-center px-5 py-12 sm:px-9 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1fr)] lg:px-14">
+              <div className="max-w-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="green">
+                    <Leaf className="size-3.5" aria-hidden />
+                    Canlı yerel pazar
+                  </Badge>
+                  <Badge variant="outline">
+                    {productsPage.totalCount > 0
+                      ? `${productsPage.totalCount} ürün yayında`
+                      : "Vitrin ürün bekliyor"}
+                  </Badge>
+                </div>
 
-              <h1 className="mt-6 font-serif text-[2.8rem] font-black leading-[0.98] text-brand-brown sm:text-6xl lg:text-[5.9rem]">
-                Yöremio
-              </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-foreground/[0.75] sm:text-xl">
-                Yerel üreticiden taze ürünü keşfet, güven skorunu gör,
-                satıcıyla konuş ve talebini güvenli pazar akışıyla netleştir.
-              </p>
+                <h1 className="mt-6 text-4xl font-black leading-[1.04] tracking-normal text-white sm:text-5xl lg:text-7xl">
+                  Yerel ürünü güvenle keşfet.
+                  <span className="block text-accent">Satıcıyla direkt anlaş.</span>
+                </h1>
+                <p className="mt-5 max-w-xl text-base leading-8 text-white/78 sm:text-lg">
+                  Ürün keşfi, stok kontrolü, talep, teklif, güven skoru ve canlı
+                  mesajlaşma tek akışta. Yöremio gerçek pazaryeri verisiyle çalışır.
+                </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  variant="premium"
-                  className="h-[52px] px-6"
-                  onClick={() =>
-                    document.getElementById("kesif")?.scrollIntoView({
-                      behavior: "smooth",
-                    })
-                  }
-                >
-                  <ShoppingBasket aria-hidden />
-                  Pazarı keşfet
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-[52px] bg-white/[0.8] px-6"
-                  onClick={openSellerWorkspace}
-                >
-                  <Store aria-hidden />
-                  Satıcı paneli
-                </Button>
-              </div>
-
-              <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-                <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı profili" />
-                <HeroSignal icon={PackagePlus} label="Ürün akışı" value="Gerçek stok" />
-                <HeroSignal icon={MessageCircle} label="Görüşme" value="Canlı mesaj" />
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    size="lg"
+                    className="h-[52px] px-6"
+                    onClick={() =>
+                      document.getElementById("kesif")?.scrollIntoView({
+                        behavior: "smooth",
+                      })
+                    }
+                  >
+                    <ShoppingBasket aria-hidden />
+                    Pazarı keşfet
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-[52px] border-white/30 bg-white/12 px-6 text-white backdrop-blur hover:bg-white/18"
+                    onClick={openSellerWorkspace}
+                  >
+                    <Store aria-hidden />
+                    Satıcı paneli
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <form
-              className="mb-2 max-w-5xl overflow-hidden rounded-lg border border-white/[0.7] bg-white/[0.9] shadow-[0_30px_90px_rgba(32,24,15,0.18)] backdrop-blur-xl"
-              onSubmit={(event) => event.preventDefault()}
-            >
-              <div className="grid gap-2 p-2 md:grid-cols-[minmax(0,1fr)_180px_130px]">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Bal, peynir, domates, şehir veya satıcı ara"
-                    className="h-[60px] border-0 bg-transparent pl-12 text-base shadow-none focus-visible:ring-0"
-                  />
-                </div>
-                <select
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value as SortKey)}
-                  className="h-[60px] rounded-md border border-input bg-background px-3 text-sm font-semibold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20"
-                >
-                  <option value="newest">En yeni</option>
-                  <option value="rating">En yüksek puan</option>
-                  <option value="price">Artan fiyat</option>
-                </select>
-                <Button size="lg" variant="default" className="h-[60px]">
-                  {marketState === "loading" ? (
-                    <Loader2 className="animate-spin" aria-hidden />
-                  ) : (
-                    <Search aria-hidden />
-                  )}
-                  Ara
-                </Button>
-              </div>
-            </form>
+            <div className="relative mx-4 mb-5 grid gap-2 rounded-lg border border-white/18 bg-white/12 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:mx-8 sm:-mt-20 sm:grid-cols-2 lg:grid-cols-4">
+              <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı güven metrikleri" />
+              <HeroSignal icon={PackagePlus} label="Gerçek stok" value="Demo veri basmadan canlı vitrin" />
+              <HeroSignal icon={Store} label="Satıcı paneli" value="Ürün, medya ve kategori yönetimi" />
+              <HeroSignal icon={MessageCircle} label="Canlı chat" value="SignalR mesaj ve okunma bilgisi" />
+            </div>
           </div>
         </section>
 
-        <section id="kesif" className="mx-auto max-w-[1680px] px-4 py-8 sm:px-6">
+        <section id="kesif" className="mx-auto max-w-[1760px] px-3 py-8 sm:px-5">
           <div className="space-y-6">
             <CategoryShelf
               categories={categories}
@@ -1049,13 +1025,13 @@ export function YoremioMarketplace() {
               selectedCategory={selectedCategory}
             />
 
-            <div className="flex flex-col gap-4 rounded-lg border border-border bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 rounded-lg border border-border/80 bg-white/92 p-4 shadow-[0_18px_50px_rgba(32,39,52,0.07)] backdrop-blur lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.16em] text-muted-foreground">
                   Pazar vitrini
                 </p>
-                <h2 className="mt-1 text-2xl font-black tracking-normal text-brand-brown">
-                  Üreticiden gelen canlı ürünler
+                <h2 className="mt-1 text-2xl font-black tracking-normal text-brand-brown sm:text-3xl">
+                  Canlı ürün akışı
                 </h2>
                 {marketError ? (
                   <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -1066,18 +1042,27 @@ export function YoremioMarketplace() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
+                <div className="flex h-11 items-center gap-2 rounded-md border border-border bg-background px-3">
                   <Filter className="size-4 text-primary" aria-hidden />
                   <span className="text-sm font-semibold text-muted-foreground">
                     {productsPage.totalCount} sonuç
                   </span>
                 </div>
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SortKey)}
+                  className="h-11 rounded-md border border-border bg-background px-3 text-sm font-bold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20"
+                >
+                  <option value="newest">En yeni</option>
+                  <option value="rating">En yüksek puan</option>
+                  <option value="price">Artan fiyat</option>
+                </select>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={inStockOnly}
                   onClick={() => setInStockOnly(!inStockOnly)}
-                  className="flex h-10 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 text-sm font-semibold"
+                  className="flex h-11 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 text-sm font-bold"
                 >
                   Stokta olanlar
                   <span
@@ -1100,7 +1085,7 @@ export function YoremioMarketplace() {
             <div className="space-y-5">
               <div className="space-y-5">
                 {productsPage.items.length > 0 ? (
-                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                     {productsPage.items.map((product) => (
                       <ProductCard
                         key={product.id}
@@ -1145,7 +1130,7 @@ export function YoremioMarketplace() {
           </div>
         </section>
 
-        <section id="paneller" className="border-t border-border bg-white">
+        <section id="paneller" className="border-t border-border/70 bg-[#fbfaf7]">
           <WorkspaceSection
             workspace={workspace}
             setWorkspace={setWorkspace}
@@ -1236,15 +1221,15 @@ function HeroSignal({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/70 bg-white/75 px-3 py-3 shadow-sm backdrop-blur">
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-primary">
+    <div className="flex min-w-0 items-center gap-3 rounded-md border border-white/14 bg-white/12 px-3 py-3 text-white backdrop-blur">
+      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-white/16 text-accent ring-1 ring-white/10">
         <Icon className="size-5" aria-hidden />
       </span>
       <span className="min-w-0">
-        <span className="block text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="block text-xs font-bold uppercase tracking-[0.14em] text-white/62">
           {label}
         </span>
-        <span className="block truncate text-sm font-black text-brand-brown">
+        <span className="block truncate text-sm font-black text-white">
           {value}
         </span>
       </span>
@@ -1255,21 +1240,86 @@ function HeroSignal({
 function AppHeader({
   authUser,
   sellerProfile,
+  query,
+  onQueryChange,
+  onSearchSubmit,
+  onSellerClick,
   onLoginClick,
   onLogout,
 }: {
   authUser: AuthState | null;
   sellerProfile: SellerProfileDto | null;
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSearchSubmit: () => void;
+  onSellerClick: () => void;
   onLoginClick: () => void;
   onLogout: () => void;
 }) {
   const displayName = accountDisplayName(authUser, sellerProfile);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/95 shadow-[0_8px_30px_rgba(32,24,15,0.05)] backdrop-blur-xl">
-      <div className="mx-auto flex h-[76px] max-w-[1680px] items-center justify-between gap-3 px-4 sm:px-6">
-        <BrandLogo compact />
-        <div className="flex items-center gap-2">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-[#fbfaf7]/88 shadow-[0_10px_34px_rgba(32,39,52,0.08)] backdrop-blur-xl">
+      <div className="mx-auto grid min-h-[76px] max-w-[1760px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 sm:px-5">
+        <Link href="/" className="min-w-0">
+          <BrandLogo compact />
+        </Link>
+
+        <nav className="hidden items-center justify-center gap-7 text-sm font-extrabold text-foreground lg:flex">
+          <a href="#kesif" className="transition hover:text-primary">
+            Kategoriler
+          </a>
+          <button
+            type="button"
+            onClick={onSellerClick}
+            className="transition hover:text-primary"
+          >
+            Nasıl Çalışır?
+          </button>
+        </nav>
+
+        <div className="col-span-3 grid gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mx-auto md:w-full md:max-w-xl lg:col-start-2 lg:max-w-[520px]">
+          <form
+            className="relative"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearchSubmit();
+            }}
+          >
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="Ürün, kategori veya satıcı ara..."
+              className="h-12 border-border bg-white/92 pl-11 pr-12 shadow-[0_8px_24px_rgba(32,39,52,0.06)]"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 top-1/2 size-9 -translate-y-1/2"
+              title="Ara"
+            >
+              <Search aria-hidden />
+            </Button>
+          </form>
+        </div>
+
+        <div className="col-start-3 row-start-1 flex items-center justify-end gap-1.5 sm:gap-2">
+          <Button variant="ghost" size="icon" title="Sepet">
+            <ShoppingBasket aria-hidden />
+          </Button>
+          <Button variant="ghost" size="icon" title="Favoriler">
+            <Heart aria-hidden />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Bildirimler"
+            className="hidden sm:inline-flex"
+          >
+            <Bell aria-hidden />
+          </Button>
           {authUser ? (
             <>
               <Button variant="outline" size="icon" className="md:hidden" asChild>
@@ -1279,7 +1329,7 @@ function AppHeader({
               </Button>
               <Button
                 variant="outline"
-                className="hidden max-w-72 md:inline-flex"
+                className="hidden max-w-56 bg-white md:inline-flex"
                 asChild
               >
                 <Link href="/profil">
@@ -1299,10 +1349,25 @@ function AppHeader({
               </Button>
             </>
           ) : (
-            <Button variant="default" onClick={onLoginClick}>
-              <UserRound aria-hidden />
-              Giriş yap
-            </Button>
+            <>
+              <Button
+                variant="default"
+                onClick={onLoginClick}
+                className="hidden sm:inline-flex"
+              >
+                <UserRound aria-hidden />
+                Giriş Yap / Kayıt Ol
+              </Button>
+              <Button
+                variant="default"
+                size="icon"
+                onClick={onLoginClick}
+                className="sm:hidden"
+                title="Giriş yap"
+              >
+                <UserRound aria-hidden />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -1423,14 +1488,14 @@ function AuthDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/[0.42] px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/[0.58] px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-6">
       <div
-        className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-border bg-white shadow-[0_30px_100px_rgba(0,0,0,0.28)]"
+        className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg border border-white/20 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
       >
-        <div className="flex flex-col gap-4 border-b border-border bg-[linear-gradient(135deg,rgba(23,90,56,0.08),rgba(197,138,46,0.08),rgba(255,255,255,0.98))] px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-4 border-b border-border bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.1),rgba(255,255,255,0.98))] px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Güvenli oturum
@@ -1500,15 +1565,15 @@ function AuthDialog({
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
               Hızlı giriş
               <p className="mt-1 text-xs font-normal text-muted-foreground">Mevcut kullanıcı için en kısa yol.</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
               Yeni kayıt
               <p className="mt-1 text-xs font-normal text-muted-foreground">Alıcı veya satıcı hesabı oluştur.</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
+            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
               Doğrulama
               <p className="mt-1 text-xs font-normal text-muted-foreground">Email ve telefon onayını tamamla.</p>
             </div>
@@ -1676,38 +1741,41 @@ function CategoryShelf({
   selectedCategory?: CategoryDto;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <div className="rounded-lg border border-border/80 bg-white/92 px-4 py-5 shadow-[0_18px_50px_rgba(32,39,52,0.07)] backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-brand-brown">
-            {selectedCategory?.adi ?? "Tüm kategoriler"}
-          </p>
-          <p className="text-xs text-muted-foreground">
+          <h2 className="text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
+            Popüler Kategoriler
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {selectedCategory?.aciklama ??
               "Sebze, meyve, süt ürünleri, bakliyat ve kahvaltılık"}
           </p>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="ghost" size="sm" onClick={() => onSelect("all")}>
           <ArrowRight aria-hidden />
-          Liste
+          Tüm Kategoriler
         </Button>
       </div>
-      <div className="flex gap-2 overflow-x-auto p-3">
+      <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
         <CategoryChip
           active={activeId === "all"}
-          icon={ShoppingBasket}
+          imageSrc="/hero-market.png"
           label="Tümü"
           onClick={() => onSelect("all")}
         />
-        {categories.map((category) => (
-          <CategoryChip
-            key={category.id}
-            active={activeId === category.id}
-            icon={categoryIcons[category.id] ?? Leaf}
-            label={category.adi}
-            onClick={() => onSelect(category.id)}
-          />
-        ))}
+        {categories.map((category, index) => {
+          const imageSrc = categoryImages[(category.id + index) % categoryImages.length];
+          return (
+            <CategoryChip
+              key={category.id}
+              active={activeId === category.id}
+              imageSrc={imageSrc}
+              label={category.adi}
+              onClick={() => onSelect(category.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -1715,12 +1783,12 @@ function CategoryShelf({
 
 function CategoryChip({
   active,
-  icon: Icon,
+  imageSrc,
   label,
   onClick,
 }: {
   active: boolean;
-  icon: LucideIcon;
+  imageSrc: string;
   label: string;
   onClick: () => void;
 }) {
@@ -1729,14 +1797,31 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-bold transition",
+        "group flex w-[126px] shrink-0 flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition",
         active
-          ? "border-primary bg-primary text-primary-foreground shadow-sm"
-          : "border-border bg-background text-foreground hover:bg-secondary/60",
+          ? "border-primary/30 bg-secondary text-primary shadow-sm"
+          : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
       )}
     >
-      <Icon className="size-4" aria-hidden />
-      {label}
+      <span
+        className={cn(
+          "relative size-20 overflow-hidden rounded-md border bg-muted shadow-sm transition",
+          active
+            ? "border-primary ring-4 ring-primary/10"
+            : "border-border group-hover:border-primary/50",
+        )}
+      >
+        <Image
+          src={imageSrc}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-cover transition duration-300 group-hover:scale-105"
+        />
+      </span>
+      <span className="line-clamp-2 min-h-9 text-xs font-black leading-4">
+        {label}
+      </span>
     </button>
   );
 }
@@ -1818,7 +1903,7 @@ function ProductDetailDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/45 p-2 backdrop-blur-sm sm:p-5">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/62 p-2 backdrop-blur-sm sm:p-5">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -1826,17 +1911,19 @@ function ProductDetailDialog({
         onClick={onClose}
       />
       <div
-        className="relative ml-auto flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
+        className="relative flex h-[min(940px,calc(100vh-24px))] w-full max-w-[1540px] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_34px_120px_rgba(0,0,0,0.36)]"
         role="dialog"
         aria-modal="true"
         aria-label="Ürün detayı"
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-4 sm:px-5">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-4 sm:px-5">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Ürün detayı
             </p>
-            <p className="truncate text-sm font-semibold text-brand-brown">Detay, talep ve mesajlaşma tek panelde</p>
+            <p className="truncate text-sm font-semibold text-brand-brown">
+              Detay, talep ve mesajlaşma tek panelde
+            </p>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={onClose} title="Kapat">
             <X aria-hidden />
@@ -1874,13 +1961,13 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group min-w-0 cursor-pointer overflow-hidden rounded-2xl border bg-card text-left shadow-sm outline-none transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(32,24,15,0.13)] focus-visible:ring-2 focus-visible:ring-ring",
+        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_16px_45px_rgba(32,39,52,0.07)] outline-none transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(32,39,52,0.12)] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
       )}
     >
-      <div className="relative aspect-[1.08] overflow-hidden bg-muted sm:aspect-[1.18]">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <Image
           src={productImage(product)}
           alt={product.adi}
@@ -1888,85 +1975,82 @@ function ProductCard({
           sizes="(min-width: 1536px) 290px, (min-width: 768px) 45vw, 100vw"
           className="object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/[0.58] to-transparent" />
-        <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
+        <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
           {category ? (
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur",
+                "rounded-md border px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur",
                 categoryTone(category.id),
               )}
             >
               {category.adi}
             </span>
           ) : null}
-          {product.stokMiktari === 0 ? (
-            <Badge variant="gold">Ön sipariş</Badge>
-          ) : null}
-          {product.saticiDogrulanmis ? <Badge variant="green">Doğrulanmış</Badge> : null}
         </div>
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3 text-white">
+        <span
+          className={cn(
+            "absolute right-3 top-3 grid size-9 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm backdrop-blur",
+            isFavorite ? "text-red-600" : "text-primary",
+          )}
+        >
+          <Heart
+            className={cn("size-4", isFavorite && "fill-current")}
+            aria-hidden
+          />
+        </span>
+        {product.stokMiktari === 0 ? (
+          <Badge className="absolute bottom-3 left-3" variant="gold">
+            Ön sipariş
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="line-clamp-1 text-lg font-black">{product.adi}</p>
-            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-white/[0.85]">
+            <p className="truncate text-sm font-bold text-primary">
+              {sellerName(product)}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="size-3.5" aria-hidden />
               {productLocation(product)}
             </p>
           </div>
-          <span
-            className={cn(
-              "grid size-9 shrink-0 place-items-center rounded-md bg-white/[0.92] shadow-sm",
-              isFavorite ? "text-red-600" : "text-primary",
-            )}
-          >
-            <Heart
-              className={cn("size-4", isFavorite && "fill-current")}
-              aria-hidden
-            />
-          </span>
+          <p className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-black text-brand-brown">
+            <Star className="size-3.5 fill-accent text-accent" aria-hidden />
+            {product.ortalamaPuan.toFixed(1)}
+          </p>
         </div>
-      </div>
 
-      <div className="space-y-4 p-4 sm:p-5">
-        <p className="line-clamp-2 min-h-10 text-sm leading-6 text-muted-foreground sm:min-h-12">
-          {product.aciklama}
-        </p>
+        <div>
+          <h3 className="line-clamp-1 text-lg font-black text-brand-brown">
+            {product.adi}
+          </h3>
+          <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+            {product.aciklama}
+          </p>
+        </div>
 
-        <div className="grid grid-cols-[1fr_auto] gap-3">
+        <div className="grid grid-cols-[1fr_auto] items-end gap-3 border-t border-border pt-3">
           <div className="min-w-0">
-            <p className="text-xl font-black text-primary sm:text-[1.7rem]">
+            <p className="text-2xl font-black text-brand-brown">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
-              {product.stokMiktari > 0 ? `${product.stokMiktari} stok` : "Sırada"} ·
-              ID {product.id}
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-background px-2 py-1 text-right">
-            <p className="flex items-center gap-1 text-sm font-black text-brand-brown">
-              <Star className="size-3.5 fill-accent text-accent" aria-hidden />
-              {product.ortalamaPuan.toFixed(1)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {product.toplamYorum} yorum
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold">{sellerName(product)}</p>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              {product.saticiDogrulanmis ? (
-                <BadgeCheck className="size-3.5 text-primary" aria-hidden />
-              ) : null}
-              {product.toplamFavori} favori
+              {product.stokMiktari > 0 ? `${product.stokMiktari} stok` : "Stok bekliyor"} · {product.toplamYorum} yorum
             </p>
           </div>
           <Button size="sm" variant={active ? "default" : "outline"}>
             İncele
           </Button>
         </div>
+
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          {product.saticiDogrulanmis ? (
+            <BadgeCheck className="size-3.5 text-primary" aria-hidden />
+          ) : null}
+          {product.toplamFavori} favori
+        </p>
       </div>
     </article>
   );
@@ -2020,10 +2104,10 @@ function ProductDetail({
   return (
     <section
       id="detay"
-      className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]"
+      className="grid gap-4 xl:grid-cols-[minmax(0,1.12fr)_430px]"
     >
       <div className="space-y-4">
-        <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-[0_22px_55px_rgba(32,24,15,0.12)]">
+        <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_24px_70px_rgba(32,39,52,0.11)]">
           <div className="relative aspect-[4/3] overflow-hidden bg-muted">
             {activeMedia ? (
               activeMedia.kind === "video" ? (
@@ -2055,7 +2139,7 @@ function ProductDetail({
                 priority
               />
             )}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-4 py-4 text-white">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/72 to-transparent px-4 py-4 text-white">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={product.stokMiktari > 0 ? "green" : "gold"}>
                   {product.stokMiktari > 0 ? "Stokta" : "Ön sipariş"}
@@ -2087,7 +2171,7 @@ function ProductDetail({
                       type="button"
                       onClick={() => setActiveMediaIndex(index)}
                       className={cn(
-                        "relative h-24 w-36 shrink-0 overflow-hidden rounded-2xl border transition sm:h-28 sm:w-48 snap-center",
+                        "relative h-24 w-36 shrink-0 snap-center overflow-hidden rounded-lg border transition sm:h-28 sm:w-48",
                         isActive ? "border-primary ring-2 ring-primary/20" : "border-border",
                       )}
                     >
@@ -2131,7 +2215,7 @@ function ProductDetail({
           <Metric label="Favori" value={String(product.toplamFavori)} icon={Heart} />
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -2152,51 +2236,90 @@ function ProductDetail({
           </p>
         </div>
 
-        <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-sm text-muted-foreground">Birim fiyat</p>
-              <p className="text-3xl font-black text-brand-brown">{formatPrice(product.fiyat)}</p>
-            </div>
-            <p className="text-right text-xs font-semibold text-muted-foreground">
-              {product.stokMiktari} stok
-              <br />
-              Ürün ID {product.id}
-            </p>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="border-border bg-background"
-              onClick={() => onFavorite(product)}
-              disabled={actionStatus === `favorite-${product.id}`}
+        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+          <div className="flex items-center gap-3 border-b border-border pb-3">
+            <button
+              type="button"
+              className="border-b-2 border-primary pb-2 text-sm font-black text-brand-brown"
             >
-              {actionStatus === `favorite-${product.id}` ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <Heart className={cn(isFavorite && "fill-current")} aria-hidden />
-              )}
-              {isFavorite ? "Favoriden çıkar" : "Favori ekle"}
-            </Button>
-            <Button variant="premium" onClick={() => onOpenChat(product.saticiId)}>
-              <MessageCircle aria-hidden />
-              Mesaj gönder
-            </Button>
+              Ürün Açıklaması
+            </button>
+            <button
+              type="button"
+              className="pb-2 text-sm font-semibold text-muted-foreground"
+            >
+              Satıcı Hakkında
+            </button>
           </div>
+          <p className="mt-4 text-sm leading-7 text-muted-foreground">
+            {product.aciklama || "Bu ürün için açıklama henüz eklenmedi."}
+          </p>
         </div>
       </div>
 
       <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-        <div className="rounded-3xl border border-border bg-[#102a20] p-5 text-white shadow-[0_22px_55px_rgba(32,24,15,0.18)]">
+        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_24px_70px_rgba(32,39,52,0.12)]">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-emerald-50/70">Talep oluştur</p>
-              <h3 className="mt-1 text-xl font-black">Satıcıyla mutabakat başlat</h3>
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-bold text-primary">
+                {sellerName(product)}
+                {product.saticiDogrulanmis ? (
+                  <BadgeCheck className="size-4" aria-hidden />
+                ) : null}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {productLocation(product)}
+              </p>
             </div>
-            <Truck className="size-5 text-emerald-50/85" aria-hidden />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onFavorite(product)}
+              disabled={actionStatus === `favorite-${product.id}`}
+              title={isFavorite ? "Favoriden çıkar" : "Favori ekle"}
+            >
+              {actionStatus === `favorite-${product.id}` ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Heart className={cn(isFavorite && "fill-current text-red-600")} aria-hidden />
+              )}
+            </Button>
           </div>
+
+          <h3 className="mt-5 text-3xl font-black leading-tight text-brand-brown">
+            {product.adi}
+          </h3>
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+            {product.aciklama || "Yerel üreticiden gelen taze ürün."}
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <p className="text-4xl font-black text-brand-brown">
+              {formatPrice(product.fiyat)}
+            </p>
+            <span className="pb-1 text-base font-bold text-foreground">/ kg</span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Stok Durumu</p>
+              <p className="mt-1 text-sm font-black">{product.stokMiktari} stok</p>
+            </div>
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Kargo</p>
+              <p className="mt-1 text-sm font-black">2-3 iş günü</p>
+            </div>
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Kategori</p>
+              <p className="mt-1 truncate text-sm font-black">
+                {category?.adi ?? "Yerel ürün"}
+              </p>
+            </div>
+          </div>
+
           <form
-            className="mt-4 space-y-3"
+            className="mt-5 space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
               onDemand(product.id, miktar, note);
@@ -2209,31 +2332,54 @@ function ProductDetail({
                 max={100000}
                 value={miktar}
                 onChange={(event) => setMiktar(Number(event.target.value))}
-                className="border-white/10 bg-white/10 text-white placeholder:text-white/60"
               />
               <Input
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
-                className="border-white/10 bg-white/10 text-white placeholder:text-white/60"
               />
             </div>
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={actionStatus === `demand-${product.id}`}
-            >
-              {actionStatus === `demand-${product.id}` ? (
-                <Loader2 className="animate-spin" aria-hidden />
-              ) : (
-                <Send aria-hidden />
-              )}
-              Talep gönder
-            </Button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                className="w-full"
+                disabled={actionStatus === `demand-${product.id}`}
+              >
+                {actionStatus === `demand-${product.id}` ? (
+                  <Loader2 className="animate-spin" aria-hidden />
+                ) : (
+                  <Send aria-hidden />
+                )}
+                Teklif Gönder
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => onOpenChat(product.saticiId)}
+              >
+                <MessageCircle aria-hidden />
+                Satıcıya Mesaj Gönder
+              </Button>
+            </div>
           </form>
+
+          <div className="mt-5 grid gap-3 border-t border-border pt-4 text-xs text-muted-foreground sm:grid-cols-3">
+            <p className="flex items-center gap-2">
+              <ShieldCheck className="size-4 text-primary" aria-hidden />
+              Güvenli ödeme
+            </p>
+            <p className="flex items-center gap-2">
+              <Check className="size-4 text-primary" aria-hidden />
+              Koşulsuz iade
+            </p>
+            <p className="flex items-center gap-2">
+              <Truck className="size-4 text-primary" aria-hidden />
+              Hızlı teslimat
+            </p>
+          </div>
         </div>
 
         <form
-          className="rounded-3xl border border-border bg-white p-5 shadow-sm"
+          className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
           onSubmit={(event) => {
             event.preventDefault();
             onRate(product.id, rating);
@@ -2269,7 +2415,7 @@ function ProductDetail({
         </form>
 
         <form
-          className="rounded-3xl border border-border bg-white p-5 shadow-sm"
+          className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (comment.trim().length >= 3) {
@@ -2297,7 +2443,7 @@ function ProductDetail({
           </Button>
         </form>
 
-        <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
           <div className="border-b border-border px-5 py-4">
             <h3 className="font-bold">Son yorumlar</h3>
           </div>
@@ -2416,18 +2562,18 @@ function WorkspaceSection({
   onSendMessage: (receiverId: string, message: string) => void;
 }) {
   return (
-    <div className="mx-auto max-w-[1680px] px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[1760px] px-3 py-10 sm:px-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Badge variant="plum">
             <Sparkles className="size-3.5" aria-hidden />
             Genel panel
           </Badge>
-          <h2 className="mt-3 text-3xl font-black tracking-normal text-brand-brown">
+          <h2 className="mt-3 text-3xl font-black tracking-normal text-brand-brown sm:text-4xl">
             Pazar operasyon merkezi
           </h2>
         </div>
-        <div className="flex w-full rounded-lg border border-border bg-muted p-1 sm:w-auto">
+        <div className="flex w-full rounded-lg border border-border bg-muted/80 p-1 shadow-inner sm:w-auto">
           {workspaces.map((item) => {
             const Icon = item.icon;
             return (
@@ -2538,7 +2684,7 @@ function BuyerWorkspace({
   const openDemands = demands.filter((demand) => demand.durum === "ACIK").length;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
           <WorkspaceStat
@@ -2634,7 +2780,7 @@ function BuyerWorkspace({
         />
       </div>
 
-      <Card className="p-4">
+      <Card className="p-4 lg:sticky lg:top-24 lg:self-start">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="font-bold">Hızlı talep</h3>
@@ -2735,7 +2881,7 @@ function SellerWorkspace({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
       <div className="space-y-4">
         <SellerProfileForm
           profile={profile}
@@ -3357,8 +3503,8 @@ function ChatWorkspace({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <div className="rounded-2xl border border-border bg-white p-3 shadow-sm">
+    <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="rounded-lg border border-border/80 bg-white p-3 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
         <div className="flex items-center justify-between gap-2 px-1 py-2">
           <div>
             <h3 className="font-bold">Konuşmalar</h3>
@@ -3377,7 +3523,7 @@ function ChatWorkspace({
                 type="button"
                 onClick={() => onTargetChange(conversation.userId)}
                 className={cn(
-                  "w-full rounded-2xl border p-3 text-left transition",
+                  "w-full rounded-lg border p-3 text-left transition",
                   currentTarget === conversation.userId
                     ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : "border-border bg-white hover:bg-muted",
@@ -3405,14 +3551,14 @@ function ChatWorkspace({
               </button>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
               Henüz konuşma yok. Bir ürünün satıcısına mesaj gönderince burada görünür.
             </div>
           )}
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-bold">
@@ -3425,7 +3571,7 @@ function ChatWorkspace({
           <Badge variant="green">{signalRState}</Badge>
         </div>
 
-        <div className="grid min-h-[24rem] content-end gap-3 bg-[linear-gradient(180deg,#f7f9f4,#fffefa)] p-4 sm:min-h-[32rem]">
+        <div className="grid min-h-[24rem] content-end gap-3 bg-[linear-gradient(180deg,#f8f5ec,#fffdf8)] p-4 sm:min-h-[32rem]">
           {chatState === "loading" ? (
             <div className="grid place-items-center py-10 text-sm font-semibold text-muted-foreground">
               <Loader2 className="mb-2 size-5 animate-spin" aria-hidden />
@@ -3547,8 +3693,8 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+    <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-[#fbfaf7] px-4 py-3">
         <div>
           <h3 className="font-bold">{title}</h3>
           <p className="text-sm text-muted-foreground">{description}</p>
@@ -3571,7 +3717,7 @@ function PaginationBar({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border bg-white p-3 shadow-sm">
+    <div className="flex items-center justify-between rounded-lg border border-border/80 bg-white p-3 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
       <Button
         variant="outline"
         disabled={page <= 1}
@@ -3612,7 +3758,7 @@ function LockedPanel({
   ];
 
   return (
-    <div className="rounded-lg border border-dashed border-border bg-background p-10 text-center">
+    <div className="rounded-lg border border-dashed border-primary/30 bg-white p-10 text-center shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
       <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden />
       <h3 className="mt-3 text-xl font-black text-brand-brown">
         {anyRole ? "Giriş gerekli" : `${roleLabel(role)} girişi gerekli`}
@@ -3654,7 +3800,7 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center">
+    <div className="rounded-lg border border-dashed border-border/90 bg-white p-8 text-center">
       <Icon className="mx-auto size-8 text-muted-foreground" aria-hidden />
       <p className="mt-3 font-bold">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
@@ -3674,7 +3820,7 @@ function WorkspaceStat({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-border/80 bg-white p-4 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
       <Icon className="size-5 text-primary" aria-hidden />
       <p className="mt-3 text-2xl font-black text-brand-brown">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -3692,7 +3838,7 @@ function Metric({
   icon: LucideIcon;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-3">
+    <div className="rounded-lg border border-border/80 bg-white p-3 shadow-sm">
       <Icon className="size-4 text-accent" aria-hidden />
       <p className="mt-2 text-lg font-black text-brand-brown">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
