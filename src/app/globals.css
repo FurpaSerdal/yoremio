@@ -114,39 +114,25 @@ textarea {
   }
 }
 
-@keyframes hero-drift {
-  0% {
-    transform: scale(1.02) translate3d(0, 0, 0);
-  }
-  100% {
-    transform: scale(1.07) translate3d(-1.2%, -0.8%, 0);
-  }
-}
-
 @layer utilities {
   .surface-glass {
     border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-    background: color-mix(in srgb, white 88%, transparent);
-    box-shadow: 0 18px 55px rgba(32, 39, 52, 0.08);
-    backdrop-filter: blur(18px);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 12px 34px rgba(32, 39, 52, 0.07);
   }
 
   .surface-soft {
     border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 248, 0.88));
-    box-shadow: 0 16px 48px rgba(32, 39, 52, 0.07);
+    box-shadow: 0 12px 34px rgba(32, 39, 52, 0.06);
   }
 
   .animate-fade-up {
-    animation: fade-up 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .animate-soft-reveal {
-    animation: soft-reveal 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  .animate-hero-drift {
-    animation: hero-drift 16s ease-out both;
+    animation: soft-reveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .hover-lift {
@@ -158,8 +144,8 @@ textarea {
   }
 
   .hover-lift:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 24px 70px rgba(32, 39, 52, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 42px rgba(32, 39, 52, 0.1);
   }
 
   .scroll-shelf {

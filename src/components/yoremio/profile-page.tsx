@@ -250,7 +250,7 @@ export function YoremioProfilePage() {
   return (
     <ProfileShell onLogout={logout}>
       <main className="mx-auto max-w-[1360px] px-3 py-8 sm:px-5">
-        <Card className="overflow-hidden border-white/70 bg-white/88 backdrop-blur-xl">
+        <Card className="overflow-hidden border-white/70 bg-white/94">
           <div className="bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.12),rgba(255,255,255,0.98))] px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-5 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
@@ -418,7 +418,7 @@ function ProfileShell({
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-[#fbfaf7]/88 shadow-[0_10px_34px_rgba(32,39,52,0.08)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-[#fbfaf7]/96 shadow-[0_8px_24px_rgba(32,39,52,0.06)]">
         <div className="mx-auto flex h-[76px] max-w-[1360px] items-center justify-between gap-3 px-3 sm:px-5">
           <Link href="/">
             <BrandLogo compact />

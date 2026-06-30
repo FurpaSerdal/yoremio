@@ -11,7 +11,7 @@ export function BrandLogo({
 }) {
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      <span className="grid shrink-0 place-items-center rounded-lg bg-white p-1.5 shadow-[0_10px_30px_rgba(10,106,68,0.16)] ring-1 ring-border/70">
+      <span className="grid shrink-0 place-items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-border/70">
         <Image
           src="/yoremio-mark.svg"
           alt="Yöremio logosu"

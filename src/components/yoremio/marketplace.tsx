@@ -34,7 +34,6 @@ import {
   MapPin,
   MessageCircle,
   PackagePlus,
-  Plus,
   RefreshCw,
   Search,
   Send,
@@ -1086,14 +1085,14 @@ export function YoremioMarketplace() {
 
       <main>
         <section className="mx-auto max-w-[1760px] px-3 pt-3 sm:px-5">
-          <div className="animate-soft-reveal relative isolate overflow-hidden rounded-lg border border-white/70 bg-ink text-white shadow-[0_28px_90px_rgba(32,39,52,0.22)]">
+          <div className="relative isolate overflow-hidden rounded-lg border border-white/70 bg-ink text-white shadow-[0_18px_56px_rgba(32,39,52,0.18)]">
             <Image
               src="/hero-market-1600.jpg"
               alt="Yöremio yerel ürün vitrini"
               fill
               priority
               sizes="100vw"
-              className="animate-hero-drift object-cover object-center"
+              className="object-cover object-center"
             />
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,26,23,0.9)_0%,rgba(25,26,23,0.72)_38%,rgba(25,26,23,0.24)_70%,rgba(25,26,23,0.06)_100%)]" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent_34%,rgba(0,0,0,0.18))]" />
@@ -1101,7 +1100,7 @@ export function YoremioMarketplace() {
 
             <div className="relative grid min-h-[min(660px,calc(100vh-92px))] content-center px-5 py-12 sm:px-9 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1fr)] lg:px-14">
               <div className="max-w-2xl">
-                <div className="animate-fade-up flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="green">
                     <Leaf className="size-3.5" aria-hidden />
                     Canlı yerel pazar
@@ -1113,16 +1112,16 @@ export function YoremioMarketplace() {
                   </Badge>
                 </div>
 
-                <h1 className="animate-fade-up mt-6 text-4xl font-black leading-[1.04] tracking-normal text-white [animation-delay:90ms] sm:text-5xl lg:text-7xl">
+                <h1 className="mt-6 text-4xl font-black leading-[1.04] tracking-normal text-white sm:text-5xl lg:text-7xl">
                   Yerel ürünü güvenle keşfet.
                   <span className="block text-accent">Satıcıyla direkt anlaş.</span>
                 </h1>
-                <p className="animate-fade-up mt-5 max-w-xl text-base leading-8 text-white/78 [animation-delay:170ms] sm:text-lg">
+                <p className="mt-5 max-w-xl text-base leading-8 text-white/78 sm:text-lg">
                   Ürün keşfi, stok kontrolü, talep, teklif, güven skoru ve canlı
                   mesajlaşma tek akışta. Yöremio gerçek pazaryeri verisiyle çalışır.
                 </p>
 
-                <div className="animate-fade-up mt-7 flex flex-col gap-3 [animation-delay:250ms] sm:flex-row">
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <Button
                     size="lg"
                     className="h-[52px] px-6"
@@ -1138,7 +1137,7 @@ export function YoremioMarketplace() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-[52px] border-white/30 bg-white/12 px-6 text-white backdrop-blur hover:bg-white/18"
+                    className="h-[52px] border-white/30 bg-white/12 px-6 text-white hover:bg-white/18"
                     onClick={openSellerWorkspace}
                   >
                     <Store aria-hidden />
@@ -1148,11 +1147,11 @@ export function YoremioMarketplace() {
               </div>
             </div>
 
-            <div className="relative mx-4 mb-5 grid gap-2 rounded-lg border border-white/18 bg-white/12 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:mx-8 sm:-mt-20 sm:grid-cols-2 lg:grid-cols-4">
-              <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı güven metrikleri" delay="300ms" />
-              <HeroSignal icon={PackagePlus} label="Gerçek stok" value="Demo veri basmadan canlı vitrin" delay="360ms" />
-              <HeroSignal icon={Store} label="Satıcı paneli" value="Ürün, medya ve kategori yönetimi" delay="420ms" />
-              <HeroSignal icon={MessageCircle} label="Canlı chat" value="SignalR mesaj ve okunma bilgisi" delay="480ms" />
+            <div className="relative mx-4 mb-5 grid gap-2 rounded-lg border border-white/18 bg-white/12 p-2 shadow-[0_12px_34px_rgba(0,0,0,0.14)] sm:mx-8 sm:-mt-20 sm:grid-cols-2 lg:grid-cols-4">
+              <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı güven metrikleri" />
+              <HeroSignal icon={PackagePlus} label="Gerçek stok" value="Demo veri basmadan canlı vitrin" />
+              <HeroSignal icon={Store} label="Satıcı paneli" value="Ürün, medya ve kategori yönetimi" />
+              <HeroSignal icon={MessageCircle} label="Canlı chat" value="SignalR mesaj ve okunma bilgisi" />
             </div>
           </div>
         </section>
@@ -1166,7 +1165,7 @@ export function YoremioMarketplace() {
               selectedCategory={selectedCategory}
             />
 
-            <div className="surface-glass animate-fade-up grid gap-5 rounded-lg p-4 [animation-delay:80ms] xl:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.7fr)] xl:items-end">
+            <div className="surface-glass grid gap-5 rounded-lg p-4 xl:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.7fr)] xl:items-end">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.16em] text-muted-foreground">
                   Pazar vitrini
@@ -1420,18 +1419,13 @@ function HeroSignal({
   icon: Icon,
   label,
   value,
-  delay = "0ms",
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
-  delay?: string;
 }) {
   return (
-    <div
-      className="animate-fade-up hover-lift flex min-w-0 items-center gap-3 rounded-md border border-white/14 bg-white/12 px-3 py-3 text-white backdrop-blur"
-      style={{ animationDelay: delay }}
-    >
+    <div className="hover-lift flex min-w-0 items-center gap-3 rounded-md border border-white/14 bg-white/12 px-3 py-3 text-white">
       <span className="grid size-10 shrink-0 place-items-center rounded-md bg-white/16 text-accent ring-1 ring-white/10">
         <Icon className="size-5" aria-hidden />
       </span>
@@ -1469,7 +1463,7 @@ function AppHeader({
   const displayName = accountDisplayName(authUser, sellerProfile);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-[#fbfaf7]/88 shadow-[0_10px_34px_rgba(32,39,52,0.08)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-[#fbfaf7]/96 shadow-[0_8px_24px_rgba(32,39,52,0.06)]">
       <div className="mx-auto grid min-h-[76px] max-w-[1760px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 sm:px-5">
         <Link href="/" className="min-w-0">
           <BrandLogo compact />
@@ -1726,19 +1720,19 @@ function AuthDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/[0.58] px-3 py-3 backdrop-blur-sm sm:px-4 sm:py-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 px-3 py-3 sm:px-4 sm:py-6">
       <div
-        className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg border border-white/20 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-white shadow-[0_12px_34px_rgba(0,0,0,0.18)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
       >
-        <div className="flex flex-col gap-4 border-b border-border bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.1),rgba(255,255,255,0.98))] px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-[#fbfaf7] px-4 py-3 sm:px-5">
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Güvenli oturum
             </p>
-            <h2 id="auth-title" className="mt-1 text-2xl font-black text-brand-brown sm:text-3xl">
+            <h2 id="auth-title" className="mt-1 text-xl font-black text-brand-brown">
               {mode === "login"
                 ? "Hesabına geri dön"
                 : mode === "buyer"
@@ -1747,74 +1741,68 @@ function AuthDialog({
                     ? "Satıcı vitrini oluştur"
                     : "Email ve telefon doğrulaması"}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Hesabın doğrulandıktan sonra favori, teklif, chat ve ürün yönetimi tek akışta açılır.
-            </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} title="Kapat" className="shrink-0 self-end">
+          <Button variant="ghost" size="icon" onClick={onClose} title="Kapat" className="shrink-0">
             <X aria-hidden />
           </Button>
         </div>
 
-        <form className="space-y-5 p-4 sm:p-6" onSubmit={handleSubmit}>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <Button
+        <form className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" onSubmit={handleSubmit}>
+          <div className="grid rounded-md border border-border bg-muted/70 p-1 sm:grid-cols-4">
+            <button
               type="button"
-              variant={mode === "login" && role === "ALICI" ? "default" : "outline"}
               onClick={() => chooseLoginRole("ALICI")}
-              className="justify-start"
+              className={cn(
+                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
+                mode === "login" && role === "ALICI"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Heart aria-hidden />
               Alıcı
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant={mode === "login" && role === "SATICI" ? "default" : "outline"}
               onClick={() => chooseLoginRole("SATICI")}
-              className="justify-start"
+              className={cn(
+                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
+                mode === "login" && role === "SATICI"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Store aria-hidden />
               Satıcı
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant={mode === "buyer" ? "default" : "outline"}
               onClick={() => {
                 setRole("ALICI");
                 setMode("buyer");
               }}
-              className="justify-start"
+              className={cn(
+                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
+                mode === "buyer"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Plus aria-hidden />
               Alıcı kayıt
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant={mode === "seller" ? "default" : "outline"}
               onClick={() => {
                 setRole("SATICI");
                 setMode("seller");
               }}
-              className="justify-start"
+              className={cn(
+                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
+                mode === "seller"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
-              <UploadCloud aria-hidden />
               Satıcı kayıt
-            </Button>
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
-              Hızlı giriş
-              <p className="mt-1 text-xs font-normal text-muted-foreground">Mevcut kullanıcı için en kısa yol.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
-              Yeni kayıt
-              <p className="mt-1 text-xs font-normal text-muted-foreground">Alıcı veya satıcı hesabı oluştur.</p>
-            </div>
-            <div className="rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-brand-brown">
-              Doğrulama
-              <p className="mt-1 text-xs font-normal text-muted-foreground">Email ve telefon onayını tamamla.</p>
-            </div>
+            </button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1938,33 +1926,35 @@ function AuthDialog({
             </div>
           ) : null}
 
-          <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
-            <div>
-              <p className="font-bold text-brand-brown">Satıcı doğrulaması</p>
-              <p className="mt-1 text-muted-foreground">
-                Email veya SMS mesajı gelmediyse aynı e-posta için yeniden gönderim iste.
+          {(mode === "login" || mode === "seller") ? (
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-muted-foreground">
+                Satıcı doğrulaması gelmediyse e-postanı yazıp tekrar iste.
               </p>
+              <div className="flex flex-wrap gap-2">
               {devVerificationUrl ? (
                 <a
                   href={devVerificationUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-flex text-xs font-black text-primary underline-offset-4 hover:underline"
+                    className="inline-flex h-9 items-center rounded-md px-2 text-xs font-black text-primary underline-offset-4 hover:underline"
                 >
-                  Development doğrulama kutusunu aç
+                    Dev kutusu
                 </a>
               ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleResendVerification}
+                  disabled={status === "loading"}
+                >
+                  <RefreshCw aria-hidden />
+                  Tekrar gönder
+                </Button>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleResendVerification}
-              disabled={status === "loading"}
-            >
-              <RefreshCw aria-hidden />
-              Tekrar gönder
-            </Button>
-          </div>
+          ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
@@ -2007,7 +1997,7 @@ function CategoryShelf({
   selectedCategory?: CategoryDto;
 }) {
   return (
-    <div className="surface-soft animate-fade-up rounded-lg px-4 py-5 [animation-delay:40ms]">
+    <div className="surface-soft rounded-lg px-4 py-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
@@ -2063,7 +2053,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "hover-lift group flex w-[126px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition",
+        "group flex w-[126px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition-colors",
         active
           ? "border-primary/30 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
@@ -2071,7 +2061,7 @@ function CategoryChip({
     >
       <span
         className={cn(
-          "relative size-20 overflow-hidden rounded-md border bg-muted shadow-sm transition",
+          "relative size-20 overflow-hidden rounded-md border bg-muted shadow-sm transition-colors",
           active
             ? "border-primary ring-4 ring-primary/10"
             : "border-border group-hover:border-primary/50",
@@ -2082,9 +2072,8 @@ function CategoryChip({
           alt=""
           fill
           sizes="80px"
-          className="object-cover transition duration-300 group-hover:scale-105"
+          className="object-cover"
         />
-        <span className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.12))] opacity-0 transition group-hover:opacity-100" />
       </span>
       <span className="line-clamp-2 min-h-9 text-xs font-black leading-4">
         {label}
@@ -2170,7 +2159,7 @@ function ProductDetailDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/62 p-2 backdrop-blur-sm sm:p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-ink/56 p-2 sm:p-3">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -2178,12 +2167,12 @@ function ProductDetailDialog({
         onClick={onClose}
       />
       <div
-        className="animate-soft-reveal relative flex h-[min(940px,calc(100vh-24px))] w-full max-w-[1540px] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_34px_120px_rgba(0,0,0,0.36)]"
+        className="relative flex h-[calc(100svh-16px)] w-full max-w-[1380px] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_14px_44px_rgba(0,0,0,0.22)] sm:h-[calc(100svh-24px)]"
         role="dialog"
         aria-modal="true"
         aria-label="Ürün detayı"
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/92 px-4 backdrop-blur sm:px-5">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 sm:px-4">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Ürün detayı
@@ -2196,7 +2185,7 @@ function ProductDetailDialog({
             <X aria-hidden />
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
+        <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
           {children}
         </div>
       </div>
@@ -2228,7 +2217,7 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "animate-fade-up group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_16px_45px_rgba(32,39,52,0.07)] outline-none transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_72px_rgba(32,39,52,0.14)] focus-visible:ring-2 focus-visible:ring-ring",
+        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_8px_24px_rgba(32,39,52,0.055)] outline-none transition-colors duration-150 hover:shadow-[0_10px_30px_rgba(32,39,52,0.085)] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
@@ -2240,14 +2229,14 @@ function ProductCard({
           alt={product.adi}
           fill
           sizes="(min-width: 1536px) 290px, (min-width: 768px) 45vw, 100vw"
-          className="object-cover transition duration-700 group-hover:scale-110"
+          className="object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_45%,rgba(0,0,0,0.22))] opacity-70 transition group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_45%,rgba(0,0,0,0.18))]" />
         <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
           {category ? (
             <span
               className={cn(
-                "rounded-md border px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur",
+                "rounded-md border px-2.5 py-1 text-[11px] font-bold shadow-sm",
                 categoryTone(category.id),
               )}
             >
@@ -2257,7 +2246,7 @@ function ProductCard({
         </div>
         <span
           className={cn(
-            "absolute right-3 top-3 grid size-9 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm backdrop-blur transition group-hover:scale-105",
+            "absolute right-3 top-3 grid size-9 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm",
             isFavorite ? "text-red-600" : "text-primary",
           )}
         >
@@ -2301,7 +2290,7 @@ function ProductCard({
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3 border-t border-border pt-3">
           <div className="min-w-0">
-            <p className="text-2xl font-black text-brand-brown transition group-hover:text-primary">
+            <p className="text-2xl font-black text-brand-brown group-hover:text-primary">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -2381,11 +2370,11 @@ function ProductDetail({
   return (
     <section
       id="detay"
-      className="grid gap-4 xl:grid-cols-[minmax(0,1.12fr)_430px]"
+      className="grid h-full min-h-0 gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_370px] xl:grid-cols-[minmax(0,1fr)_390px]"
     >
-      <div className="space-y-4">
-        <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_24px_70px_rgba(32,39,52,0.11)]">
-          <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+        <div className="min-h-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_22px_rgba(32,39,52,0.06)]">
+          <div className="relative h-[min(45vh,470px)] min-h-[260px] overflow-hidden bg-muted">
             {activeMedia ? (
               activeMedia.kind === "video" ? (
                 <video
@@ -2401,8 +2390,8 @@ function ProductDetail({
                   src={mediaUrl(activeMedia.url) || productImage(product)}
                   alt={product.adi}
                   fill
-                  sizes="(min-width: 1280px) 900px, 100vw"
-                  className="object-cover transition duration-500"
+                  sizes="(min-width: 1280px) 860px, 100vw"
+                  className="object-cover"
                   priority
                 />
               )
@@ -2411,12 +2400,12 @@ function ProductDetail({
                 src={productImage(product)}
                 alt={product.adi}
                 fill
-                sizes="(min-width: 1280px) 900px, 100vw"
-                className="object-cover transition duration-500"
+                sizes="(min-width: 1280px) 860px, 100vw"
+                className="object-cover"
                 priority
               />
             )}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/72 to-transparent px-4 py-4 text-white">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/72 to-transparent px-3 py-3 text-white sm:px-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={product.stokMiktari > 0 ? "green" : "gold"}>
                   {product.stokMiktari > 0 ? "Stokta" : "Ön sipariş"}
@@ -2429,17 +2418,17 @@ function ProductDetail({
                   </Badge>
                 ) : null}
               </div>
-              <h2 className="mt-3 text-2xl font-black leading-tight sm:text-4xl">{product.adi}</h2>
-              <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-white/80">
+              <h2 className="mt-2 line-clamp-1 text-2xl font-black leading-tight sm:text-3xl">{product.adi}</h2>
+              <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-white/80">
                 <MapPin className="size-4" aria-hidden />
                 {productLocation(product)}
               </p>
             </div>
           </div>
 
-          <div className="border-t border-border p-3 sm:p-4">
+          <div className="border-t border-border p-2 sm:p-3">
             {mediaItems.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+              <div className="scroll-shelf flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory">
                 {mediaItems.map((media, index) => {
                   const isActive = index === activeMediaIndex;
                   return (
@@ -2448,7 +2437,7 @@ function ProductDetail({
                       type="button"
                       onClick={() => setActiveMediaIndex(index)}
                       className={cn(
-                        "relative h-24 w-36 shrink-0 snap-center overflow-hidden rounded-lg border transition sm:h-28 sm:w-48",
+                        "relative h-16 w-24 shrink-0 snap-center overflow-hidden rounded-md border transition-colors sm:h-20 sm:w-32",
                         isActive ? "border-primary ring-2 ring-primary/20" : "border-border",
                       )}
                     >
@@ -2486,13 +2475,13 @@ function ProductDetail({
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid shrink-0 gap-2 sm:grid-cols-3">
           <Metric label="Puan" value={product.ortalamaPuan.toFixed(1)} icon={Star} />
           <Metric label="Yorum" value={String(product.toplamYorum)} icon={MessageCircle} />
           <Metric label="Favori" value={String(product.toplamFavori)} icon={Heart} />
         </div>
 
-        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+        <div className="shrink-0 rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -2508,35 +2497,35 @@ function ProductDetail({
             </div>
             <TrustDial score={shownTrust} />
           </div>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
             Doğrulanmış satıcı, gerçek stok ve canlı talep akışı birlikte gösterilir. Bu panel hızlı karar vermek için tasarlandı.
           </p>
         </div>
 
-        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
-          <div className="flex items-center gap-3 border-b border-border pb-3">
+        <div className="min-h-0 rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
+          <div className="flex items-center gap-3 border-b border-border pb-2">
             <button
               type="button"
-              className="border-b-2 border-primary pb-2 text-sm font-black text-brand-brown"
+              className="border-b-2 border-primary pb-1.5 text-sm font-black text-brand-brown"
             >
               Ürün Açıklaması
             </button>
             <button
               type="button"
-              className="pb-2 text-sm font-semibold text-muted-foreground"
+              className="pb-1.5 text-sm font-semibold text-muted-foreground"
             >
               Satıcı Hakkında
             </button>
           </div>
-          <p className="mt-4 text-sm leading-7 text-muted-foreground">
+          <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
             {product.aciklama || "Bu ürün için açıklama henüz eklenmedi."}
           </p>
         </div>
       </div>
 
-      <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-        <div className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_24px_70px_rgba(32,39,52,0.12)]">
-          <div className="flex items-start justify-between gap-4">
+      <aside className="flex min-h-0 flex-col gap-3 overflow-hidden">
+        <div className="shrink-0 rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.07)]">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm font-bold text-primary">
                 {sellerName(product)}
@@ -2564,30 +2553,30 @@ function ProductDetail({
             </Button>
           </div>
 
-          <h3 className="mt-5 text-3xl font-black leading-tight text-brand-brown">
+          <h3 className="mt-3 line-clamp-1 text-2xl font-black leading-tight text-brand-brown">
             {product.adi}
           </h3>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
             {product.aciklama || "Yerel üreticiden gelen taze ürün."}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-end gap-3">
-            <p className="text-4xl font-black text-brand-brown">
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <p className="text-3xl font-black text-brand-brown">
               {formatPrice(product.fiyat)}
             </p>
             <span className="pb-1 text-base font-bold text-foreground">/ kg</span>
           </div>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-md border border-border bg-background p-3">
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-md border border-border bg-background p-2">
               <p className="text-xs text-muted-foreground">Stok Durumu</p>
               <p className="mt-1 text-sm font-black">{product.stokMiktari} stok</p>
             </div>
-            <div className="rounded-md border border-border bg-background p-3">
+            <div className="rounded-md border border-border bg-background p-2">
               <p className="text-xs text-muted-foreground">Kargo</p>
               <p className="mt-1 text-sm font-black">2-3 iş günü</p>
             </div>
-            <div className="rounded-md border border-border bg-background p-3">
+            <div className="rounded-md border border-border bg-background p-2">
               <p className="text-xs text-muted-foreground">Kategori</p>
               <p className="mt-1 truncate text-sm font-black">
                 {category?.adi ?? "Yerel ürün"}
@@ -2596,7 +2585,7 @@ function ProductDetail({
           </div>
 
           <form
-            className="mt-5 space-y-3"
+            className="mt-3 space-y-2"
             onSubmit={(event) => {
               event.preventDefault();
               if (!demandFlowEnabled) return;
@@ -2641,7 +2630,7 @@ function ProductDetail({
             </div>
           </form>
 
-          <div className="mt-5 grid gap-3 border-t border-border pt-4 text-xs text-muted-foreground sm:grid-cols-3">
+          <div className="mt-3 grid gap-2 border-t border-border pt-3 text-xs text-muted-foreground sm:grid-cols-3">
             <p className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-primary" aria-hidden />
               Güvenli ödeme
@@ -2658,7 +2647,7 @@ function ProductDetail({
         </div>
 
         <form
-          className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
+          className="shrink-0 rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.05)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!canReview || !ratingsEnabled) return;
@@ -2668,11 +2657,11 @@ function ProductDetail({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-bold">Puan ver</h3>
-              <p className="text-sm text-muted-foreground">Ürünü deneyimledikten sonra değerlendir.</p>
+              <p className="text-xs text-muted-foreground">Deneyimden sonra değerlendir.</p>
             </div>
             <Star className="size-5 text-primary" aria-hidden />
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
             <Field label="Yıldız" htmlFor="rating">
               <select
                 id="rating"
@@ -2704,7 +2693,7 @@ function ProductDetail({
         </form>
 
         <form
-          className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
+          className="shrink-0 rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.05)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!canReview || !reviewsEnabled) return;
@@ -2724,7 +2713,7 @@ function ProductDetail({
             />
           </Field>
           <Button
-            className="mt-3 w-full"
+            className="mt-2 w-full"
             variant="outline"
             disabled={!canReview || !reviewsEnabled || actionStatus === `comment-${product.id}`}
           >
@@ -2738,17 +2727,17 @@ function ProductDetail({
           ) : null}
         </form>
 
-        <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
-          <div className="border-b border-border px-5 py-4">
+        <div className="min-h-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
+          <div className="border-b border-border px-3 py-2">
             <h3 className="font-bold">Son yorumlar</h3>
           </div>
           <div className="divide-y divide-border">
             {product.yorumlar.length > 0 ? (
-              product.yorumlar.slice(0, 4).map((commentItem) => (
-                <div key={commentItem.id} className="px-5 py-4">
+              product.yorumlar.slice(0, 2).map((commentItem) => (
+                <div key={commentItem.id} className="px-3 py-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm leading-6">{commentItem.icerik}</p>
+                      <p className="line-clamp-2 text-sm leading-5">{commentItem.icerik}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {commentItem.kullaniciAdi ?? "Yöremio kullanıcısı"} · {formatShortDate(commentItem.tarih)}
                       </p>
@@ -2768,7 +2757,7 @@ function ProductDetail({
                 </div>
               ))
             ) : (
-              <p className="px-5 py-5 text-sm text-muted-foreground">
+              <p className="px-3 py-3 text-sm text-muted-foreground">
                 Bu ürün için henüz yorum yok.
               </p>
             )}
@@ -2893,7 +2882,7 @@ function WorkspaceSection({
         </div>
       </div>
 
-      <div className="animate-fade-up mt-6">
+      <div className="mt-6">
         {workspace === "buyer" ? (
           <BuyerWorkspace
             authUser={authUser}
@@ -3887,7 +3876,7 @@ function ChatWorkspace({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="rounded-lg border border-border/80 bg-white p-3 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+      <div className="rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
         <div className="flex items-center justify-between gap-2 px-1 py-2">
           <div>
             <h3 className="font-bold">Konuşmalar</h3>
@@ -3941,7 +3930,7 @@ function ChatWorkspace({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+      <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-bold">
@@ -4076,7 +4065,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+    <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
       <div className="flex items-center justify-between gap-3 border-b border-border bg-[#fbfaf7] px-4 py-3">
         <div>
           <h3 className="font-bold">{title}</h3>
@@ -4100,7 +4089,7 @@ function PaginationBar({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border/80 bg-white p-3 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+    <div className="flex items-center justify-between rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
       <Button
         variant="outline"
         disabled={page <= 1}
@@ -4141,7 +4130,7 @@ function LockedPanel({
   ];
 
   return (
-    <div className="rounded-lg border border-dashed border-primary/30 bg-white p-10 text-center shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+    <div className="rounded-lg border border-dashed border-primary/30 bg-white p-10 text-center shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
       <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden />
       <h3 className="mt-3 text-xl font-black text-brand-brown">
         {anyRole ? "Giriş gerekli" : `${roleLabel(role)} girişi gerekli`}
@@ -4203,7 +4192,7 @@ function WorkspaceStat({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border/80 bg-white p-4 shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
+    <div className="rounded-lg border border-border/80 bg-white p-4 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
       <Icon className="size-5 text-primary" aria-hidden />
       <p className="mt-3 text-2xl font-black text-brand-brown">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
