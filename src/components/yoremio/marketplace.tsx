@@ -1171,20 +1171,14 @@ export function YoremioMarketplace() {
             />
 
             <div className="min-w-0 space-y-4">
-              <div className="y-card p-3 sm:p-4">
+              <div className="rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(16,24,18,0.055)] sm:p-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="green">
-                        <Leaf className="size-3.5" aria-hidden />
-                        Ürün keşfet
-                      </Badge>
-                      <Badge variant="outline">
-                        {productsPage.totalCount} sonuç
-                      </Badge>
-                    </div>
+                    <p className="text-sm font-semibold text-muted-foreground">
+                      {productsPage.totalCount} ürün bulundu
+                    </p>
                     <h1 className="mt-2 text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
-                      Ardahan ve çevresinden canlı yerel ürünler
+                      Ürün keşfi
                     </h1>
                     {marketError ? (
                       <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -1193,7 +1187,7 @@ export function YoremioMarketplace() {
                       </p>
                     ) : (
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Gerçek görsel, stok, satıcı güveni ve hızlı talep akışı tek ekranda.
+                        Yerel ürünleri kategori, konum, puan ve stok durumuna göre keşfet.
                       </p>
                     )}
                   </div>
@@ -1277,6 +1271,16 @@ export function YoremioMarketplace() {
                   page={productsPage.page}
                   totalPages={productsPage.totalPages}
                   onPageChange={setPage}
+                />
+              ) : null}
+
+              {productsPage.items.length > 0 ? (
+                <FeaturedSellerStrip
+                  products={productsPage.items}
+                  onSelectProduct={(id) => {
+                    setActiveProductId(id);
+                    setDetailOpen(true);
+                  }}
                 />
               ) : null}
             </div>
@@ -1379,7 +1383,6 @@ function PublicHomeHero({
   activeId,
   selectedCategory,
   onSelectCategory,
-  onSellerClick,
 }: {
   categories: CategoryDto[];
   activeId: number | "all";
@@ -1388,8 +1391,8 @@ function PublicHomeHero({
   onSellerClick: () => void;
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-white">
-      <div className="absolute inset-0">
+    <section className="relative border-b border-border bg-white pb-8">
+      <div className="relative min-h-[310px] overflow-hidden sm:min-h-[360px] lg:min-h-[390px]">
         <Image
           src="/hero-market-1600.jpg"
           alt=""
@@ -1398,56 +1401,29 @@ function PublicHomeHero({
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,24,18,0.74),rgba(20,24,18,0.26)_48%,rgba(20,24,18,0.08)),linear-gradient(180deg,rgba(20,24,18,0.12),rgba(251,250,247,0.86)_92%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.24)_48%,rgba(0,0,0,0.14))]" />
+        <div className="absolute inset-0 flex items-center justify-center px-4 pb-10 text-center">
+          <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
+            Yerel ürünler
+          </h1>
+      </div>
       </div>
 
-      <div className="relative mx-auto grid min-h-[430px] max-w-[1440px] content-between px-3 py-8 sm:px-5 lg:min-h-[520px] lg:py-12">
-        <div className="max-w-3xl pt-6 text-white lg:pt-10">
-          <Badge className="border-white/30 bg-white/16 text-white" variant="outline">
-            <Leaf className="size-3.5" aria-hidden />
-            API-safe talep pazari
-          </Badge>
-          <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.02] tracking-normal sm:text-5xl lg:text-6xl">
-            Yoremio yerel urun pazari
-          </h1>
-          <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/86 sm:text-base">
-            Urun kesfi, satici guveni, favoriler, talep, teklif ve canli chat akislari tek vitrine baglanir.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button asChild size="lg" variant="premium">
-              <a href="#kesif">
-                <Search aria-hidden />
-                Urunleri kesfet
-              </a>
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="border-white/45 bg-white/92"
-              onClick={onSellerClick}
-            >
-              <Store aria-hidden />
-              Satici paneli
-            </Button>
-          </div>
-        </div>
+      <div className="relative z-10 mx-auto -mt-16 max-w-[820px] px-4 sm:-mt-[72px] lg:max-w-[860px]">
+        <CategoryShelf
+          categories={categories}
+          activeId={activeId}
+          selectedCategory={selectedCategory}
+          onSelect={onSelectCategory}
+          elevated
+        />
+      </div>
 
-        <div className="mt-8 grid gap-3">
-          <CategoryShelf
-            categories={categories}
-            activeId={activeId}
-            selectedCategory={selectedCategory}
-            onSelect={onSelectCategory}
-            elevated
-          />
-          <div className="grid gap-2 rounded-lg border border-white/70 bg-white/94 p-2 shadow-[0_14px_36px_rgba(20,24,18,0.14)] sm:grid-cols-2 lg:grid-cols-4">
-            <HeroPromise icon={ClipboardList} title="Talep olustur" text="Urun detayindan saticiya miktar ve not gonder." />
-            <HeroPromise icon={CircleDollarSign} title="Teklif al" text="Satici talebe birim fiyat ve mesajla doner." />
-            <HeroPromise icon={MessageCircle} title="Chat ile konus" text="REST ve SignalR destekli mesajlasma." />
-            <HeroPromise icon={ShieldCheck} title="Guven skoru" text="Dogrulama, yorum, puan ve favori sinyalleri." />
-          </div>
-        </div>
+      <div className="mx-auto mt-7 grid max-w-[1440px] gap-3 px-4 sm:grid-cols-2 sm:px-7 lg:grid-cols-4">
+        <HeroPromise icon={Leaf} title="Yerel üreticiden" text="Taze ve doğal ürünleri keşfet." />
+        <HeroPromise icon={ShieldCheck} title="Güvenli alışveriş" text="Doğrulanmış satıcı sinyalleri." />
+        <HeroPromise icon={MessageCircle} title="Satıcıyla konuş" text="Talep, teklif ve chat akışı." />
+        <HeroPromise icon={Heart} title="Doğaya saygılı" text="Bölgesel üretime destek." />
       </div>
     </section>
   );
@@ -1463,13 +1439,13 @@ function HeroPromise({
   text: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-md px-3 py-2">
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-primary">
-        <Icon className="size-5" aria-hidden />
+    <div className="flex min-w-0 items-center justify-center gap-4 rounded-lg border border-border bg-white p-4 shadow-[0_8px_22px_rgba(16,24,18,0.055)]">
+      <span className="grid size-12 shrink-0 place-items-center rounded-full border border-border bg-white text-primary shadow-sm">
+        <Icon className="size-6" aria-hidden />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-black text-brand-brown">{title}</span>
-        <span className="line-clamp-2 text-xs leading-5 text-muted-foreground">{text}</span>
+        <span className="block truncate text-base font-bold text-brand-brown">{title}</span>
+        <span className="line-clamp-2 text-sm leading-5 text-muted-foreground">{text}</span>
       </span>
     </div>
   );
@@ -1662,13 +1638,16 @@ function AppHeader({
   const displayName = accountDisplayName(authUser, sellerProfile);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/95 shadow-[0_6px_18px_rgba(32,39,52,0.05)] backdrop-blur">
-      <div className="mx-auto grid min-h-[68px] max-w-[1440px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 sm:px-5">
+    <header className="sticky top-0 z-40 border-b border-border bg-white/96 shadow-[0_4px_16px_rgba(16,24,18,0.045)] backdrop-blur">
+      <div className="mx-auto grid min-h-[76px] max-w-[1440px] grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-2 sm:px-7">
         <Link href="/" className="min-w-0">
           <BrandLogo compact />
         </Link>
 
-        <nav className="hidden items-center justify-center gap-7 text-sm font-bold text-foreground lg:flex">
+        <nav className="hidden items-center justify-start gap-9 text-base font-semibold text-foreground lg:flex">
+          <a href="#kesif" className="text-red-600 transition hover:text-primary">
+            Urunler
+          </a>
           <a href="#kesif" className="transition hover:text-primary">
             Kategoriler
           </a>
@@ -1677,11 +1656,11 @@ function AppHeader({
             onClick={onSellerClick}
             className="transition hover:text-primary"
           >
-            Nasıl Çalışır?
+            Saticilar
           </button>
         </nav>
 
-        <div className="col-span-3 grid gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mx-auto md:w-full md:max-w-xl lg:col-start-2 lg:max-w-[520px]">
+        <div className="col-span-3 grid gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mx-auto md:w-full md:max-w-2xl lg:col-start-2 lg:max-w-[620px]">
           <form
             className="relative"
             onSubmit={(event) => {
@@ -1693,8 +1672,8 @@ function AppHeader({
             <Input
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Ürün, kategori veya satıcı ara..."
-              className="h-11 border-border bg-white pl-11 pr-12"
+              placeholder="Ara"
+              className="h-12 rounded-lg border-border bg-white pl-12 pr-12 text-base shadow-sm"
             />
             <Button
               type="submit"
@@ -1708,7 +1687,7 @@ function AppHeader({
           </form>
         </div>
 
-        <div className="col-start-3 row-start-1 flex items-center justify-end gap-1.5 sm:gap-2">
+        <div className="col-start-3 row-start-1 flex items-center justify-end gap-2 sm:gap-3">
           <Button variant="ghost" size="icon" title="Talepler" asChild>
             <a href="#paneller">
               <ClipboardList aria-hidden />
@@ -2226,18 +2205,19 @@ function AuthMockupPanel({
         ];
 
   return (
-    <div className="relative hidden min-h-[680px] overflow-hidden border-l border-border bg-[#fbfaf7] lg:block">
+    <div className="relative hidden min-h-[680px] overflow-hidden border-l border-border bg-white lg:block">
       <Image
         src="/hero-market-1600.jpg"
         alt=""
         fill
         sizes="680px"
-        className="object-cover opacity-20"
+        className="object-cover"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.78)_46%,rgba(251,250,247,0.96))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.10)_48%,rgba(0,0,0,0.28))]" />
       <div className="relative flex h-full flex-col justify-between p-8">
-        <div>
-          <h3 className="max-w-xl text-3xl font-black leading-tight text-brand-brown">
+        <div className="max-w-xl rounded-lg border border-white/60 bg-white/86 p-5 shadow-[0_14px_36px_rgba(16,24,18,0.16)] backdrop-blur">
+          <BrandLogo compact />
+          <h3 className="mt-5 max-w-xl text-3xl font-black leading-tight text-brand-brown">
             {mode === "seller"
               ? "Yoremio ile satıcı paneli talep, teklif ve chat merkezli çalışır."
               : mode === "verify"
@@ -2250,7 +2230,7 @@ function AuthMockupPanel({
               return (
                 <span
                   key={feature.label}
-                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-white/90 px-3 text-sm font-black text-brand-brown shadow-sm"
+                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-white/95 px-3 text-sm font-black text-brand-brown shadow-sm"
                 >
                   <Icon className="size-4 text-primary" aria-hidden />
                   {feature.label}
@@ -2296,7 +2276,7 @@ function AuthMockupPanel({
             ))}
           </div>
 
-          <div className="grid gap-3 rounded-lg border border-border bg-white/92 p-4 shadow-sm">
+          <div className="grid gap-3 rounded-lg border border-white/60 bg-white/92 p-4 shadow-[0_14px_36px_rgba(16,24,18,0.16)] backdrop-blur">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-black text-brand-brown">
@@ -2360,10 +2340,11 @@ function CategoryShelf({
       className={cn(
         "px-3 py-3",
         elevated
-          ? "rounded-lg border border-white/70 bg-white/94 shadow-[0_14px_36px_rgba(20,24,18,0.14)]"
+          ? "rounded-lg border border-border bg-white/96 shadow-[0_14px_34px_rgba(16,24,18,0.14)]"
           : "y-card",
       )}
     >
+      {!elevated ? (
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-black tracking-normal text-brand-brown">
@@ -2379,7 +2360,13 @@ function CategoryShelf({
           Tüm Kategoriler
         </Button>
       </div>
-      <div className="scroll-shelf mt-3 flex gap-2 overflow-x-auto pb-1">
+      ) : null}
+      <div
+        className={cn(
+          "scroll-shelf flex gap-3 overflow-x-auto pb-1",
+          elevated ? "justify-start sm:justify-center" : "mt-3",
+        )}
+      >
         <CategoryChip
           active={activeId === "all"}
           imageSrc="/hero-market.png"
@@ -2419,15 +2406,15 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-[82px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-2 text-center outline-none transition-colors",
+        "group flex w-[112px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-2.5 text-center outline-none transition-colors",
         active
-          ? "border-primary/30 bg-secondary text-primary shadow-sm"
+            ? "border-primary/25 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
       )}
     >
       <span
         className={cn(
-          "relative size-12 overflow-hidden rounded-full border bg-muted transition-colors",
+          "relative size-12 overflow-hidden rounded-full border bg-secondary transition-colors",
           active
             ? "border-primary ring-4 ring-primary/10"
             : "border-border group-hover:border-primary/50",
@@ -2441,7 +2428,7 @@ function CategoryChip({
           className="object-cover"
         />
       </span>
-      <span className="line-clamp-2 min-h-8 text-[11px] font-bold leading-4">
+      <span className="line-clamp-2 min-h-8 text-xs font-semibold leading-4">
         {label}
       </span>
     </button>
@@ -2666,13 +2653,13 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group grid min-w-0 cursor-pointer grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-lg border bg-white text-left shadow-[0_6px_18px_rgba(32,39,52,0.035)] outline-none transition-colors duration-150 hover:shadow-[0_10px_26px_rgba(32,39,52,0.065)] focus-visible:ring-2 focus-visible:ring-ring sm:block",
+        "group grid min-w-0 cursor-pointer grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-lg border bg-white text-left shadow-[0_8px_22px_rgba(16,24,18,0.055)] outline-none transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(16,24,18,0.09)] focus-visible:ring-2 focus-visible:ring-ring sm:block",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
       )}
     >
-      <div className="relative min-h-[154px] overflow-hidden bg-muted sm:aspect-[4/3] sm:min-h-0">
+      <div className="relative min-h-[154px] overflow-hidden bg-muted sm:aspect-[1.12] sm:min-h-0">
         <Image
           src={productImage(product)}
           alt={product.adi}
@@ -2680,10 +2667,10 @@ function ProductCard({
           sizes="(min-width: 1536px) 260px, (min-width: 768px) 45vw, 132px"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_45%,rgba(0,0,0,0.18))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_58%,rgba(0,0,0,0.10))]" />
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-4rem)] flex-wrap gap-1.5">
           {product.saticiDogrulanmis ? (
-            <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/95 px-2 py-1 text-[10px] font-black text-emerald-800 shadow-sm">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/95 px-2 py-1 text-[10px] font-black text-emerald-800 shadow-sm">
               <ShieldCheck className="size-3" aria-hidden />
               Sertifikalı
             </span>
@@ -2691,7 +2678,7 @@ function ProductCard({
           {category ? (
             <span
               className={cn(
-                "rounded-md border px-2 py-1 text-[10px] font-bold shadow-sm",
+                "rounded-full border px-2 py-1 text-[10px] font-bold shadow-sm",
                 categoryTone(category.id),
               )}
             >
@@ -2701,7 +2688,7 @@ function ProductCard({
         </div>
         <span
           className={cn(
-            "absolute right-2 top-2 grid size-8 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm",
+            "absolute right-2 top-2 grid size-9 shrink-0 place-items-center rounded-full bg-white/96 shadow-sm",
             isFavorite ? "text-red-600" : "text-primary",
           )}
         >
@@ -2719,7 +2706,7 @@ function ProductCard({
 
       <div className="min-w-0 space-y-2 p-3 sm:space-y-2.5">
         <div>
-          <h3 className="line-clamp-2 text-sm font-black text-brand-brown sm:line-clamp-1 sm:text-base">
+          <h3 className="line-clamp-2 text-sm font-bold text-foreground sm:line-clamp-1 sm:text-base">
             {product.adi}
           </h3>
           <p className="mt-1 flex min-w-0 items-center gap-1 text-xs font-semibold text-primary">
@@ -2738,7 +2725,7 @@ function ProductCard({
               <span className="truncate">{productLocation(product)}</span>
             </p>
           </div>
-          <p className="flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-1 font-black text-brand-brown shadow-sm">
+          <p className="flex shrink-0 items-center gap-1 px-1 font-semibold text-foreground">
             <Star className="size-3.5 fill-accent text-accent" aria-hidden />
             {product.ortalamaPuan.toFixed(1)}
           </p>
@@ -2746,7 +2733,7 @@ function ProductCard({
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-2 border-t border-border pt-2">
           <div className="min-w-0">
-            <p className="text-lg font-black text-brand-brown group-hover:text-primary sm:text-xl">
+            <p className="text-lg font-black text-primary sm:text-xl">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -3382,17 +3369,10 @@ function WorkspaceSection({
 }) {
   return (
     <div className="mx-auto max-w-[1440px] px-3 py-6 sm:px-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Badge variant="green">
-            <Sparkles className="size-3.5" aria-hidden />
-            Genel panel
-          </Badge>
-          <h2 className="mt-2 text-2xl font-black tracking-normal text-brand-brown sm:text-3xl">
-            Pazar operasyon merkezi
-          </h2>
-        </div>
-        <div className="y-card-flat flex w-full p-1 sm:w-auto">
+      <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_10px_28px_rgba(16,24,18,0.075)] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="bg-[linear-gradient(180deg,#064526,#003b2f)] p-4 text-white lg:min-h-[760px]">
+          <BrandLogo inverse />
+          <nav className="mt-6 grid gap-2">
           {workspaces.map((item) => {
             const Icon = item.icon;
             return (
@@ -3401,10 +3381,10 @@ function WorkspaceSection({
                 type="button"
                 onClick={() => setWorkspace(item.id)}
                 className={cn(
-                  "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition sm:flex-none",
+                  "inline-flex h-12 items-center justify-start gap-3 rounded-md px-3 text-sm font-bold transition",
                   workspace === item.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-white/55 hover:text-foreground",
+                    ? "bg-primary text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)]"
+                    : "text-white/82 hover:bg-white/10 hover:text-white",
                 )}
               >
                 <Icon className="size-4" aria-hidden />
@@ -3412,10 +3392,40 @@ function WorkspaceSection({
               </button>
             );
           })}
-        </div>
-      </div>
+          </nav>
+          <div className="mt-8 hidden rounded-lg border border-white/12 bg-white/8 p-4 text-sm leading-6 text-white/82 lg:block">
+            Yoremio paneli; favori, talep, teklif, ürün ve chat akışlarını API destekli şekilde toplar.
+          </div>
+        </aside>
 
-      <div className="mt-6">
+      <div className="min-w-0 bg-background p-4 sm:p-5">
+        <div className="mb-5 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-black tracking-normal text-brand-brown sm:text-3xl">
+              {workspace === "buyer"
+                ? "Alıcı Paneli"
+                : workspace === "seller"
+                  ? "Satıcı Paneli"
+                  : workspace === "chat"
+                    ? "Mesajlar"
+                    : "Admin Paneli"}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mockup setindeki operasyon ekranlarıyla aynı panel ritmi.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" title="Bildirimler" className="relative bg-white">
+              <Bell aria-hidden />
+              <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-red-600 text-[10px] font-black text-white">
+                3
+              </span>
+            </Button>
+            <Button variant="ghost" size="icon" title="Mesajlar" className="bg-white">
+              <MessageCircle aria-hidden />
+            </Button>
+          </div>
+        </div>
         {workspace === "buyer" ? (
           <BuyerWorkspace
             authUser={authUser}
@@ -3477,6 +3487,7 @@ function WorkspaceSection({
             onCategoryDelete={onCategoryDelete}
           />
         ) : null}
+      </div>
       </div>
     </div>
   );
