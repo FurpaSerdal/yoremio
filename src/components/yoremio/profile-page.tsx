@@ -41,12 +41,18 @@ type AuthState = SessionUser & Pick<LoginResponse, "token">;
 type PageState = "loading" | "ready" | "guest" | "error";
 
 function roleLabel(role?: AuthState["role"]) {
+  if (role === "ADMIN") return "Admin";
   return role === "SATICI" ? "Satıcı" : "Alıcı";
+}
+
+function hasRole(user: AuthState | SessionUser | null, role: AuthState["role"]) {
+  if (!user) return false;
+  return (user.roles?.length ? user.roles : [user.role]).includes(role);
 }
 
 function displayName(user: AuthState | null, sellerProfile: SellerProfileDto | null) {
   if (!user) return "Profil";
-  if (user.role === "SATICI") {
+  if (hasRole(user, "SATICI")) {
     return sellerProfile?.magazaAdi?.trim() || "Satıcı hesabı";
   }
 
@@ -102,7 +108,7 @@ export function YoremioProfilePage() {
         const nextConversations = await yoremioApi.conversations(sessionToken);
         if (!ignore) setConversations(nextConversations);
 
-        if (user.role === "SATICI") {
+        if (hasRole(user, "SATICI")) {
           const [profile, products, demands] = await Promise.all([
             yoremioApi.sellerProfile(sessionToken),
             yoremioApi.sellerProducts(sessionToken),
@@ -118,7 +124,9 @@ export function YoremioProfilePage() {
           setSehir(profile.sehir ?? "");
           setIlce(profile.ilce ?? "");
           setPhoneNumber(profile.phoneNumber ?? "");
-        } else {
+        }
+
+        if (hasRole(user, "ALICI")) {
           const [favorites, demands] = await Promise.all([
             yoremioApi.favoriteProducts(sessionToken),
             yoremioApi.buyerDemands(sessionToken),
@@ -159,7 +167,7 @@ export function YoremioProfilePage() {
 
   const saveSellerProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!authUser || authUser.role !== "SATICI") return;
+    if (!authUser || !hasRole(authUser, "SATICI")) return;
 
     setSaving(true);
     setMessage(null);
@@ -247,7 +255,7 @@ export function YoremioProfilePage() {
             <div className="flex flex-col gap-5 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={authUser?.role === "SATICI" ? "green" : "plum"}>
+                  <Badge variant={hasRole(authUser, "SATICI") ? "green" : "plum"}>
                     <ShieldCheck className="size-3.5" aria-hidden />
                     {roleLabel(authUser?.role)} profili
                   </Badge>
@@ -265,7 +273,16 @@ export function YoremioProfilePage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <ProfilePill label="Durum" value={authUser?.role === "SATICI" ? "Satıcı paneli" : "Alıcı paneli"} />
+                <ProfilePill
+                  label="Durum"
+                  value={
+                    authUser
+                      ? (authUser.roles?.length ? authUser.roles : [authUser.role])
+                          .map(roleLabel)
+                          .join(" + ")
+                      : "Oturum"
+                  }
+                />
                 <ProfilePill label="Chat" value={String(conversations.length)} />
                 <Button variant="outline" asChild className="bg-white/85">
                   <Link href="/">
@@ -294,14 +311,14 @@ export function YoremioProfilePage() {
           <ProfileStat icon={ShieldCheck} label="Email" value={authUser?.emailConfirmed ? "Doğrulandı" : "Bekliyor"} />
           <ProfileStat icon={UserRound} label="Telefon" value={authUser?.phoneNumberConfirmed ? "Doğrulandı" : "Bekliyor"} />
           <ProfileStat icon={MessageCircle} label="Görüşme" value={String(conversations.length)} />
-          {authUser?.role === "SATICI" ? (
+          {hasRole(authUser, "SATICI") ? (
             <ProfileStat icon={PackageCheck} label="Ürün" value={String(sellerProducts.length)} />
           ) : (
             <ProfileStat icon={Heart} label="Favori" value={String(favoriteProducts.length)} />
           )}
         </div>
 
-        {authUser?.role === "SATICI" ? (
+        {hasRole(authUser, "SATICI") ? (
           <div className="mt-6 grid gap-5 lg:grid-cols-[430px_minmax(0,1fr)]">
             <Card className="p-5 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between gap-3">

@@ -67,6 +67,10 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  scroll-padding-top: 96px;
+}
+
 button,
 input,
 select {
@@ -86,4 +90,101 @@ input,
 select,
 textarea {
   color-scheme: light;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-drift {
+  0% {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.07) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+
+@layer utilities {
+  .surface-glass {
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    background: color-mix(in srgb, white 88%, transparent);
+    box-shadow: 0 18px 55px rgba(32, 39, 52, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .surface-soft {
+    border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 248, 0.88));
+    box-shadow: 0 16px 48px rgba(32, 39, 52, 0.07);
+  }
+
+  .animate-fade-up {
+    animation: fade-up 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-soft-reveal {
+    animation: soft-reveal 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-hero-drift {
+    animation: hero-drift 16s ease-out both;
+  }
+
+  .hover-lift {
+    transition:
+      transform 220ms ease,
+      box-shadow 220ms ease,
+      border-color 220ms ease,
+      background-color 220ms ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 70px rgba(32, 39, 52, 0.12);
+  }
+
+  .scroll-shelf {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--primary) 35%, transparent) transparent;
+    scroll-snap-type: x proximity;
+  }
+
+  .scroll-shelf::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .scroll-shelf::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(10, 106, 68, 0.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

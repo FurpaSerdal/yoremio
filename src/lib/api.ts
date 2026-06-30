@@ -4,7 +4,7 @@ export const API_BASE_URL =
     "",
   );
 
-export type UserRole = "ALICI" | "SATICI";
+export type UserRole = "ADMIN" | "ALICI" | "SATICI";
 
 export type ApiResponse<T> = {
   success: boolean;
@@ -20,6 +20,7 @@ export type SessionUser = {
   userName?: string;
   phoneNumber?: string;
   role: UserRole;
+  roles?: UserRole[];
   emailConfirmed: boolean;
   phoneNumberConfirmed: boolean;
 };
@@ -29,6 +30,40 @@ export type LoginResponse = {
   userId: string;
   email: string;
   role: UserRole;
+  roles?: UserRole[];
+};
+
+export type AppFeatureFlags = {
+  chatEnabled: boolean;
+  demandFlowEnabled: boolean;
+  favoritesEnabled: boolean;
+  ratingsEnabled: boolean;
+  reviewsEnabled: boolean;
+  devVerificationInboxEnabled: boolean;
+  cloudinaryEnabled: boolean;
+};
+
+export type AppVerificationConfig = {
+  requireConfirmedPhoneForSellerLogin: boolean;
+  devVerificationInboxUrl?: string | null;
+};
+
+export type AppUploadsConfig = {
+  maxImageBytes: number;
+  maxVideoBytes: number;
+  maxMultipartBodyBytes: number;
+  imageContentTypePrefixes: string[];
+  videoContentTypePrefixes: string[];
+};
+
+export type AppBootstrapDto = {
+  environment: string;
+  roles: UserRole[];
+  categories: CategoryDto[];
+  productSorts: string[];
+  features: AppFeatureFlags;
+  verification: AppVerificationConfig;
+  uploads: AppUploadsConfig;
 };
 
 export type CategoryDto = {
@@ -360,6 +395,7 @@ export function createProductFormData(values: ProductFormValues) {
 }
 
 export const yoremioApi = {
+  bootstrap: () => request<AppBootstrapDto>("/api/App/bootstrap"),
   registerBuyer: (values: RegisterBuyerValues) =>
     request<null>("/api/Auth/register/alici", {
       method: "POST",
@@ -387,6 +423,11 @@ export const yoremioApi = {
     request<null>(
       `/api/Auth/confirm-phone?${queryString({ userId, token })}`,
     ),
+  resendVerification: (email: string) =>
+    request<null>("/api/Auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
 
   categories: () => request<CategoryDto[]>("/api/Kategori"),
   category: (id: number) => request<CategoryDto>(`/api/Kategori/${id}`),

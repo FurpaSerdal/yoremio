@@ -59,9 +59,13 @@ import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/yoremio/brand-logo";
 import { bindChatEvents, createChatConnection } from "@/lib/chat";
 import {
+  API_BASE_URL,
   ApiClientError,
   mediaUrl,
   yoremioApi,
+  type AppBootstrapDto,
+  type AppFeatureFlags,
+  type AppUploadsConfig,
   type CategoryDto,
   type ChatConversationDto,
   type ChatMessageDto,
@@ -83,6 +87,7 @@ const workspaces = [
   { id: "buyer", label: "Alıcı", icon: Heart },
   { id: "seller", label: "Satıcı", icon: Store },
   { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "admin", label: "Admin", icon: ShieldCheck },
 ] as const;
 
 const categoryTones = [
@@ -104,7 +109,7 @@ const categoryImages = [
 ];
 
 type Workspace = (typeof workspaces)[number]["id"];
-type SortKey = "newest" | "rating" | "price";
+type SortKey = string;
 type AuthState = SessionUser & Pick<LoginResponse, "token">;
 type ToastKind = "success" | "error" | "info";
 type ToastState = {
@@ -112,6 +117,98 @@ type ToastState = {
   message: string;
 } | null;
 type LoadState = "idle" | "loading" | "error";
+
+const fallbackProductSorts = [
+  "newest",
+  "oldest",
+  "price_asc",
+  "price_desc",
+  "name_asc",
+  "name_desc",
+  "top_rated",
+  "most_reviewed",
+  "most_favorited",
+];
+
+const sortLabels: Record<string, string> = {
+  newest: "En yeni",
+  oldest: "En eski",
+  price_asc: "Fiyat artan",
+  price_desc: "Fiyat azalan",
+  name_asc: "İsim A-Z",
+  name_desc: "İsim Z-A",
+  top_rated: "En yüksek puan",
+  most_reviewed: "En çok yorum",
+  most_favorited: "En çok favori",
+};
+
+function rolesOf(authUser: AuthState | null) {
+  if (!authUser) return [];
+  return authUser.roles?.length ? authUser.roles : [authUser.role];
+}
+
+function hasRole(authUser: AuthState | null, role: UserRole) {
+  return rolesOf(authUser).includes(role);
+}
+
+function formatBytes(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+function uploadValidationMessage(
+  files: File[],
+  limitBytes: number,
+  typePrefixes: string[],
+  label: string,
+) {
+  const invalidType = files.find(
+    (file) => !typePrefixes.some((prefix) => file.type.startsWith(prefix)),
+  );
+  if (invalidType) return `${label} dosyası desteklenmiyor: ${invalidType.name}`;
+
+  const oversize = files.find((file) => file.size > limitBytes);
+  if (oversize) {
+    return `${oversize.name} en fazla ${formatBytes(limitBytes)} olabilir.`;
+  }
+
+  return null;
+}
+
+function productUploadValidationMessage(
+  values: ProductFormValues,
+  uploads?: AppUploadsConfig,
+) {
+  if (!uploads) return null;
+
+  const imagesMessage = uploadValidationMessage(
+    values.resimler ?? [],
+    uploads.maxImageBytes,
+    uploads.imageContentTypePrefixes,
+    "Resim",
+  );
+  if (imagesMessage) return imagesMessage;
+
+  const videosMessage = uploadValidationMessage(
+    values.videolar ?? [],
+    uploads.maxVideoBytes,
+    uploads.videoContentTypePrefixes,
+    "Video",
+  );
+  if (videosMessage) return videosMessage;
+
+  const totalBytes = [...(values.resimler ?? []), ...(values.videolar ?? [])].reduce(
+    (sum, file) => sum + file.size,
+    0,
+  );
+
+  if (totalBytes > uploads.maxMultipartBodyBytes) {
+    return `Toplam medya boyutu en fazla ${formatBytes(uploads.maxMultipartBodyBytes)} olabilir.`;
+  }
+
+  return null;
+}
 
 function emptyProductsResult(page = 1): Paginated<ProductDto> {
   return {
@@ -168,6 +265,7 @@ function productLocation(product: ProductDto) {
 }
 
 function roleLabel(role: UserRole) {
+  if (role === "ADMIN") return "Admin";
   return role === "SATICI" ? "Satıcı" : "Alıcı";
 }
 
@@ -176,7 +274,7 @@ function accountDisplayName(
   sellerProfile?: SellerProfileDto | null,
 ) {
   if (!authUser) return "";
-  if (authUser.role === "SATICI") {
+  if (hasRole(authUser, "SATICI")) {
     return sellerProfile?.magazaAdi?.trim() || "Satıcı hesabı";
   }
 
@@ -189,12 +287,17 @@ export function YoremioMarketplace() {
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<number | "all">("all");
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [minRating, setMinRating] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
   const [workspace, setWorkspace] = useState<Workspace>("buyer");
   const [authOpen, setAuthOpen] = useState(false);
   const [authPreferredRole, setAuthPreferredRole] = useState<UserRole>("ALICI");
   const [authUser, setAuthUser] = useState<AuthState | null>(null);
+  const [bootstrap, setBootstrap] = useState<AppBootstrapDto | null>(null);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [productsPage, setProductsPage] =
     useState<Paginated<ProductDto>>(emptyProductsPage);
@@ -219,10 +322,13 @@ export function YoremioMarketplace() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const chatConnection = useRef<HubConnection | null>(null);
+  const productSorts = bootstrap?.productSorts?.length
+    ? bootstrap.productSorts
+    : fallbackProductSorts;
 
   const openSellerWorkspace = useCallback(() => {
     setWorkspace("seller");
-    if (!authUser || authUser.role !== "SATICI") {
+    if (!hasRole(authUser, "SATICI")) {
       setAuthPreferredRole("SATICI");
       setAuthOpen(true);
     }
@@ -294,7 +400,7 @@ export function YoremioMarketplace() {
       const nextConversations = await yoremioApi.conversations(authUser.token);
       setConversations(nextConversations);
 
-      if (authUser.role === "ALICI") {
+      if (hasRole(authUser, "ALICI")) {
         const [favorites, recommended, demands] = await Promise.all([
           yoremioApi.favoriteProducts(authUser.token),
           yoremioApi.recommendedProducts(authUser.token),
@@ -306,7 +412,7 @@ export function YoremioMarketplace() {
         setBuyerDemands(demands);
       }
 
-      if (authUser.role === "SATICI") {
+      if (hasRole(authUser, "SATICI")) {
         const [profile, products, demands] = await Promise.all([
           yoremioApi.sellerProfile(authUser.token),
           yoremioApi.sellerProducts(authUser.token),
@@ -342,6 +448,7 @@ export function YoremioMarketplace() {
           userId: user.userId,
           email: user.email,
           role: user.role,
+          roles: user.roles,
         };
 
         window.localStorage.setItem("yoremio-user", JSON.stringify(session));
@@ -363,13 +470,25 @@ export function YoremioMarketplace() {
     let ignore = false;
 
     yoremioApi
-      .categories()
-      .then((nextCategories) => {
-        if (!ignore) setCategories(nextCategories);
+      .bootstrap()
+      .then((nextBootstrap) => {
+        if (ignore) return;
+        setBootstrap(nextBootstrap);
+        setCategories(nextBootstrap.categories);
+        setSort((current) =>
+          nextBootstrap.productSorts.includes(current)
+            ? current
+            : nextBootstrap.productSorts[0] ?? "newest",
+        );
       })
-      .catch((error) => {
+      .catch(async (error) => {
         if (!ignore) {
-          setCategories([]);
+          try {
+            const nextCategories = await yoremioApi.categories();
+            if (!ignore) setCategories(nextCategories);
+          } catch {
+            if (!ignore) setCategories([]);
+          }
           showToast(apiErrorMessage(error), "error");
         }
       });
@@ -389,7 +508,11 @@ export function YoremioMarketplace() {
         pageSize: PAGE_SIZE,
         q: query.trim() || undefined,
         kategoriId: categoryId === "all" ? undefined : categoryId,
+        minFiyat: minPrice ? Number(minPrice) : undefined,
+        maxFiyat: maxPrice ? Number(maxPrice) : undefined,
+        sehir: cityFilter.trim() || undefined,
         sadeceStoktaOlanlar: inStockOnly,
+        minOrtalamaPuan: minRating ? Number(minRating) : undefined,
         sort,
       })
       .then((nextPage) => {
@@ -427,11 +550,22 @@ export function YoremioMarketplace() {
     return () => {
       ignore = true;
     };
-  }, [activeProductId, categoryId, inStockOnly, page, query, sort]);
+  }, [
+    activeProductId,
+    categoryId,
+    cityFilter,
+    inStockOnly,
+    maxPrice,
+    minPrice,
+    minRating,
+    page,
+    query,
+    sort,
+  ]);
 
   useEffect(() => {
     setPage(1);
-  }, [categoryId, inStockOnly, query, sort]);
+  }, [categoryId, cityFilter, inStockOnly, maxPrice, minPrice, minRating, query, sort]);
 
   useEffect(() => {
     let ignore = false;
@@ -598,7 +732,7 @@ export function YoremioMarketplace() {
       return false;
     }
 
-    if (role && authUser.role !== role) {
+    if (role && !hasRole(authUser, role)) {
       showToast(`Bu işlem ${roleLabel(role)} rolü gerektirir.`, "error");
       return false;
     }
@@ -747,6 +881,12 @@ export function YoremioMarketplace() {
     if (!requireAuth("SATICI")) return;
     if (!authUser) return;
 
+    const uploadError = productUploadValidationMessage(values, bootstrap?.uploads);
+    if (uploadError) {
+      showToast(uploadError, "error");
+      return;
+    }
+
     setActionStatus("product-form");
     try {
       const product = await yoremioApi.upsertProduct(authUser.token, values, productId);
@@ -838,7 +978,7 @@ export function YoremioMarketplace() {
     values: { adi: string; aciklama: string },
     categoryToUpdate?: number,
   ) => {
-    if (!requireAuth("SATICI")) return;
+    if (!requireAuth("ADMIN")) return;
     if (!authUser) return;
 
     setActionStatus("category");
@@ -862,7 +1002,7 @@ export function YoremioMarketplace() {
   };
 
   const handleCategoryDelete = async (id: number) => {
-    if (!requireAuth("SATICI")) return;
+    if (!requireAuth("ADMIN")) return;
     if (!authUser) return;
     if (!window.confirm("Bu kategoriyi silmek istiyor musun?")) return;
 
@@ -946,21 +1086,22 @@ export function YoremioMarketplace() {
 
       <main>
         <section className="mx-auto max-w-[1760px] px-3 pt-3 sm:px-5">
-          <div className="relative isolate overflow-hidden rounded-lg border border-white/70 bg-ink text-white shadow-[0_28px_90px_rgba(32,39,52,0.22)]">
+          <div className="animate-soft-reveal relative isolate overflow-hidden rounded-lg border border-white/70 bg-ink text-white shadow-[0_28px_90px_rgba(32,39,52,0.22)]">
             <Image
               src="/hero-market-1600.jpg"
               alt="Yöremio yerel ürün vitrini"
               fill
               priority
               sizes="100vw"
-              className="object-cover object-center"
+              className="animate-hero-drift object-cover object-center"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,26,23,0.88)_0%,rgba(25,26,23,0.72)_38%,rgba(25,26,23,0.24)_70%,rgba(25,26,23,0.06)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(25,26,23,0.9)_0%,rgba(25,26,23,0.72)_38%,rgba(25,26,23,0.24)_70%,rgba(25,26,23,0.06)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent_34%,rgba(0,0,0,0.18))]" />
             <div className="absolute inset-x-0 bottom-0 h-36 bg-[linear-gradient(0deg,rgba(25,26,23,0.72),transparent)]" />
 
             <div className="relative grid min-h-[min(660px,calc(100vh-92px))] content-center px-5 py-12 sm:px-9 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1fr)] lg:px-14">
               <div className="max-w-2xl">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="animate-fade-up flex flex-wrap items-center gap-2">
                   <Badge variant="green">
                     <Leaf className="size-3.5" aria-hidden />
                     Canlı yerel pazar
@@ -972,16 +1113,16 @@ export function YoremioMarketplace() {
                   </Badge>
                 </div>
 
-                <h1 className="mt-6 text-4xl font-black leading-[1.04] tracking-normal text-white sm:text-5xl lg:text-7xl">
+                <h1 className="animate-fade-up mt-6 text-4xl font-black leading-[1.04] tracking-normal text-white [animation-delay:90ms] sm:text-5xl lg:text-7xl">
                   Yerel ürünü güvenle keşfet.
                   <span className="block text-accent">Satıcıyla direkt anlaş.</span>
                 </h1>
-                <p className="mt-5 max-w-xl text-base leading-8 text-white/78 sm:text-lg">
+                <p className="animate-fade-up mt-5 max-w-xl text-base leading-8 text-white/78 [animation-delay:170ms] sm:text-lg">
                   Ürün keşfi, stok kontrolü, talep, teklif, güven skoru ve canlı
                   mesajlaşma tek akışta. Yöremio gerçek pazaryeri verisiyle çalışır.
                 </p>
 
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <div className="animate-fade-up mt-7 flex flex-col gap-3 [animation-delay:250ms] sm:flex-row">
                   <Button
                     size="lg"
                     className="h-[52px] px-6"
@@ -1008,10 +1149,10 @@ export function YoremioMarketplace() {
             </div>
 
             <div className="relative mx-4 mb-5 grid gap-2 rounded-lg border border-white/18 bg-white/12 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:mx-8 sm:-mt-20 sm:grid-cols-2 lg:grid-cols-4">
-              <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı güven metrikleri" />
-              <HeroSignal icon={PackagePlus} label="Gerçek stok" value="Demo veri basmadan canlı vitrin" />
-              <HeroSignal icon={Store} label="Satıcı paneli" value="Ürün, medya ve kategori yönetimi" />
-              <HeroSignal icon={MessageCircle} label="Canlı chat" value="SignalR mesaj ve okunma bilgisi" />
+              <HeroSignal icon={ShieldCheck} label="Güven skoru" value="Satıcı güven metrikleri" delay="300ms" />
+              <HeroSignal icon={PackagePlus} label="Gerçek stok" value="Demo veri basmadan canlı vitrin" delay="360ms" />
+              <HeroSignal icon={Store} label="Satıcı paneli" value="Ürün, medya ve kategori yönetimi" delay="420ms" />
+              <HeroSignal icon={MessageCircle} label="Canlı chat" value="SignalR mesaj ve okunma bilgisi" delay="480ms" />
             </div>
           </div>
         </section>
@@ -1025,7 +1166,7 @@ export function YoremioMarketplace() {
               selectedCategory={selectedCategory}
             />
 
-            <div className="flex flex-col gap-4 rounded-lg border border-border/80 bg-white/92 p-4 shadow-[0_18px_50px_rgba(32,39,52,0.07)] backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+            <div className="surface-glass animate-fade-up grid gap-5 rounded-lg p-4 [animation-delay:80ms] xl:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.7fr)] xl:items-end">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.16em] text-muted-foreground">
                   Pazar vitrini
@@ -1041,28 +1182,52 @@ export function YoremioMarketplace() {
                 ) : null}
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex h-11 items-center gap-2 rounded-md border border-border bg-background px-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[120px_1fr_1fr_1fr_180px_170px_140px_auto]">
+                <div className="flex h-11 items-center gap-2 rounded-md border border-border bg-background/80 px-3">
                   <Filter className="size-4 text-primary" aria-hidden />
                   <span className="text-sm font-semibold text-muted-foreground">
                     {productsPage.totalCount} sonuç
                   </span>
                 </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={minPrice}
+                  onChange={(event) => setMinPrice(event.target.value)}
+                  placeholder="Min fiyat"
+                  className="bg-white"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={maxPrice}
+                  onChange={(event) => setMaxPrice(event.target.value)}
+                  placeholder="Max fiyat"
+                  className="bg-white"
+                />
+                <Input
+                  value={cityFilter}
+                  onChange={(event) => setCityFilter(event.target.value)}
+                  placeholder="Şehir"
+                  className="bg-white"
+                />
                 <select
                   value={sort}
                   onChange={(event) => setSort(event.target.value as SortKey)}
-                  className="h-11 rounded-md border border-border bg-background px-3 text-sm font-bold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20"
+                  className="h-11 rounded-md border border-border bg-white px-3 text-sm font-bold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20"
                 >
-                  <option value="newest">En yeni</option>
-                  <option value="rating">En yüksek puan</option>
-                  <option value="price">Artan fiyat</option>
+                  {productSorts.map((item) => (
+                    <option key={item} value={item}>
+                      {sortLabels[item] ?? item}
+                    </option>
+                  ))}
                 </select>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={inStockOnly}
                   onClick={() => setInStockOnly(!inStockOnly)}
-                  className="flex h-11 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 text-sm font-bold"
+                  className="flex h-11 items-center justify-between gap-3 rounded-md border border-border bg-white px-3 text-sm font-bold transition hover:border-primary/35"
                 >
                   Stokta olanlar
                   <span
@@ -1079,6 +1244,35 @@ export function YoremioMarketplace() {
                     />
                   </span>
                 </button>
+                <select
+                  value={minRating}
+                  onChange={(event) => setMinRating(event.target.value)}
+                  className="h-11 rounded-md border border-border bg-white px-3 text-sm font-bold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 sm:col-span-2 lg:col-span-1 xl:col-span-1"
+                >
+                  <option value="">Tüm puanlar</option>
+                  <option value="4">4+ puan</option>
+                  <option value="3">3+ puan</option>
+                  <option value="2">2+ puan</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="bg-white/60 xl:size-11 xl:px-0"
+                  title="Filtreleri temizle"
+                  onClick={() => {
+                    setQuery("");
+                    setCategoryId("all");
+                    setInStockOnly(false);
+                    setMinPrice("");
+                    setMaxPrice("");
+                    setCityFilter("");
+                    setMinRating("");
+                    setSort("newest");
+                  }}
+                >
+                  <RefreshCw aria-hidden />
+                  <span className="xl:sr-only">Temizle</span>
+                </Button>
               </div>
             </div>
 
@@ -1110,6 +1304,10 @@ export function YoremioMarketplace() {
                       setQuery("");
                       setCategoryId("all");
                       setInStockOnly(false);
+                      setMinPrice("");
+                      setMaxPrice("");
+                      setCityFilter("");
+                      setMinRating("");
                       setSort("newest");
                     }}
                     onSellerPanelClick={openSellerWorkspace}
@@ -1135,6 +1333,7 @@ export function YoremioMarketplace() {
             workspace={workspace}
             setWorkspace={setWorkspace}
             authUser={authUser}
+            uploads={bootstrap?.uploads}
             selectedProduct={selectedProduct}
             categories={categories}
             recommendedProducts={recommendedProducts}
@@ -1182,6 +1381,11 @@ export function YoremioMarketplace() {
               (category) => category.id === selectedProduct.kategoriId,
             )}
             authUser={authUser}
+            canReview={buyerDemands.some(
+              (demand) =>
+                demand.urunId === selectedProduct.id && demand.durum === "ANLASILDI",
+            )}
+            features={bootstrap?.features}
             isFavorite={favoriteIds.has(selectedProduct.id)}
             actionStatus={actionStatus}
             onFavorite={handleFavorite}
@@ -1200,6 +1404,7 @@ export function YoremioMarketplace() {
         key={authPreferredRole}
         open={authOpen}
         initialRole={authPreferredRole}
+        bootstrap={bootstrap}
         onClose={() => setAuthOpen(false)}
         onAuthenticated={(user) => {
           setAuthUser(user);
@@ -1215,13 +1420,18 @@ function HeroSignal({
   icon: Icon,
   label,
   value,
+  delay = "0ms",
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
+  delay?: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-md border border-white/14 bg-white/12 px-3 py-3 text-white backdrop-blur">
+    <div
+      className="animate-fade-up hover-lift flex min-w-0 items-center gap-3 rounded-md border border-white/14 bg-white/12 px-3 py-3 text-white backdrop-blur"
+      style={{ animationDelay: delay }}
+    >
       <span className="grid size-10 shrink-0 place-items-center rounded-md bg-white/16 text-accent ring-1 ring-white/10">
         <Icon className="size-5" aria-hidden />
       </span>
@@ -1335,7 +1545,7 @@ function AppHeader({
                 <Link href="/profil">
                   <UserRound aria-hidden />
                   <span className="truncate">
-                    {displayName} · {roleLabel(authUser.role)}
+                    {displayName} · {rolesOf(authUser).map(roleLabel).join(" + ")}
                   </span>
                 </Link>
               </Button>
@@ -1378,11 +1588,13 @@ function AppHeader({
 function AuthDialog({
   open,
   initialRole,
+  bootstrap,
   onClose,
   onAuthenticated,
 }: {
   open: boolean;
   initialRole: UserRole;
+  bootstrap: AppBootstrapDto | null;
   onClose: () => void;
   onAuthenticated: (user: AuthState) => void;
 }) {
@@ -1402,6 +1614,11 @@ function AuthDialog({
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const devVerificationUrl =
+    bootstrap?.features.devVerificationInboxEnabled &&
+    bootstrap.verification.devVerificationInboxUrl
+      ? `${API_BASE_URL}${bootstrap.verification.devVerificationInboxUrl}`
+      : null;
 
   if (!open) return null;
 
@@ -1430,6 +1647,7 @@ function AuthDialog({
           email: login.email,
           userName: login.email,
           role: login.role,
+          roles: login.roles,
           emailConfirmed: false,
           phoneNumberConfirmed: false,
         };
@@ -1480,6 +1698,26 @@ function AuthDialog({
         setMessage("Doğrulama tamamlandı.");
       }
 
+      setStatus("success");
+    } catch (caught) {
+      setError(apiErrorMessage(caught));
+      setStatus("idle");
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setError("Doğrulama mesajı için e-posta gir.");
+      return;
+    }
+
+    setStatus("loading");
+    setError(null);
+    setMessage(null);
+
+    try {
+      await yoremioApi.resendVerification(email.trim());
+      setMessage("Doğrulama mesajı varsa yeniden gönderildi.");
       setStatus("success");
     } catch (caught) {
       setError(apiErrorMessage(caught));
@@ -1700,6 +1938,34 @@ function AuthDialog({
             </div>
           ) : null}
 
+          <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <p className="font-bold text-brand-brown">Satıcı doğrulaması</p>
+              <p className="mt-1 text-muted-foreground">
+                Email veya SMS mesajı gelmediyse aynı e-posta için yeniden gönderim iste.
+              </p>
+              {devVerificationUrl ? (
+                <a
+                  href={devVerificationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex text-xs font-black text-primary underline-offset-4 hover:underline"
+                >
+                  Development doğrulama kutusunu aç
+                </a>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResendVerification}
+              disabled={status === "loading"}
+            >
+              <RefreshCw aria-hidden />
+              Tekrar gönder
+            </Button>
+          </div>
+
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
@@ -1741,7 +2007,7 @@ function CategoryShelf({
   selectedCategory?: CategoryDto;
 }) {
   return (
-    <div className="rounded-lg border border-border/80 bg-white/92 px-4 py-5 shadow-[0_18px_50px_rgba(32,39,52,0.07)] backdrop-blur">
+    <div className="surface-soft animate-fade-up rounded-lg px-4 py-5 [animation-delay:40ms]">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
@@ -1757,7 +2023,7 @@ function CategoryShelf({
           Tüm Kategoriler
         </Button>
       </div>
-      <div className="mt-5 flex gap-3 overflow-x-auto pb-1">
+      <div className="scroll-shelf mt-5 flex gap-3 overflow-x-auto pb-2">
         <CategoryChip
           active={activeId === "all"}
           imageSrc="/hero-market.png"
@@ -1797,7 +2063,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-[126px] shrink-0 flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition",
+        "hover-lift group flex w-[126px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition",
         active
           ? "border-primary/30 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
@@ -1818,6 +2084,7 @@ function CategoryChip({
           sizes="80px"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
+        <span className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.12))] opacity-0 transition group-hover:opacity-100" />
       </span>
       <span className="line-clamp-2 min-h-9 text-xs font-black leading-4">
         {label}
@@ -1911,12 +2178,12 @@ function ProductDetailDialog({
         onClick={onClose}
       />
       <div
-        className="relative flex h-[min(940px,calc(100vh-24px))] w-full max-w-[1540px] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_34px_120px_rgba(0,0,0,0.36)]"
+        className="animate-soft-reveal relative flex h-[min(940px,calc(100vh-24px))] w-full max-w-[1540px] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_34px_120px_rgba(0,0,0,0.36)]"
         role="dialog"
         aria-modal="true"
         aria-label="Ürün detayı"
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white px-4 sm:px-5">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/92 px-4 backdrop-blur sm:px-5">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Ürün detayı
@@ -1961,7 +2228,7 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_16px_45px_rgba(32,39,52,0.07)] outline-none transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(32,39,52,0.12)] focus-visible:ring-2 focus-visible:ring-ring",
+        "animate-fade-up group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_16px_45px_rgba(32,39,52,0.07)] outline-none transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_28px_72px_rgba(32,39,52,0.14)] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
@@ -1973,8 +2240,9 @@ function ProductCard({
           alt={product.adi}
           fill
           sizes="(min-width: 1536px) 290px, (min-width: 768px) 45vw, 100vw"
-          className="object-cover transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-700 group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_45%,rgba(0,0,0,0.22))] opacity-70 transition group-hover:opacity-100" />
         <div className="absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-2">
           {category ? (
             <span
@@ -1989,7 +2257,7 @@ function ProductCard({
         </div>
         <span
           className={cn(
-            "absolute right-3 top-3 grid size-9 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm backdrop-blur",
+            "absolute right-3 top-3 grid size-9 shrink-0 place-items-center rounded-md bg-white/95 shadow-sm backdrop-blur transition group-hover:scale-105",
             isFavorite ? "text-red-600" : "text-primary",
           )}
         >
@@ -2016,7 +2284,7 @@ function ProductCard({
               {productLocation(product)}
             </p>
           </div>
-          <p className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-black text-brand-brown">
+          <p className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-black text-brand-brown shadow-sm">
             <Star className="size-3.5 fill-accent text-accent" aria-hidden />
             {product.ortalamaPuan.toFixed(1)}
           </p>
@@ -2033,7 +2301,7 @@ function ProductCard({
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3 border-t border-border pt-3">
           <div className="min-w-0">
-            <p className="text-2xl font-black text-brand-brown">
+            <p className="text-2xl font-black text-brand-brown transition group-hover:text-primary">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -2045,7 +2313,7 @@ function ProductCard({
           </Button>
         </div>
 
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        <p className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
           {product.saticiDogrulanmis ? (
             <BadgeCheck className="size-3.5 text-primary" aria-hidden />
           ) : null}
@@ -2061,6 +2329,8 @@ function ProductDetail({
   category,
   trustScore,
   authUser,
+  canReview,
+  features,
   isFavorite,
   actionStatus,
   onFavorite,
@@ -2074,6 +2344,8 @@ function ProductDetail({
   category?: CategoryDto;
   trustScore: SellerTrustScoreDto | null;
   authUser: AuthState | null;
+  canReview: boolean;
+  features?: AppFeatureFlags;
   isFavorite: boolean;
   actionStatus: string | null;
   onFavorite: (product: ProductDto) => void;
@@ -2089,6 +2361,11 @@ function ProductDetail({
   const [comment, setComment] = useState("");
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const shownTrust = trustScore?.guvenSkoru ?? (product.saticiDogrulanmis ? 84 : 62);
+  const favoritesEnabled = features?.favoritesEnabled ?? true;
+  const demandFlowEnabled = features?.demandFlowEnabled ?? true;
+  const chatEnabled = features?.chatEnabled ?? true;
+  const ratingsEnabled = features?.ratingsEnabled ?? true;
+  const reviewsEnabled = features?.reviewsEnabled ?? true;
   const mediaItems = [
     ...product.resimler.map((item) => ({ ...item, kind: "image" as const })),
     ...product.videolar.map((item) => ({ ...item, kind: "video" as const })),
@@ -2125,7 +2402,7 @@ function ProductDetail({
                   alt={product.adi}
                   fill
                   sizes="(min-width: 1280px) 900px, 100vw"
-                  className="object-cover"
+                  className="object-cover transition duration-500"
                   priority
                 />
               )
@@ -2135,7 +2412,7 @@ function ProductDetail({
                 alt={product.adi}
                 fill
                 sizes="(min-width: 1280px) 900px, 100vw"
-                className="object-cover"
+                className="object-cover transition duration-500"
                 priority
               />
             )}
@@ -2276,7 +2553,7 @@ function ProductDetail({
               variant="ghost"
               size="icon"
               onClick={() => onFavorite(product)}
-              disabled={actionStatus === `favorite-${product.id}`}
+              disabled={!favoritesEnabled || actionStatus === `favorite-${product.id}`}
               title={isFavorite ? "Favoriden çıkar" : "Favori ekle"}
             >
               {actionStatus === `favorite-${product.id}` ? (
@@ -2322,6 +2599,7 @@ function ProductDetail({
             className="mt-5 space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
+              if (!demandFlowEnabled) return;
               onDemand(product.id, miktar, note);
             }}
           >
@@ -2341,7 +2619,7 @@ function ProductDetail({
             <div className="grid gap-2 sm:grid-cols-2">
               <Button
                 className="w-full"
-                disabled={actionStatus === `demand-${product.id}`}
+                disabled={!demandFlowEnabled || actionStatus === `demand-${product.id}`}
               >
                 {actionStatus === `demand-${product.id}` ? (
                   <Loader2 className="animate-spin" aria-hidden />
@@ -2355,6 +2633,7 @@ function ProductDetail({
                 variant="outline"
                 className="w-full"
                 onClick={() => onOpenChat(product.saticiId)}
+                disabled={!chatEnabled}
               >
                 <MessageCircle aria-hidden />
                 Satıcıya Mesaj Gönder
@@ -2382,6 +2661,7 @@ function ProductDetail({
           className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!canReview || !ratingsEnabled) return;
             onRate(product.id, rating);
           }}
         >
@@ -2407,17 +2687,27 @@ function ProductDetail({
                 ))}
               </select>
             </Field>
-            <Button disabled={actionStatus === `rating-${product.id}`}>
+            <Button
+              disabled={
+                !canReview || !ratingsEnabled || actionStatus === `rating-${product.id}`
+              }
+            >
               <Check aria-hidden />
               Kaydet
             </Button>
           </div>
+          {!canReview || !ratingsEnabled ? (
+            <p className="mt-3 text-xs font-semibold text-muted-foreground">
+              Puan vermek için bu üründe anlaşılmış bir talebin olmalı.
+            </p>
+          ) : null}
         </form>
 
         <form
           className="rounded-lg border border-border/80 bg-white p-5 shadow-[0_16px_45px_rgba(32,39,52,0.07)]"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!canReview || !reviewsEnabled) return;
             if (comment.trim().length >= 3) {
               onComment(product.id, comment.trim());
               setComment("");
@@ -2436,11 +2726,16 @@ function ProductDetail({
           <Button
             className="mt-3 w-full"
             variant="outline"
-            disabled={actionStatus === `comment-${product.id}`}
+            disabled={!canReview || !reviewsEnabled || actionStatus === `comment-${product.id}`}
           >
             <MessageCircle aria-hidden />
             Yorum ekle
           </Button>
+          {!canReview || !reviewsEnabled ? (
+            <p className="mt-3 text-xs font-semibold text-muted-foreground">
+              Yorum eklemek için kabul edilmiş teklif ve anlaşılmış talep gerekir.
+            </p>
+          ) : null}
         </form>
 
         <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_16px_45px_rgba(32,39,52,0.07)]">
@@ -2488,6 +2783,7 @@ function WorkspaceSection({
   workspace,
   setWorkspace,
   authUser,
+  uploads,
   selectedProduct,
   categories,
   recommendedProducts,
@@ -2520,6 +2816,7 @@ function WorkspaceSection({
   workspace: Workspace;
   setWorkspace: (value: Workspace) => void;
   authUser: AuthState | null;
+  uploads?: AppUploadsConfig;
   selectedProduct: ProductDto | null;
   categories: CategoryDto[];
   recommendedProducts: ProductDto[];
@@ -2573,7 +2870,7 @@ function WorkspaceSection({
             Pazar operasyon merkezi
           </h2>
         </div>
-        <div className="flex w-full rounded-lg border border-border bg-muted/80 p-1 shadow-inner sm:w-auto">
+        <div className="surface-glass flex w-full rounded-lg p-1 shadow-inner sm:w-auto">
           {workspaces.map((item) => {
             const Icon = item.icon;
             return (
@@ -2584,8 +2881,8 @@ function WorkspaceSection({
                 className={cn(
                   "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition sm:flex-none",
                   workspace === item.id
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-white text-primary shadow-[0_8px_22px_rgba(32,39,52,0.1)]"
+                    : "text-muted-foreground hover:bg-white/55 hover:text-foreground",
                 )}
               >
                 <Icon className="size-4" aria-hidden />
@@ -2596,7 +2893,7 @@ function WorkspaceSection({
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="animate-fade-up mt-6">
         {workspace === "buyer" ? (
           <BuyerWorkspace
             authUser={authUser}
@@ -2627,8 +2924,7 @@ function WorkspaceSection({
             onProductDelete={onProductDelete}
             onDeleteMedia={onDeleteMedia}
             onOffer={onOffer}
-            onCategorySave={onCategorySave}
-            onCategoryDelete={onCategoryDelete}
+            uploads={uploads}
           />
         ) : null}
         {workspace === "chat" ? (
@@ -2644,6 +2940,16 @@ function WorkspaceSection({
             onLogin={onLogin}
             onTargetChange={onChatTargetChange}
             onSendMessage={onSendMessage}
+          />
+        ) : null}
+        {workspace === "admin" ? (
+          <AdminWorkspace
+            authUser={authUser}
+            categories={categories}
+            actionStatus={actionStatus}
+            onLogin={onLogin}
+            onCategorySave={onCategorySave}
+            onCategoryDelete={onCategoryDelete}
           />
         ) : null}
       </div>
@@ -2677,7 +2983,7 @@ function BuyerWorkspace({
   const [miktar, setMiktar] = useState(2);
   const [note, setNote] = useState("Toplu alım için fiyat rica ederim.");
 
-  if (!authUser || authUser.role !== "ALICI") {
+  if (!hasRole(authUser, "ALICI")) {
     return <LockedPanel role="ALICI" onLogin={onLogin} />;
   }
 
@@ -2844,8 +3150,7 @@ function SellerWorkspace({
   onProductDelete,
   onDeleteMedia,
   onOffer,
-  onCategorySave,
-  onCategoryDelete,
+  uploads,
 }: {
   authUser: AuthState | null;
   categories: CategoryDto[];
@@ -2870,13 +3175,9 @@ function SellerWorkspace({
     talepId: number,
     values: { birimFiyat?: number; mesaj: string },
   ) => void;
-  onCategorySave: (
-    values: { adi: string; aciklama: string },
-    categoryToUpdate?: number,
-  ) => void;
-  onCategoryDelete: (id: number) => void;
+  uploads?: AppUploadsConfig;
 }) {
-  if (!authUser || authUser.role !== "SATICI") {
+  if (!hasRole(authUser, "SATICI")) {
     return <LockedPanel role="SATICI" onLogin={onLogin} />;
   }
 
@@ -2888,12 +3189,7 @@ function SellerWorkspace({
           actionStatus={actionStatus}
           onProfileUpdate={onProfileUpdate}
         />
-        <CategoryManager
-          categories={categories}
-          actionStatus={actionStatus}
-          onCategorySave={onCategorySave}
-          onCategoryDelete={onCategoryDelete}
-        />
+        <SellerRuleCard />
       </div>
 
       <div className="space-y-4">
@@ -2911,6 +3207,7 @@ function SellerWorkspace({
           onProductSave={onProductSave}
           onProductDelete={onProductDelete}
           onDeleteMedia={onDeleteMedia}
+          uploads={uploads}
         />
 
         <Panel title="Gelen talepler" description="Açık taleplere teklif ver">
@@ -3029,6 +3326,25 @@ function SellerProfileForm({
   );
 }
 
+function SellerRuleCard() {
+  return (
+    <Card className="p-4">
+      <div className="flex items-start gap-3">
+        <div className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-primary">
+          <ShieldCheck className="size-5" aria-hidden />
+        </div>
+        <div>
+          <h3 className="font-bold">Kategori yönetimi admin alanında</h3>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Satıcılar ürün eklerken mevcut kategorileri seçer. Kategori oluşturma,
+            güncelleme ve silme işlemleri artık sadece ADMIN rolüyle yapılır.
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function ProductManager({
   categories,
   products,
@@ -3037,6 +3353,7 @@ function ProductManager({
   onProductSave,
   onProductDelete,
   onDeleteMedia,
+  uploads,
 }: {
   categories: CategoryDto[];
   products: ProductDto[];
@@ -3045,6 +3362,7 @@ function ProductManager({
   onProductSave: (values: ProductFormValues, productId?: number) => void;
   onProductDelete: (urunId: number) => void;
   onDeleteMedia: (urunId: number, mediaId: number, kind: "image" | "video") => void;
+  uploads?: AppUploadsConfig;
 }) {
   const [editingProductId, setEditingProductId] = useState<number | undefined>();
   const editingProduct = products.find((product) => product.id === editingProductId);
@@ -3055,6 +3373,7 @@ function ProductManager({
         categories={categories}
         product={editingProduct}
         actionStatus={actionStatus}
+        uploads={uploads}
         onCancel={() => setEditingProductId(undefined)}
         onProductSave={(values, productId) => {
           onProductSave(values, productId);
@@ -3158,12 +3477,14 @@ function ProductForm({
   categories,
   product,
   actionStatus,
+  uploads,
   onCancel,
   onProductSave,
 }: {
   categories: CategoryDto[];
   product?: ProductDto;
   actionStatus: string | null;
+  uploads?: AppUploadsConfig;
   onCancel: () => void;
   onProductSave: (values: ProductFormValues, productId?: number) => void;
 }) {
@@ -3272,6 +3593,11 @@ function ProductForm({
             multiple
             onChange={updateImages}
           />
+          {uploads ? (
+            <span className="block text-xs font-normal text-muted-foreground">
+              Dosya başına en fazla {formatBytes(uploads.maxImageBytes)}
+            </span>
+          ) : null}
         </Field>
         <Field label="Videolar" htmlFor="product-videos">
           <Input
@@ -3281,6 +3607,11 @@ function ProductForm({
             multiple
             onChange={updateVideos}
           />
+          {uploads ? (
+            <span className="block text-xs font-normal text-muted-foreground">
+              Dosya başına en fazla {formatBytes(uploads.maxVideoBytes)}
+            </span>
+          ) : null}
         </Field>
       </div>
       <div className="flex gap-2 lg:col-span-2">
@@ -3304,6 +3635,58 @@ function ProductForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function AdminWorkspace({
+  authUser,
+  categories,
+  actionStatus,
+  onLogin,
+  onCategorySave,
+  onCategoryDelete,
+}: {
+  authUser: AuthState | null;
+  categories: CategoryDto[];
+  actionStatus: string | null;
+  onLogin: () => void;
+  onCategorySave: (
+    values: { adi: string; aciklama: string },
+    categoryToUpdate?: number,
+  ) => void;
+  onCategoryDelete: (id: number) => void;
+}) {
+  if (!hasRole(authUser, "ADMIN")) {
+    return <LockedPanel role="ADMIN" onLogin={onLogin} />;
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
+      <CategoryManager
+        categories={categories}
+        actionStatus={actionStatus}
+        onCategorySave={onCategorySave}
+        onCategoryDelete={onCategoryDelete}
+      />
+      <Panel title="Kategori sözleşmesi" description="Admin yetkili taksonomi yönetimi">
+        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              className="rounded-lg border border-border bg-background p-4"
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                #{category.id}
+              </p>
+              <h3 className="mt-2 font-black text-brand-brown">{category.adi}</h3>
+              <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                {category.aciklama || "Açıklama eklenmedi."}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
   );
 }
 
