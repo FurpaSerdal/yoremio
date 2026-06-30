@@ -13,7 +13,7 @@ export function BrandLogo({
 }) {
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      <span className="grid shrink-0 place-items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-border/70">
+      <span className="grid shrink-0 place-items-center rounded-md bg-white p-1 ring-1 ring-border/70">
         <Image
           src="/yoremio-mark.svg"
           alt="Yöremio logosu"
@@ -34,7 +34,7 @@ export function BrandLogo({
         <p
           className={cn(
             "truncate text-xs font-bold leading-4",
-            inverse ? "text-white/72" : "text-primary",
+            inverse ? "text-white/72" : "text-muted-foreground",
           )}
         >
           Yerel Pazar

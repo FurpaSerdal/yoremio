@@ -1132,8 +1132,8 @@ export function YoremioMarketplace() {
       />
 
       <main>
-        <section id="kesif" className="mx-auto max-w-[1760px] px-3 py-4 sm:px-5">
-          <div className="grid gap-4 lg:grid-cols-[238px_minmax(0,1fr)]">
+        <section id="kesif" className="mx-auto max-w-[1440px] px-3 py-4 sm:px-5">
+          <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
             <DiscoverySidebar
               categories={categories}
               activeId={categoryId}
@@ -1163,8 +1163,8 @@ export function YoremioMarketplace() {
             />
 
             <div className="min-w-0 space-y-4">
-              <div className="surface-glass rounded-lg p-3 sm:p-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="y-card p-3 sm:p-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="green">
@@ -1175,7 +1175,7 @@ export function YoremioMarketplace() {
                         {productsPage.totalCount} sonuç
                       </Badge>
                     </div>
-                    <h1 className="mt-2 text-2xl font-black tracking-normal text-brand-brown sm:text-3xl">
+                    <h1 className="mt-2 text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
                       Ardahan ve çevresinden canlı yerel ürünler
                     </h1>
                     {marketError ? (
@@ -1191,7 +1191,7 @@ export function YoremioMarketplace() {
                   </div>
 
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center xl:justify-end">
-                    <div className="grid h-10 grid-cols-3 rounded-md border border-border bg-background p-1 text-sm font-bold">
+                    <div className="grid h-10 grid-cols-3 rounded-md border border-border bg-muted/55 p-1 text-sm font-bold">
                       <button className="rounded-sm bg-white px-3 text-primary shadow-sm" type="button">
                         Ürünler
                       </button>
@@ -1275,7 +1275,7 @@ export function YoremioMarketplace() {
           </div>
         </section>
 
-        <section id="paneller" className="border-t border-border/70 bg-[#fbfaf7]">
+        <section id="paneller" className="border-t border-border bg-background">
           <WorkspaceSection
             workspace={workspace}
             setWorkspace={setWorkspace}
@@ -1403,7 +1403,7 @@ function DiscoverySidebar({
 }) {
   return (
     <aside className="hidden lg:block">
-      <div className="sticky top-24 rounded-lg border border-border bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+      <div className="sticky top-24 y-card p-4">
         <div className="border-b border-border pb-3">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
             Kategoriler
@@ -1413,15 +1413,15 @@ function DiscoverySidebar({
           </p>
         </div>
 
-        <div className="mt-3 grid gap-1.5">
+        <div className="mt-3 grid gap-2">
           <button
             type="button"
             onClick={() => onCategorySelect("all")}
             className={cn(
-              "flex h-9 items-center justify-between rounded-md px-2.5 text-sm font-bold transition",
+              "flex h-10 items-center justify-between rounded-md border px-3 text-sm font-bold transition",
               activeId === "all"
-                ? "bg-secondary text-primary"
-                : "text-foreground hover:bg-background",
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-white text-foreground hover:border-primary/40 hover:bg-secondary/45",
             )}
           >
             Tümü
@@ -1433,10 +1433,10 @@ function DiscoverySidebar({
               type="button"
               onClick={() => onCategorySelect(category.id)}
               className={cn(
-                "flex h-9 items-center justify-between rounded-md px-2.5 text-sm font-bold transition",
+                "flex h-10 items-center justify-between rounded-md border px-3 text-sm font-bold transition",
                 activeId === category.id
-                  ? "bg-secondary text-primary"
-                  : "text-foreground hover:bg-background",
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-white text-foreground hover:border-primary/40 hover:bg-secondary/45",
               )}
             >
               <span className="truncate">{category.adi}</span>
@@ -1483,7 +1483,7 @@ function DiscoverySidebar({
               id="market-rating"
               value={minRating}
               onChange={(event) => onMinRatingChange(event.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
+              className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
             >
               <option value="">Tüm puanlar</option>
               <option value="4">4+ puan</option>
@@ -1497,7 +1497,7 @@ function DiscoverySidebar({
             role="switch"
             aria-checked={inStockOnly}
             onClick={onStockToggle}
-            className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-background px-3 text-sm font-bold transition hover:border-primary/35"
+            className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-white px-3 text-sm font-bold transition hover:border-primary/40"
           >
             Yakınımdakiler / stokta
             <span
@@ -1553,13 +1553,13 @@ function AppHeader({
   const displayName = accountDisplayName(authUser, sellerProfile);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-[#fbfaf7]/96 shadow-[0_8px_24px_rgba(32,39,52,0.06)]">
-      <div className="mx-auto grid min-h-[76px] max-w-[1760px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 sm:px-5">
+    <header className="sticky top-0 z-40 border-b border-border bg-white/95 shadow-[0_6px_18px_rgba(32,39,52,0.05)] backdrop-blur">
+      <div className="mx-auto grid min-h-[68px] max-w-[1440px] grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2 sm:px-5">
         <Link href="/" className="min-w-0">
           <BrandLogo compact />
         </Link>
 
-        <nav className="hidden items-center justify-center gap-7 text-sm font-extrabold text-foreground lg:flex">
+        <nav className="hidden items-center justify-center gap-7 text-sm font-bold text-foreground lg:flex">
           <a href="#kesif" className="transition hover:text-primary">
             Kategoriler
           </a>
@@ -1585,7 +1585,7 @@ function AppHeader({
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder="Ürün, kategori veya satıcı ara..."
-              className="h-12 border-border bg-white/92 pl-11 pr-12 shadow-[0_8px_24px_rgba(32,39,52,0.06)]"
+              className="h-11 border-border bg-white pl-11 pr-12"
             />
             <Button
               type="submit"
@@ -1811,15 +1811,15 @@ function AuthDialog({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 px-3 py-3 sm:px-4 sm:py-6">
       <div
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-white shadow-[0_12px_34px_rgba(0,0,0,0.18)]"
+        className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-lg border border-border bg-white shadow-[0_12px_34px_rgba(0,0,0,0.18)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-[#fbfaf7] px-4 py-3 sm:px-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-white px-4 py-3 sm:px-5">
           <div className="max-w-xl">
             <BrandLogo compact />
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Güvenli oturum
             </p>
             <h2 id="auth-title" className="mt-1 text-xl font-black text-brand-brown">
@@ -1838,7 +1838,7 @@ function AuthDialog({
         </div>
 
         <form className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" onSubmit={handleSubmit}>
-          <div className="grid rounded-md border border-border bg-muted/70 p-1 sm:grid-cols-4">
+          <div className="grid rounded-md border border-border bg-muted/60 p-1 sm:grid-cols-4">
             <button
               type="button"
               onClick={() => chooseLoginRole("ALICI")}
@@ -2087,13 +2087,13 @@ function CategoryShelf({
   selectedCategory?: CategoryDto;
 }) {
   return (
-    <div className="surface-soft rounded-lg px-4 py-5">
+    <div className="y-card px-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
+          <h2 className="text-base font-black tracking-normal text-brand-brown">
             Popüler Kategoriler
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
             {selectedCategory?.aciklama ??
               "Sebze, meyve, süt ürünleri, bakliyat ve kahvaltılık"}
           </p>
@@ -2103,7 +2103,7 @@ function CategoryShelf({
           Tüm Kategoriler
         </Button>
       </div>
-      <div className="scroll-shelf mt-5 flex gap-3 overflow-x-auto pb-2">
+      <div className="scroll-shelf mt-3 flex gap-2 overflow-x-auto pb-1">
         <CategoryChip
           active={activeId === "all"}
           imageSrc="/hero-market.png"
@@ -2143,7 +2143,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-[126px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-3 text-center outline-none transition-colors",
+        "group flex w-[82px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-2 text-center outline-none transition-colors",
         active
           ? "border-primary/30 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
@@ -2151,7 +2151,7 @@ function CategoryChip({
     >
       <span
         className={cn(
-          "relative size-20 overflow-hidden rounded-md border bg-muted shadow-sm transition-colors",
+          "relative size-12 overflow-hidden rounded-full border bg-muted transition-colors",
           active
             ? "border-primary ring-4 ring-primary/10"
             : "border-border group-hover:border-primary/50",
@@ -2165,7 +2165,7 @@ function CategoryChip({
           className="object-cover"
         />
       </span>
-      <span className="line-clamp-2 min-h-9 text-xs font-black leading-4">
+      <span className="line-clamp-2 min-h-8 text-[11px] font-bold leading-4">
         {label}
       </span>
     </button>
@@ -2257,7 +2257,7 @@ function ProductDetailDialog({
         onClick={onClose}
       />
       <div
-        className="relative flex h-[min(760px,calc(100svh-28px))] w-[min(1180px,calc(100vw-32px))] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_12px_36px_rgba(0,0,0,0.2)]"
+        className="relative flex h-[min(840px,calc(100svh-28px))] w-[min(1280px,calc(100vw-32px))] flex-col overflow-hidden rounded-lg border border-white/20 bg-background shadow-[0_12px_36px_rgba(0,0,0,0.2)]"
         role="dialog"
         aria-modal="true"
         aria-label="Ürün detayı"
@@ -2307,18 +2307,18 @@ function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_6px_18px_rgba(32,39,52,0.05)] outline-none transition-colors duration-150 hover:shadow-[0_10px_26px_rgba(32,39,52,0.08)] focus-visible:ring-2 focus-visible:ring-ring",
+        "group grid min-w-0 cursor-pointer grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-lg border bg-white text-left shadow-[0_6px_18px_rgba(32,39,52,0.035)] outline-none transition-colors duration-150 hover:shadow-[0_10px_26px_rgba(32,39,52,0.065)] focus-visible:ring-2 focus-visible:ring-ring sm:block",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",
       )}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+      <div className="relative min-h-[154px] overflow-hidden bg-muted sm:aspect-[4/3] sm:min-h-0">
         <Image
           src={productImage(product)}
           alt={product.adi}
           fill
-          sizes="(min-width: 1536px) 290px, (min-width: 768px) 45vw, 100vw"
+          sizes="(min-width: 1536px) 260px, (min-width: 768px) 45vw, 132px"
           className="object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_45%,rgba(0,0,0,0.18))]" />
@@ -2358,9 +2358,9 @@ function ProductCard({
         ) : null}
       </div>
 
-      <div className="space-y-2.5 p-3">
+      <div className="min-w-0 space-y-2 p-3 sm:space-y-2.5">
         <div>
-          <h3 className="line-clamp-1 text-base font-black text-brand-brown">
+          <h3 className="line-clamp-2 text-sm font-black text-brand-brown sm:line-clamp-1 sm:text-base">
             {product.adi}
           </h3>
           <p className="mt-1 flex min-w-0 items-center gap-1 text-xs font-semibold text-primary">
@@ -2385,9 +2385,9 @@ function ProductCard({
           </p>
         </div>
 
-        <div className="grid grid-cols-[1fr_auto] items-end gap-2 border-t border-border pt-2.5">
+        <div className="grid grid-cols-[1fr_auto] items-end gap-2 border-t border-border pt-2">
           <div className="min-w-0">
-            <p className="text-xl font-black text-brand-brown group-hover:text-primary">
+            <p className="text-lg font-black text-brand-brown group-hover:text-primary sm:text-xl">
               {formatPrice(product.fiyat)}
             </p>
             <p className="text-xs font-semibold text-muted-foreground">
@@ -2464,11 +2464,11 @@ function ProductDetail({
   return (
     <section
       id="detay"
-      className="grid h-full min-h-0 gap-2 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_350px]"
+      className="grid h-full min-h-0 gap-3 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_380px]"
     >
       <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
-        <div className="min-h-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_22px_rgba(32,39,52,0.06)]">
-          <div className="relative h-[min(35vh,300px)] min-h-[210px] overflow-hidden bg-muted">
+        <div className="min-h-0 overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
+          <div className="relative h-[min(46vh,430px)] min-h-[250px] overflow-hidden bg-muted">
             {activeMedia ? (
               activeMedia.kind === "video" ? (
                 <video
@@ -2575,7 +2575,7 @@ function ProductDetail({
           <Metric label="Favori" value={String(product.toplamFavori)} icon={Heart} />
         </div>
 
-        <div className="shrink-0 rounded-lg border border-border/80 bg-white p-2.5 shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
+        <div className="shrink-0 rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -2596,7 +2596,7 @@ function ProductDetail({
           </p>
         </div>
 
-        <div className="min-h-0 rounded-lg border border-border/80 bg-white p-2.5 shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
+        <div className="min-h-0 rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
           <div className="flex items-center gap-3 border-b border-border pb-1.5">
             <button
               type="button"
@@ -2618,7 +2618,7 @@ function ProductDetail({
       </div>
 
       <aside className="flex min-h-0 flex-col gap-2 overflow-hidden">
-        <div className="shrink-0 rounded-lg border border-border/80 bg-white p-2.5 shadow-[0_8px_24px_rgba(32,39,52,0.07)]">
+        <div className="shrink-0 rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm font-bold text-primary">
@@ -2741,7 +2741,7 @@ function ProductDetail({
         </div>
 
         <form
-          className="shrink-0 rounded-lg border border-border/80 bg-white p-2.5 shadow-[0_8px_22px_rgba(32,39,52,0.05)]"
+          className="shrink-0 rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!canReview || !ratingsEnabled) return;
@@ -2787,7 +2787,7 @@ function ProductDetail({
         </form>
 
         <form
-          className="shrink-0 rounded-lg border border-border/80 bg-white p-2.5 shadow-[0_8px_22px_rgba(32,39,52,0.05)]"
+          className="shrink-0 rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!canReview || !reviewsEnabled) return;
@@ -2821,7 +2821,7 @@ function ProductDetail({
           ) : null}
         </form>
 
-        <div className="min-h-0 overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_22px_rgba(32,39,52,0.05)]">
+        <div className="min-h-0 overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
           <div className="border-b border-border px-2.5 py-1.5">
             <h3 className="text-sm font-bold">Son yorumlar</h3>
           </div>
@@ -2948,18 +2948,18 @@ function WorkspaceSection({
   onSendMessage: (receiverId: string, message: string) => void;
 }) {
   return (
-    <div className="mx-auto max-w-[1760px] px-3 py-10 sm:px-5">
+    <div className="mx-auto max-w-[1440px] px-3 py-6 sm:px-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Badge variant="plum">
+          <Badge variant="green">
             <Sparkles className="size-3.5" aria-hidden />
             Genel panel
           </Badge>
-          <h2 className="mt-3 text-3xl font-black tracking-normal text-brand-brown sm:text-4xl">
+          <h2 className="mt-2 text-2xl font-black tracking-normal text-brand-brown sm:text-3xl">
             Pazar operasyon merkezi
           </h2>
         </div>
-        <div className="surface-glass flex w-full rounded-lg p-1 shadow-inner sm:w-auto">
+        <div className="y-card-flat flex w-full p-1 sm:w-auto">
           {workspaces.map((item) => {
             const Icon = item.icon;
             return (
@@ -2970,7 +2970,7 @@ function WorkspaceSection({
                 className={cn(
                   "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition sm:flex-none",
                   workspace === item.id
-                    ? "bg-white text-primary shadow-[0_8px_22px_rgba(32,39,52,0.1)]"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-white/55 hover:text-foreground",
                 )}
               >
@@ -4130,7 +4130,7 @@ function ChatWorkspace({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+      <div className="rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
         <div className="flex items-center justify-between gap-2 px-1 py-2">
           <div>
             <h3 className="font-bold">Konuşmalar</h3>
@@ -4184,7 +4184,7 @@ function ChatWorkspace({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+      <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-bold">
@@ -4319,8 +4319,8 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border/80 bg-white shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
-      <div className="flex items-center justify-between gap-3 border-b border-border bg-[#fbfaf7] px-4 py-3">
+    <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-white px-4 py-3">
         <div>
           <h3 className="font-bold">{title}</h3>
           <p className="text-sm text-muted-foreground">{description}</p>
@@ -4343,7 +4343,7 @@ function PaginationBar({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border/80 bg-white p-3 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+    <div className="flex items-center justify-between rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
       <Button
         variant="outline"
         disabled={page <= 1}
@@ -4384,7 +4384,7 @@ function LockedPanel({
   ];
 
   return (
-    <div className="rounded-lg border border-dashed border-primary/30 bg-white p-10 text-center shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+    <div className="rounded-lg border border-dashed border-primary/30 bg-white p-10 text-center shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
       <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden />
       <h3 className="mt-3 text-xl font-black text-brand-brown">
         {anyRole ? "Giriş gerekli" : `${roleLabel(role)} girişi gerekli`}
@@ -4426,7 +4426,7 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border/90 bg-white p-8 text-center">
+    <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center">
       <Icon className="mx-auto size-8 text-muted-foreground" aria-hidden />
       <p className="mt-3 font-bold">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
@@ -4446,7 +4446,7 @@ function WorkspaceStat({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border/80 bg-white p-4 shadow-[0_8px_24px_rgba(32,39,52,0.055)]">
+    <div className="rounded-lg border border-border bg-white p-4 shadow-[0_8px_22px_rgba(32,39,52,0.045)]">
       <Icon className="size-5 text-primary" aria-hidden />
       <p className="mt-3 text-2xl font-black text-brand-brown">{value}</p>
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -4464,7 +4464,7 @@ function Metric({
   icon: LucideIcon;
 }) {
   return (
-    <div className="rounded-lg border border-border/80 bg-white p-2.5 shadow-sm">
+    <div className="rounded-lg border border-border bg-white p-2.5">
       <Icon className="size-3.5 text-accent" aria-hidden />
       <p className="mt-1 text-base font-black text-brand-brown">{value}</p>
       <p className="text-[11px] text-muted-foreground">{label}</p>

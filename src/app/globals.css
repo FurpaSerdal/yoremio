@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f5ef;
-  --foreground: #191a17;
+  --background: #fbfaf7;
+  --foreground: #141812;
   --card: #ffffff;
-  --card-foreground: #1c211b;
-  --primary: #0a6a44;
+  --card-foreground: #141812;
+  --primary: #194d33;
   --primary-foreground: #fffdf7;
-  --secondary: #e8f0df;
-  --secondary-foreground: #22331f;
-  --accent: #e7a321;
+  --secondary: #eef5ec;
+  --secondary-foreground: #183725;
+  --accent: #d89a27;
   --accent-foreground: #271704;
-  --muted: #ece7dd;
-  --muted-foreground: #6e6a61;
-  --border: #ded5c5;
-  --input: #d9d0bf;
-  --ring: #23785a;
-  --brand-brown: #242018;
+  --muted: #f1eee8;
+  --muted-foreground: #68746e;
+  --border: #e5e0d6;
+  --input: #ded8cf;
+  --ring: #2f7a4e;
+  --brand-brown: #26312b;
   --plum: #714460;
-  --tomato: #bb4a33;
-  --ink: #202734;
+  --tomato: #c7513a;
+  --ink: #17211d;
   --sky: #2f6f86;
 }
 
@@ -57,7 +57,9 @@
 
 body {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fffdf8 0%, #f7f5ef 42%, #f1eee6 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(251, 250, 247, 0.94)),
+    #fbfaf7;
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
@@ -113,15 +115,28 @@ textarea {
 
 @layer utilities {
   .surface-glass {
-    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 12px 34px rgba(32, 39, 52, 0.07);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 8px 22px rgba(32, 39, 52, 0.045);
   }
 
   .surface-soft {
-    border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 248, 0.88));
-    box-shadow: 0 12px 34px rgba(32, 39, 52, 0.06);
+    border: 1px solid var(--border);
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(32, 39, 52, 0.045);
+  }
+
+  .y-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(32, 39, 52, 0.045);
+  }
+
+  .y-card-flat {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
   }
 
   .animate-fade-up {
