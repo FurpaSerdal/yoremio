@@ -66,6 +66,53 @@ export type AppBootstrapDto = {
   uploads: AppUploadsConfig;
 };
 
+export type DashboardSummaryDto = {
+  roles: UserRole[];
+  unreadMessages: number;
+  favoriteProducts: number;
+  myProducts: number;
+  openDemands: number;
+  buyerOpenDemands: number;
+  sellerOpenDemands: number;
+  pendingOffers: number;
+  buyerPendingOffers: number;
+  sellerPendingOffers: number;
+};
+
+export type SellerDashboardDto = {
+  totalProducts: number;
+  activeProducts: number;
+  inactiveProducts: number;
+  outOfStockProducts: number;
+  totalFavorites: number;
+  totalReviews: number;
+  totalRatings: number;
+  averageRating: number;
+  trustScore: number;
+  openDemands: number;
+  agreedDemands: number;
+  pendingOffers: number;
+  acceptedOffers: number;
+  rejectedOffers: number;
+  unreadMessages: number;
+};
+
+export type AdminDashboardDto = {
+  totalUsers: number;
+  totalSellers: number;
+  activeSellers: number;
+  totalBuyers: number;
+  totalProducts: number;
+  activeProducts: number;
+  inactiveProducts: number;
+  totalDemands: number;
+  openDemands: number;
+  agreedDemands: number;
+  totalReviews: number;
+  totalMessages: number;
+  unreadMessages: number;
+};
+
 export type CategoryDto = {
   id: number;
   adi: string;
@@ -100,7 +147,9 @@ export type ProductDto = {
   aciklama?: string | null;
   fiyat: number;
   stokMiktari: number;
+  aktifMi?: boolean;
   kategoriId: number;
+  kategoriAdi?: string | null;
   saticiId: string;
   saticiMagazaAdi?: string | null;
   saticiSehir?: string | null;
@@ -131,9 +180,11 @@ export type ProductQuery = {
   kategoriId?: number;
   minFiyat?: number;
   maxFiyat?: number;
+  saticiId?: string;
   sehir?: string;
   ilce?: string;
   sadeceStoktaOlanlar?: boolean;
+  sadeceAktif?: boolean;
   minOrtalamaPuan?: number;
   sort?: string;
 };
@@ -415,11 +466,21 @@ export const yoremioApi = {
     request<SessionUser>("/api/Auth/me", {
       token,
     }),
-  confirmEmail: (userId: string, token: string) =>
+  confirmEmail: (email: string, code: string) =>
+    request<null>("/api/Auth/confirm-email", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+  confirmPhone: (email: string, code: string) =>
+    request<null>("/api/Auth/confirm-phone", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+  confirmEmailLink: (userId: string, token: string) =>
     request<null>(
       `/api/Auth/confirm-email?${queryString({ userId, token })}`,
     ),
-  confirmPhone: (userId: string, token: string) =>
+  confirmPhoneLink: (userId: string, token: string) =>
     request<null>(
       `/api/Auth/confirm-phone?${queryString({ userId, token })}`,
     ),
@@ -430,6 +491,24 @@ export const yoremioApi = {
     }),
 
   categories: () => request<CategoryDto[]>("/api/Kategori"),
+  dashboardSummary: (token: string) =>
+    request<DashboardSummaryDto>("/api/Dashboard/summary", {
+      token,
+    }),
+  sellerDashboard: (token: string) =>
+    request<SellerDashboardDto>("/api/Dashboard/satici", {
+      token,
+    }),
+  adminDashboard: (token: string) =>
+    request<AdminDashboardDto>("/api/Dashboard/admin", {
+      token,
+    }),
+  updateProductStatus: (token: string, urunId: number, aktifMi: boolean) =>
+    request<ProductDto>(`/api/Urun/${urunId}/status`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ aktifMi }),
+    }),
   category: (id: number) => request<CategoryDto>(`/api/Kategori/${id}`),
   createCategory: (token: string, values: Omit<CategoryDto, "id">) =>
     request<CategoryDto>("/api/Kategori", {
@@ -458,9 +537,11 @@ export const yoremioApi = {
         kategoriId: query.kategoriId,
         minFiyat: query.minFiyat,
         maxFiyat: query.maxFiyat,
+        saticiId: query.saticiId,
         sehir: query.sehir,
         ilce: query.ilce,
         sadeceStoktaOlanlar: query.sadeceStoktaOlanlar,
+        sadeceAktif: query.sadeceAktif,
         minOrtalamaPuan: query.minOrtalamaPuan,
         sort: query.sort ?? "newest",
       })}`,

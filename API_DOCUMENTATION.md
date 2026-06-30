@@ -99,6 +99,7 @@ Response `data`:
     "cloudinaryEnabled": false
   },
   "verification": {
+    "requireConfirmedEmailForSellerLogin": true,
     "requireConfirmedPhoneForSellerLogin": true,
     "devVerificationInboxUrl": "/dev/verification"
   },
@@ -120,7 +121,23 @@ UI kullanimi:
 - Development ortaminda `features.devVerificationInboxEnabled=true` ise satici dogrulama ekraninda `verification.devVerificationInboxUrl` linkini gosterin.
 - Feature flag kapaliysa ilgili UI aksiyonunu gizleyin veya pasif gosterin.
 
-### 3.1 Auth Header
+### 3.1 Dashboard / Header Summary
+
+Login sonrasi UI header badge'leri, bos durum kararlarini ve panel kartlarini tek tek liste endpointlerinden hesaplamamalidir. Bunun yerine asagidaki endpointler kullanilmalidir:
+
+- `GET /api/Dashboard/summary`: Login kullanici icin kisa rozet ve sayac ozeti.
+- `GET /api/Dashboard/satici`: Satici panelinin ilk ekran kartlari.
+- `GET /api/Dashboard/admin`: Admin panelinin ilk ekran kartlari.
+
+UI kullanimi:
+
+- App acilinca `GET /api/App/bootstrap`, token varsa `GET /api/Auth/me`, ardindan `GET /api/Dashboard/summary` cagrilabilir.
+- Header mesaj badge'i icin `unreadMessages` kullanin.
+- Favoriler/talepler/teklifler bos ekran kararinda summary sayaclarini kullanin.
+- Satici panelinde kartlari doldurmak icin `GET /api/Dashboard/satici` cagrin; urun tablosu icin yine `GET /api/Urun/urunlerim` kullanin.
+- Admin panelinde ilk KPI kartlari icin `GET /api/Dashboard/admin` cagrin; detay listeleri ayrica ilgili endpointlerden yuklenmelidir.
+
+### 3.2 Auth Header
 
 Korumalı endpointlerde:
 
@@ -273,6 +290,7 @@ Ana ekranlar:
 
 Önemli endpointler:
 
+- `GET /api/Dashboard/summary`
 - `GET /api/Urun`
 - `GET /api/Urun/onerilen`
 - `GET /api/Urun/favorilerim`
@@ -288,6 +306,7 @@ Ana ekranlar:
 
 Ana ekranlar:
 
+- Satıcı dashboard
 - Satıcı profil
 - Ürünlerim
 - Ürün ekle/güncelle
@@ -295,15 +314,17 @@ Ana ekranlar:
 - Gelen talepler
 - Teklif verme
 - Chat
-- Kategori yönetimi
 
 Önemli endpointler:
 
+- `GET /api/Dashboard/summary`
+- `GET /api/Dashboard/satici`
 - `GET /api/Profil/satici`
 - `PUT /api/Profil/satici`
 - `GET /api/Urun/urunlerim`
 - `POST /api/Urun/urun-ekle`
 - `PUT /api/Urun/{urunId}`
+- `PATCH /api/Urun/{urunId}/status`
 - `DELETE /api/Urun/{urunId}`
 - `DELETE /api/Urun/{urunId}/resimler/{resimId}`
 - `DELETE /api/Urun/{urunId}/videolar/{videoId}`
@@ -421,6 +442,12 @@ Alıcı aksiyonları:
 1. `GET /api/Urun/{urunId}`
 2. `PUT /api/Urun/{urunId}` multipart/form-data
 
+Aktif/pasif durumu:
+
+- `PATCH /api/Urun/{urunId}/status`
+- Body: `{ "aktifMi": false }`
+- UI'da toggle veya menu aksiyonu olarak kullanin. Pasife alinan urun public listelemede gosterilmez, saticinin `urunlerim` ekraninda yonetilmeye devam eder.
+
 Medya silme:
 
 - Resim: `DELETE /api/Urun/{urunId}/resimler/{resimId}`
@@ -533,9 +560,11 @@ Response:
 
 Mantık:
 
-- Satıcı kaydı sonrası email ve telefon doğrulama akışı vardır.
-- Satıcı profili `AktifMi=false` başlar.
-- Email ve telefon doğrulanınca satıcı aktif hale gelir.
+- Satıcı kaydı sonrası email/telefon doğrulama akışı config'e bağlıdır.
+- `Verification:RequireConfirmedEmailForSellerLogin=true` veya `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satıcı profili `AktifMi=false` başlar.
+- Zorunlu doğrulamalar tamamlanınca satıcı aktif hale gelir.
+- Gerçek email/SMS servisi yoksa bu flag'ler `false` yapılır; satıcı kayıt sonrası direkt aktif/login olabilir.
+- Config `Verification:RequireConfirmedEmailForSellerLogin=true` ise satıcı login için email doğrulaması gerekir.
 - Config `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satıcı login için telefon doğrulaması da gerekir.
 
 ### 6.2 Alıcı Kaydı
@@ -635,6 +664,40 @@ UI kullanımı:
 
 ### 6.5 Email Doğrulama
 
+UI kod formu için ana endpoint:
+
+`POST /api/Auth/confirm-email`
+
+Auth: Yok
+
+Body:
+
+```json
+{
+  "email": "seller@example.com",
+  "code": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Email basariyla dogrulandi.",
+  "data": null,
+  "traceId": "..."
+}
+```
+
+UI notu:
+
+- Kullanıcıya `userId` kesinlikle sorulmaz.
+- Form alanları sadece `email` ve `code` olmalıdır.
+- Email mesajında hem kod hem de direkt doğrulama linki bulunur.
+
+Direkt link fallback endpointi:
+
 `GET /api/Auth/confirm-email?userId={userId}&token={token}`
 
 Auth: Yok
@@ -654,8 +717,42 @@ UI notu:
 
 - Link doğrudan API'ye gidiyorsa JSON döner.
 - Daha iyi UX için frontend bir doğrulama sayfası açıp query parametrelerini backend'e iletebilir.
+- Bu GET endpointi kullanıcı formu için değil, email linkinden tıklama senaryosu içindir.
 
 ### 6.6 Telefon Doğrulama
+
+UI kod formu için ana endpoint:
+
+`POST /api/Auth/confirm-phone`
+
+Auth: Yok
+
+Body:
+
+```json
+{
+  "email": "seller@example.com",
+  "code": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Telefon basariyla dogrulandi.",
+  "data": null,
+  "traceId": "..."
+}
+```
+
+UI notu:
+
+- Kullanıcıya `userId` sorulmaz.
+- SMS kodu girilirken email bilgisi kayıt formundan veya doğrulama ekran state'inden taşınmalıdır.
+
+Direkt link fallback endpointi:
 
 `GET /api/Auth/confirm-phone?userId={userId}&token={token}`
 
@@ -754,8 +851,8 @@ Response `data`:
     "id": "9d3457e5-7cd6-4d72-b160-1d7d1ac6e6f8",
     "channel": "email",
     "to": "seller@example.com",
-    "subject": "E-Posta Dogrulama",
-    "body": "Lutfen e-posta adresinizi dogrulamak icin <a href='http://localhost:5089/api/auth/confirm-email?...'>buraya tiklayin</a>",
+    "subject": "Yoremio email dogrulama",
+    "body": "Yoremio email dogrulama kodunuz: 123456 ... <a href='http://localhost:5089/api/auth/confirm-email?...'>Email adresimi dogrula</a>",
     "createdAtUtc": "2026-06-29T12:30:00Z"
   },
   {
@@ -789,9 +886,10 @@ UI akisi:
 1. Satici kayit formu `POST /api/Auth/register/satici` cagirir.
 2. Basarili response sonrasi UI kullaniciya "Email ve telefon dogrulama gerekiyor" mesaji gosterir.
 3. Development modunda gelistirici veya test kullanicisi `/dev/verification` ekranini acar.
-4. Email mesajindaki linke tiklanir: `GET /api/Auth/confirm-email`.
-5. SMS mesajindaki linke tiklanir veya kod UI tarafinda ayrica islenecekse body icinden kod okunur.
-6. Iki dogrulama da tamamlaninca satici profili aktif olur.
+4. Email mesajindaki kod `POST /api/Auth/confirm-email` ile `email + code` olarak gonderilir.
+5. SMS mesajindaki kod `POST /api/Auth/confirm-phone` ile `email + code` olarak gonderilir.
+6. Linke tiklama senaryosunda eski GET endpointleri de calisir, ama UI formunda `userId` istenmez.
+7. Zorunlu dogrulamalar tamamlaninca satici profili aktif olur.
 
 Gercek servis notu:
 
@@ -1220,7 +1318,31 @@ Form alanları:
 - `PUT` mevcut medyayı replace etmez; yeni medya ekler.
 - Mevcut resim/video silmek için ilgili delete endpointleri kullanılır.
 
-### 9.11 Ürün Sil
+### 9.11 Urun Durumu Guncelle
+
+`PATCH /api/Urun/{urunId}/status`
+
+Auth: `SATICI`
+
+Body:
+
+```json
+{
+  "aktifMi": false
+}
+```
+
+Response:
+
+- `data`: `UrunDto`
+
+UI kullanimi:
+
+- Satici urun yonetiminde aktif/pasif toggle icin kullanilir.
+- `aktifMi=false` urunu silmez; urun satici panelinde kalir, public listelemede varsayilan olarak gizlenir.
+- Delete yerine once pasife alma aksiyonu one cikarilabilir; kalici silme icin ayrica onay modal'i kullanilmalidir.
+
+### 9.12 Ürün Sil
 
 `DELETE /api/Urun/{urunId}`
 
@@ -1231,13 +1353,13 @@ Not:
 - Sadece ürün sahibi satıcı silebilir.
 - UI onay modalı kullanmalıdır.
 
-### 9.12 Ürün Resmi Sil
+### 9.13 Ürün Resmi Sil
 
 `DELETE /api/Urun/{urunId}/resimler/{resimId}`
 
 Auth: `SATICI`
 
-### 9.13 Ürün Videosu Sil
+### 9.14 Ürün Videosu Sil
 
 `DELETE /api/Urun/{urunId}/videolar/{videoId}`
 
@@ -1674,7 +1796,112 @@ Mantık:
 - Sadece karşı kullanıcıdan gelen ve `readAt=null` olan mesajları günceller.
 - Karşı kullanıcı online ise `MessagesRead(readerUserId, readAtUtc)` eventini alır.
 
-## 14. SignalR Chat Hub
+## 14. Dashboard API
+
+Dashboard endpointleri UI'nin loading/empty state ve panel kartlarini daha az istekle doldurmasi icin vardir. Liste verisi yerine sayac ve KPI doner; detay tablolar icin ilgili liste endpointleri kullanilmaya devam eder.
+
+### 14.1 Kullanici Ozeti
+
+`GET /api/Dashboard/summary`
+
+Auth: Login kullanici
+
+Response `data`:
+
+```json
+{
+  "roles": ["ALICI"],
+  "unreadMessages": 3,
+  "favoriteProducts": 5,
+  "myProducts": 0,
+  "openDemands": 2,
+  "buyerOpenDemands": 2,
+  "sellerOpenDemands": 0,
+  "pendingOffers": 1,
+  "buyerPendingOffers": 1,
+  "sellerPendingOffers": 0
+}
+```
+
+UI gorevleri:
+
+- Header mesaj badge'i: `unreadMessages`
+- Favoriler bos state: `favoriteProducts === 0`
+- Taleplerim bos state: `buyerOpenDemands === 0`
+- Satici gelen talepler bos state: `sellerOpenDemands === 0`
+- Alici teklif bekleyen durum badge'i: `buyerPendingOffers`
+- Satici teklif bekleyen durum badge'i: `sellerPendingOffers`
+- Rol bazli nav: `roles`
+
+### 14.2 Satici Dashboard
+
+`GET /api/Dashboard/satici`
+
+Auth: `SATICI`
+
+Response `data`:
+
+```json
+{
+  "totalProducts": 12,
+  "activeProducts": 10,
+  "inactiveProducts": 2,
+  "outOfStockProducts": 1,
+  "totalFavorites": 34,
+  "totalReviews": 8,
+  "totalRatings": 10,
+  "averageRating": 4.6,
+  "trustScore": 86.5,
+  "openDemands": 4,
+  "agreedDemands": 3,
+  "pendingOffers": 2,
+  "acceptedOffers": 3,
+  "rejectedOffers": 1,
+  "unreadMessages": 5
+}
+```
+
+UI gorevleri:
+
+- Satici ana panel KPI kartlari.
+- Urun yonetimi tab'lerinde aktif/pasif/stokta yok sayaclari.
+- Talep/teklif badge'leri.
+- Guven skoru progress/rozet gosterimi.
+- Mesaj merkezi okunmamis sayaci.
+
+### 14.3 Admin Dashboard
+
+`GET /api/Dashboard/admin`
+
+Auth: `ADMIN`
+
+Response `data`:
+
+```json
+{
+  "totalUsers": 120,
+  "totalSellers": 34,
+  "activeSellers": 28,
+  "totalBuyers": 86,
+  "totalProducts": 210,
+  "activeProducts": 190,
+  "inactiveProducts": 20,
+  "totalDemands": 45,
+  "openDemands": 18,
+  "agreedDemands": 20,
+  "totalReviews": 72,
+  "totalMessages": 410,
+  "unreadMessages": 12
+}
+```
+
+UI gorevleri:
+
+- Admin ana panel KPI kartlari.
+- Kullanici/satici/urun/moderasyon ekranlarina hizli link kartlari.
+- Operasyonel bos durum ve uyari kararlarinda sayac kaynagi.
+
+## 15. SignalR Chat Hub
 
 Hub URL:
 
@@ -1750,7 +1977,7 @@ Hub hata davranışı:
 - İş kuralı hataları `HubException` olarak döner.
 - UI send sırasında try/catch ile mesajı failed state'e almalıdır.
 
-## 15. Development Seed
+## 16. Development Seed
 
 Development ortamında migration ve seed otomatik çalışır.
 
@@ -1809,7 +2036,7 @@ Not:
 - API yeniden başlatıldığında seed ürünleri bu klasördeki medya URL'leriyle senkronize edilir.
 - Seed ürünlerde eski demo medya kayıtları temizlenir ve güncel `demo-media` yolları tutulur.
 
-## 16. Status Code ve Hata Mantığı
+## 17. Status Code ve Hata Mantığı
 
 Yaygın status code'lar:
 
@@ -1833,13 +2060,21 @@ Global exception mapping:
 
 Production ortamında beklenmeyen `500` detayları gizlenir; UI `message` ve `traceId` göstermelidir.
 
-## 17. Endpoint Özet Tablosu
+## 18. Endpoint Özet Tablosu
 
 ### App
 
 | Method | Endpoint | Auth | Rol | Aciklama |
 | --- | --- | --- | --- | --- |
 | `GET` | `/api/App/bootstrap` | Hayir | - | UI baslangic sozlesmesi, kategori, feature flag, upload limitleri |
+
+### Dashboard
+
+| Method | Endpoint | Auth | Rol | Aciklama |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/Dashboard/summary` | Evet | Any | Header badge, bos durum ve kisa kullanici ozeti |
+| `GET` | `/api/Dashboard/satici` | Evet | `SATICI` | Satici panel KPI kartlari |
+| `GET` | `/api/Dashboard/admin` | Evet | `ADMIN` | Admin panel KPI kartlari |
 
 ## Complete Project Logic Guide
 
@@ -1868,7 +2103,7 @@ Kapsam disinda olanlar:
 - Fatura/e-arsiv.
 - Stok rezervasyonu.
 - Iade/iptal sureci.
-- Tam admin paneli ve moderasyon workflow'u. Sadece `ADMIN` rolu ve kategori yonetimi vardir.
+- Tam moderasyon workflow'u. `ADMIN` rolu su an dashboard ozeti ve kategori yonetimi icin kullanilir.
 
 ### Architecture
 
@@ -1925,7 +2160,7 @@ Onemli iliskiler:
 | Anonymous | Public kategori, urun, yorum/puan listesi, guven skoru gorebilir. | Favori, talep, chat, yorum, puan, urun/profil yonetimi yapamaz. |
 | `ALICI` | Favori, onerilenler, talep, teklif kabul, chat, anlasilmis alim sonrasi yorum/puan. | Urun ekleyemez, satici profili yonetemez, kategori yazamaz. |
 | `SATICI` | Profil, urun, medya, gelen talep, teklif, chat. | Kategori yazamaz. |
-| `ADMIN` | Kategori olusturma/guncelleme/silme. | Urun sahipligi veya satici yerine islem yapma endpointi yoktur. |
+| `ADMIN` | Admin dashboard ozeti ve kategori olusturma/guncelleme/silme. | Urun sahipligi veya satici yerine islem yapma endpointi yoktur. |
 
 Frontend kurali:
 
@@ -1941,7 +2176,7 @@ Satici kaydi:
 2. Identity kullanicisi olusturulur.
 3. `SaticiProfili` olusturulur ve `AktifMi=false` baslar.
 4. Kullaniciya `SATICI` ve `ALICI` rolleri verilir.
-5. Email dogrulama token'i ve telefon dogrulama kodu/linki uretilir.
+5. Email dogrulama kodu/linki ve telefon dogrulama kodu/linki uretilir.
 6. Mock sender aciksa mesajlar `/dev/verification` kutusuna duser.
 7. Email ve telefon dogrulaninca satici profili aktif olur.
 
@@ -1956,7 +2191,7 @@ Login:
 
 1. UI `POST /api/Auth/login` cagirir.
 2. Email/password kontrol edilir.
-3. Kullanici `SATICI` ise email dogrulama zorunludur.
+3. `Verification:RequireConfirmedEmailForSellerLogin=true` ise satici email dogrulamasi zorunludur.
 4. `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satici telefon dogrulamasi da zorunludur.
 5. JWT icine user id, email, username ve tum roller yazilir.
 
@@ -1973,9 +2208,10 @@ UI acilisinda onerilen sira:
 
 1. `GET /api/App/bootstrap`
 2. Token varsa `GET /api/Auth/me`
-3. Public ana sayfa icin `GET /api/Urun`
-4. Login kullanici aliciysa favori/onerilen/talep/chat verileri.
-5. Login kullanici saticiysa profil/urunlerim/gelen talepler/chat verileri.
+3. Token gecerliyse `GET /api/Dashboard/summary`
+4. Public ana sayfa icin `GET /api/Urun`
+5. Login kullanici aliciysa favori/onerilen/talep/chat verileri.
+6. Login kullanici saticiysa `GET /api/Dashboard/satici`, profil/urunlerim/gelen talepler/chat verileri.
 
 Bootstrap UI'a sunlari verir:
 
@@ -2001,6 +2237,12 @@ Urun guncelleme:
 - Sadece urun sahibi satici guncelleyebilir.
 - `PUT /api/Urun/{urunId}` ile gonderilen yeni medya mevcut medyaya eklenir.
 - Eski medyayi kaldirmak icin delete medya endpointleri kullanilir.
+
+Urun aktif/pasif:
+
+- `PATCH /api/Urun/{urunId}/status` sadece urun sahibi satici tarafindan kullanilir.
+- `aktifMi=false` urunu silmez; public kesif listesinde gizler.
+- UI delete aksiyonundan once pasife alma secenegini one cikarmalidir.
 
 Medya storage:
 
@@ -2168,6 +2410,8 @@ Production icin zorunlu kurallar:
 - Migration uygulamasi pipeline veya kontrollu startup ayariyla yonetilmeli.
 - Local `wwwroot` uploadlari kalici disk olmayan ortamlarda kullanilmamali; Cloudinary acilmali.
 - SMTP/SMS gercek servis ayarlari secret olarak verilmeli.
+- Gercek SMTP/SMS baglanana kadar production demo ortaminda `Verification:RequireConfirmedEmailForSellerLogin=false` ve `Verification:RequireConfirmedPhoneForSellerLogin=false` kullanilabilir.
+- Gercek SMTP/SMS baglandiginda `Email:Smtp:UseMockSender=false`, `Sms:Twilio:UseMockSender=false` ve iki dogrulama flag'i `true` yapilmalidir.
 - CORS sadece gercek frontend originlerini icermeli.
 
 ### Frontend Screen Contract
@@ -2178,8 +2422,8 @@ Minimum ekranlar:
 - Urun detay: medya galeri, satici karti, guven skoru, puan/yorum, favori, talep, chat.
 - Auth: login, alici kayit, satici kayit, dogrulama bekleme, dogrulama sonuc.
 - Alici paneli: favoriler, onerilenler, taleplerim, chat.
-- Satici paneli: profil, urunlerim, urun formu, medya yonetimi, gelen talepler, teklif formu, chat.
-- Admin paneli: kategori liste, kategori ekle/guncelle/sil.
+- Satici paneli: dashboard, profil, urunlerim, urun formu, aktif/pasif durum, medya yonetimi, gelen talepler, teklif formu, chat.
+- Admin paneli: dashboard, kategori liste, kategori ekle/guncelle/sil.
 - Development ekran: mock dogrulama kutusu.
 
 UI state kurallari:
@@ -2196,7 +2440,7 @@ Bu bolum UI ve deployment tarafinin yeni production kurallarini tek yerden gorme
 
 ### Roles
 
-- `ADMIN`: kategori olusturma/guncelleme/silme gibi sistemsel yonetim isleri.
+- `ADMIN`: dashboard ozeti ve kategori olusturma/guncelleme/silme gibi sistemsel yonetim isleri.
 - `SATICI`: profil, urun, talep/teklif, chat.
 - `ALICI`: kesif, favori, talep, chat, dogrulanmis alim sonrasi yorum/puan.
 - Kategori yazma endpointleri artik `ADMIN` ister; satici panelinde kategori CRUD gizlenmelidir.
@@ -2234,8 +2478,10 @@ Bu bolum UI ve deployment tarafinin yeni production kurallarini tek yerden gorme
 | `POST` | `/api/Auth/register/alici` | Hayır | - | Alıcı kaydı |
 | `POST` | `/api/Auth/login` | Hayır | - | JWT login |
 | `GET` | `/api/Auth/me` | Evet | Any | Aktif kullanıcı |
-| `GET` | `/api/Auth/confirm-email` | Hayır | - | Email doğrulama |
-| `GET` | `/api/Auth/confirm-phone` | Hayır | - | Telefon doğrulama |
+| `POST` | `/api/Auth/confirm-email` | Hayır | - | Email kod doğrulama (`email + code`) |
+| `POST` | `/api/Auth/confirm-phone` | Hayır | - | Telefon kod doğrulama (`email + code`) |
+| `GET` | `/api/Auth/confirm-email` | Hayır | - | Email link fallback doğrulama |
+| `GET` | `/api/Auth/confirm-phone` | Hayır | - | Telefon link fallback doğrulama |
 
 Auth ek endpoint:
 
@@ -2250,6 +2496,14 @@ Auth ek endpoint:
 | `GET` | `/dev/verification` | Hayir | - | Development mock email/SMS kutusu HTML arayuzu |
 | `GET` | `/dev/verification/messages` | Hayir | - | Mock dogrulama mesajlari JSON listesi |
 | `DELETE` | `/dev/verification/messages` | Hayir | - | Mock dogrulama kutusunu temizle |
+
+### Dashboard
+
+| Method | Endpoint | Auth | Rol | Aciklama |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/Dashboard/summary` | Evet | Any | Header badge, bos durum ve kisa kullanici ozeti |
+| `GET` | `/api/Dashboard/satici` | Evet | `SATICI` | Satici panel KPI kartlari |
+| `GET` | `/api/Dashboard/admin` | Evet | `ADMIN` | Admin panel KPI kartlari |
 
 ### Profil
 
@@ -2282,6 +2536,7 @@ Auth ek endpoint:
 | `DELETE` | `/api/Urun/{urunId}/favori` | Evet | `ALICI` | Favoriden çıkar |
 | `POST` | `/api/Urun/urun-ekle` | Evet | `SATICI` | Ürün ekle |
 | `PUT` | `/api/Urun/{urunId}` | Evet | `SATICI` | Ürün güncelle |
+| `PATCH` | `/api/Urun/{urunId}/status` | Evet | `SATICI` | Ürün aktif/pasif durumu |
 | `DELETE` | `/api/Urun/{urunId}` | Evet | `SATICI` | Ürün sil |
 | `DELETE` | `/api/Urun/{urunId}/resimler/{resimId}` | Evet | `SATICI` | Ürün resmi sil |
 | `DELETE` | `/api/Urun/{urunId}/videolar/{videoId}` | Evet | `SATICI` | Ürün videosu sil |
@@ -2323,7 +2578,7 @@ Auth ek endpoint:
 | `POST` | `/api/Chat/messages/{otherUserId}/read` | Evet | Any | Konuşmayı okundu işaretle |
 | SignalR | `/chathub` | Evet | Any | Canlı chat |
 
-## 18. UI Tasarım Checklist'i
+## 19. UI Tasarım Checklist'i
 
 Bu dokümana göre UI çıkarırken minimum ekran seti:
 
@@ -2331,12 +2586,16 @@ Bu dokümana göre UI çıkarırken minimum ekran seti:
 - Ürün detay: galeri + satıcı kartı + puan/yorum + talep/chat/favori aksiyonları
 - Auth: login, alıcı kayıt, satıcı kayıt, doğrulama sonuç ekranı
 - Alıcı paneli: önerilenler, favorilerim, taleplerim, chat
-- Satıcı paneli: profil, ürünlerim, ürün formu, medya yönetimi, gelen talepler, teklif formu, chat
+- Satıcı paneli: dashboard, profil, ürünlerim, ürün formu, aktif/pasif durum, medya yönetimi, gelen talepler, teklif formu, chat
+- Admin paneli: dashboard, kategori liste, kategori ekle/güncelle/sil
 - Ortak: global loading, empty state, error state, 401/403/429/500 davranışları
 
 Frontend tarafında özellikle unutulmaması gerekenler:
 
 - Tüm response'larda `success/message/data/errors/traceId` envelope bekleyin.
+- Login sonrasi header badge ve bos state kararlarini `GET /api/Dashboard/summary` ile besleyin.
+- Satici paneli KPI kartlarini `GET /api/Dashboard/satici` ile, admin paneli KPI kartlarini `GET /api/Dashboard/admin` ile doldurun.
+- Satici urun listesinde kalici silme yerine once `PATCH /api/Urun/{urunId}/status` aktif/pasif toggle'ini one cikarin.
 - Upload endpointlerinde JSON değil `multipart/form-data` kullanın.
 - Upload alan adlarını backend DTO adlarıyla gönderin: `Adi`, `Fiyat`, `Resimler`, `Videolar`.
 - Media URL'leri local/demo için relative, Cloudinary için absolute gelebilir; `http` ile başlıyorsa direkt kullanın, değilse API base URL ile birleştirin.

@@ -57,10 +57,7 @@
 
 body {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(247, 245, 239, 0.96) 38%, #f1eadf 100%),
-    linear-gradient(135deg, rgba(10, 106, 68, 0.1), transparent 34%),
-    linear-gradient(315deg, rgba(187, 74, 51, 0.1), transparent 32%);
+  background: linear-gradient(180deg, #fffdf8 0%, #f7f5ef 42%, #f1eee6 100%);
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
