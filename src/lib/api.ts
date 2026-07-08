@@ -44,6 +44,7 @@ export type AppFeatureFlags = {
 };
 
 export type AppVerificationConfig = {
+  requireConfirmedEmailForSellerLogin: boolean;
   requireConfirmedPhoneForSellerLogin: boolean;
   devVerificationInboxUrl?: string | null;
 };
@@ -226,6 +227,12 @@ export type SellerTrustScoreDto = {
   guvenSkoru: number;
 };
 
+export type FeaturedSellerDto = SellerTrustScoreDto & {
+  sehir?: string | null;
+  ilce?: string | null;
+  kapakResimUrl?: string | null;
+};
+
 export type OfferDto = {
   id: number;
   talepId: number;
@@ -242,6 +249,12 @@ export type DemandDto = {
   aliciId: string;
   urunId: number;
   urunAdi: string;
+  urunResimUrl?: string | null;
+  urunFiyat?: number | null;
+  saticiId?: string | null;
+  saticiMagazaAdi?: string | null;
+  saticiSehir?: string | null;
+  saticiIlce?: string | null;
   miktar: number;
   not?: string | null;
   durum: "ACIK" | "ANLASILDI" | "IPTAL" | string;
@@ -276,6 +289,23 @@ export type ChatConversationMessagesDto = {
   pageSize: number;
   totalCount: number;
   totalPages: number;
+};
+
+export type NotificationDto = {
+  id: number;
+  tur: "MESAJ" | "TALEP" | "TEKLIF" | string;
+  baslik: string;
+  mesaj: string;
+  ilgiliVarlikTuru?: string | null;
+  ilgiliVarlikId?: string | null;
+  aksiyonUrl?: string | null;
+  olusturmaTarihi: string;
+  okunmaTarihi?: string | null;
+  okunduMu: boolean;
+};
+
+export type NotificationsPageDto = Paginated<NotificationDto> & {
+  okunmamisSayisi: number;
 };
 
 export type RegisterBuyerValues = {
@@ -603,6 +633,10 @@ export const yoremioApi = {
     }),
   sellerTrustScore: (saticiId: string) =>
     request<SellerTrustScoreDto>(`/api/Profil/satici/${saticiId}/guven-skoru`),
+  featuredSellers: (take = 6) =>
+    request<FeaturedSellerDto[]>(
+      `/api/Profil/saticilar/one-cikan?${queryString({ take })}`,
+    ),
 
   rateProduct: (token: string, urunId: number, puanDegeri: number) =>
     request<{ ortalama: number }>("/api/Puan/puan-ekle", {
@@ -687,4 +721,24 @@ export const yoremioApi = {
         token,
       },
     ),
+
+  notifications: (token: string, sadeceOkunmamis = false, page = 1, pageSize = 20) =>
+    request<NotificationsPageDto>(
+      `/api/Bildirim?${queryString({ sadeceOkunmamis, page, pageSize })}`,
+      { token },
+    ),
+  unreadNotificationCount: (token: string) =>
+    request<number>("/api/Bildirim/okunmamis-sayisi", {
+      token,
+    }),
+  markNotificationRead: (token: string, bildirimId: number) =>
+    request<null>(`/api/Bildirim/${bildirimId}/okundu`, {
+      method: "POST",
+      token,
+    }),
+  markAllNotificationsRead: (token: string) =>
+    request<null>("/api/Bildirim/tumunu-okundu", {
+      method: "POST",
+      token,
+    }),
 };

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
@@ -11,13 +11,11 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type FormEvent,
   type ReactNode,
 } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
-  ArrowRight,
   BadgeCheck,
   Bell,
   Check,
@@ -55,9 +53,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/yoremio/brand-logo";
+import { AuthDialog } from "@/components/yoremio/marketplace-auth";
+import {
+  CategoryShelf,
+  FeaturedSellerStrip,
+  HomePromiseBar,
+  ProductCard,
+  PublicHomeHero,
+} from "@/components/yoremio/marketplace-public";
 import { bindChatEvents, createChatConnection } from "@/lib/chat";
 import {
-  API_BASE_URL,
   ApiClientError,
   mediaUrl,
   yoremioApi,
@@ -70,6 +75,7 @@ import {
   type ChatMessageDto,
   type DashboardSummaryDto,
   type DemandDto,
+  type FeaturedSellerDto,
   type LoginResponse,
   type MediaDto,
   type Paginated,
@@ -92,23 +98,7 @@ const workspaces = [
   { id: "admin", label: "Admin", icon: ShieldCheck },
 ] as const;
 
-const categoryTones = [
-  "bg-emerald-50 text-emerald-800 border-emerald-200",
-  "bg-rose-50 text-rose-800 border-rose-200",
-  "bg-sky-50 text-sky-800 border-sky-200",
-  "bg-violet-50 text-violet-800 border-violet-200",
-  "bg-amber-50 text-amber-900 border-amber-200",
-];
-
 const productPlaceholderImage = "/products/product-placeholder.svg";
-const categoryImages = [
-  "/products/photo-tulum-peyniri.jpg",
-  "/products/photo-yayla-bali.jpg",
-  "/products/photo-koy-yumurtasi.jpg",
-  "/products/photo-tarla-domatesi.jpg",
-  "/products/photo-kocbasi-nohut.jpg",
-  "/products/photo-amasya-elmasi.jpg",
-];
 
 type Workspace = (typeof workspaces)[number]["id"];
 type SortKey = string;
@@ -239,9 +229,11 @@ function apiErrorMessage(error: unknown) {
 function productImage(product: ProductDto) {
   const firstImage = product.resimler?.[0]?.url?.trim();
 
-  if (!firstImage || firstImage.startsWith("/products/")) {
+  if (!firstImage) {
     return productPlaceholderImage;
   }
+
+  if (firstImage.startsWith("/products/")) return firstImage;
 
   const remote = mediaUrl(firstImage);
   if (remote) return remote;
@@ -249,8 +241,11 @@ function productImage(product: ProductDto) {
   return productPlaceholderImage;
 }
 
-function categoryTone(categoryId: number) {
-  return categoryTones[(categoryId - 1) % categoryTones.length];
+function demandImage(demand: DemandDto) {
+  const image = demand.urunResimUrl?.trim();
+  if (!image) return productPlaceholderImage;
+  if (image.startsWith("/products/")) return image;
+  return mediaUrl(image) || productPlaceholderImage;
 }
 
 function sellerName(product: ProductDto) {
@@ -317,6 +312,7 @@ export function YoremioMarketplace() {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favoriteProducts, setFavoriteProducts] = useState<ProductDto[]>([]);
   const [recommendedProducts, setRecommendedProducts] = useState<ProductDto[]>([]);
+  const [featuredSellers, setFeaturedSellers] = useState<FeaturedSellerDto[]>([]);
   const [buyerDemands, setBuyerDemands] = useState<DemandDto[]>([]);
   const [sellerProfile, setSellerProfile] = useState<SellerProfileDto | null>(null);
   const [sellerProducts, setSellerProducts] = useState<ProductDto[]>([]);
@@ -326,6 +322,7 @@ export function YoremioMarketplace() {
   const [chatMessages, setChatMessages] = useState<ChatMessageDto[]>([]);
   const [chatState, setChatState] = useState<LoadState>("idle");
   const [signalRState, setSignalRState] = useState("Kapalı");
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const chatConnection = useRef<HubConnection | null>(null);
@@ -378,6 +375,7 @@ export function YoremioMarketplace() {
     setDashboardSummary(null);
     setSellerDashboard(null);
     setAdminDashboard(null);
+    setNotificationUnreadCount(0);
     setConversations([]);
     setChatMessages([]);
     setChatTargetId("");
@@ -413,6 +411,11 @@ export function YoremioMarketplace() {
       ]);
       setConversations(nextConversations);
       setDashboardSummary(nextSummary);
+
+      yoremioApi
+        .unreadNotificationCount(authUser.token)
+        .then(setNotificationUnreadCount)
+        .catch(() => setNotificationUnreadCount(0));
 
       if (hasRole(authUser, "ALICI")) {
         const [favorites, recommended, demands] = await Promise.all([
@@ -518,6 +521,23 @@ export function YoremioMarketplace() {
       ignore = true;
     };
   }, [showToast]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    yoremioApi
+      .featuredSellers(6)
+      .then((sellers) => {
+        if (!ignore) setFeaturedSellers(sellers);
+      })
+      .catch(() => {
+        if (!ignore) setFeaturedSellers([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -1116,6 +1136,7 @@ export function YoremioMarketplace() {
         authUser={authUser}
         sellerProfile={sellerProfile}
         dashboardSummary={dashboardSummary}
+        notificationUnreadCount={notificationUnreadCount}
         query={query}
         onQueryChange={setQuery}
         onSearchSubmit={() =>
@@ -1137,48 +1158,19 @@ export function YoremioMarketplace() {
           activeId={categoryId}
           selectedCategory={selectedCategory}
           onSelectCategory={setCategoryId}
-          onSellerClick={openSellerWorkspace}
         />
 
-        <section id="kesif" className="mx-auto max-w-[1440px] px-3 py-4 sm:px-5">
-          <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <DiscoverySidebar
-              categories={categories}
-              activeId={categoryId}
-              selectedCategory={selectedCategory}
-              cityFilter={cityFilter}
-              minPrice={minPrice}
-              maxPrice={maxPrice}
-              minRating={minRating}
-              inStockOnly={inStockOnly}
-              onCategorySelect={setCategoryId}
-              onCityChange={setCityFilter}
-              onMinPriceChange={setMinPrice}
-              onMaxPriceChange={setMaxPrice}
-              onMinRatingChange={setMinRating}
-              onStockToggle={() => setInStockOnly(!inStockOnly)}
-              onApply={() => setPage(1)}
-              onClear={() => {
-                setQuery("");
-                setCategoryId("all");
-                setInStockOnly(false);
-                setMinPrice("");
-                setMaxPrice("");
-                setCityFilter("");
-                setMinRating("");
-                setSort("newest");
-              }}
-            />
-
-            <div className="min-w-0 space-y-4">
-              <div className="rounded-lg border border-border bg-white p-3 shadow-[0_8px_22px_rgba(16,24,18,0.055)] sm:p-4">
+        <section id="kesif" className="mx-auto max-w-[1500px] px-3 py-5 sm:px-7">
+          <div className="grid gap-4">
+            <div className="min-w-0 space-y-5">
+              <div className="rounded-lg border border-border bg-white p-3 shadow-[0_6px_18px_rgba(16,24,40,0.06)] sm:p-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-muted-foreground">
-                      {productsPage.totalCount} ürün bulundu
+                      <p className="text-sm font-semibold text-muted-foreground">
+                      {productsPage.totalCount} ürün listeleniyor
                     </p>
-                    <h1 className="mt-2 text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
-                      Ürün keşfi
+                    <h1 className="mt-1 text-xl font-black tracking-normal text-brand-brown sm:text-2xl">
+                      Yerel ürünler
                     </h1>
                     {marketError ? (
                       <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -1187,7 +1179,7 @@ export function YoremioMarketplace() {
                       </p>
                     ) : (
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Yerel ürünleri kategori, konum, puan ve stok durumuna göre keşfet.
+                        Taze ürünleri üreticiden keşfet, satıcıyla doğrudan talep ve chat başlat.
                       </p>
                     )}
                   </div>
@@ -1229,7 +1221,7 @@ export function YoremioMarketplace() {
               </div>
 
               {productsPage.items.length > 0 ? (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-7">
                   {productsPage.items.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -1276,6 +1268,7 @@ export function YoremioMarketplace() {
 
               {productsPage.items.length > 0 ? (
                 <FeaturedSellerStrip
+                  sellers={featuredSellers}
                   products={productsPage.items}
                   onSelectProduct={(id) => {
                     setActiveProductId(id);
@@ -1283,6 +1276,8 @@ export function YoremioMarketplace() {
                   }}
                 />
               ) : null}
+
+              {productsPage.items.length > 0 ? <HomePromiseBar /> : null}
             </div>
           </div>
         </section>
@@ -1309,6 +1304,7 @@ export function YoremioMarketplace() {
             chatTargetId={chatTargetId}
             chatState={chatState}
             signalRState={signalRState}
+            notificationUnreadCount={notificationUnreadCount}
             actionStatus={actionStatus}
             onLogin={() => setAuthOpen(true)}
             onSelectProduct={(id) => {
@@ -1327,6 +1323,7 @@ export function YoremioMarketplace() {
             onCategoryDelete={handleCategoryDelete}
             onChatTargetChange={setChatTargetId}
             onSendMessage={handleSendMessage}
+            onLogout={clearSession}
           />
         </section>
       </main>
@@ -1378,246 +1375,11 @@ export function YoremioMarketplace() {
   );
 }
 
-function PublicHomeHero({
-  categories,
-  activeId,
-  selectedCategory,
-  onSelectCategory,
-}: {
-  categories: CategoryDto[];
-  activeId: number | "all";
-  selectedCategory?: CategoryDto;
-  onSelectCategory: (value: number | "all") => void;
-  onSellerClick: () => void;
-}) {
-  return (
-    <section className="relative border-b border-border bg-white pb-8">
-      <div className="relative min-h-[310px] overflow-hidden sm:min-h-[360px] lg:min-h-[390px]">
-        <Image
-          src="/hero-market-1600.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.24)_48%,rgba(0,0,0,0.14))]" />
-        <div className="absolute inset-0 flex items-center justify-center px-4 pb-10 text-center">
-          <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
-            Yerel ürünler
-          </h1>
-      </div>
-      </div>
-
-      <div className="relative z-10 mx-auto -mt-16 max-w-[820px] px-4 sm:-mt-[72px] lg:max-w-[860px]">
-        <CategoryShelf
-          categories={categories}
-          activeId={activeId}
-          selectedCategory={selectedCategory}
-          onSelect={onSelectCategory}
-          elevated
-        />
-      </div>
-
-      <div className="mx-auto mt-7 grid max-w-[1440px] gap-3 px-4 sm:grid-cols-2 sm:px-7 lg:grid-cols-4">
-        <HeroPromise icon={Leaf} title="Yerel üreticiden" text="Taze ve doğal ürünleri keşfet." />
-        <HeroPromise icon={ShieldCheck} title="Güvenli alışveriş" text="Doğrulanmış satıcı sinyalleri." />
-        <HeroPromise icon={MessageCircle} title="Satıcıyla konuş" text="Talep, teklif ve chat akışı." />
-        <HeroPromise icon={Heart} title="Doğaya saygılı" text="Bölgesel üretime destek." />
-      </div>
-    </section>
-  );
-}
-
-function HeroPromise({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: LucideIcon;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="flex min-w-0 items-center justify-center gap-4 rounded-lg border border-border bg-white p-4 shadow-[0_8px_22px_rgba(16,24,18,0.055)]">
-      <span className="grid size-12 shrink-0 place-items-center rounded-full border border-border bg-white text-primary shadow-sm">
-        <Icon className="size-6" aria-hidden />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-base font-bold text-brand-brown">{title}</span>
-        <span className="line-clamp-2 text-sm leading-5 text-muted-foreground">{text}</span>
-      </span>
-    </div>
-  );
-}
-
-function DiscoverySidebar({
-  categories,
-  activeId,
-  selectedCategory,
-  cityFilter,
-  minPrice,
-  maxPrice,
-  minRating,
-  inStockOnly,
-  onCategorySelect,
-  onCityChange,
-  onMinPriceChange,
-  onMaxPriceChange,
-  onMinRatingChange,
-  onStockToggle,
-  onApply,
-  onClear,
-}: {
-  categories: CategoryDto[];
-  activeId: number | "all";
-  selectedCategory?: CategoryDto;
-  cityFilter: string;
-  minPrice: string;
-  maxPrice: string;
-  minRating: string;
-  inStockOnly: boolean;
-  onCategorySelect: (value: number | "all") => void;
-  onCityChange: (value: string) => void;
-  onMinPriceChange: (value: string) => void;
-  onMaxPriceChange: (value: string) => void;
-  onMinRatingChange: (value: string) => void;
-  onStockToggle: () => void;
-  onApply: () => void;
-  onClear: () => void;
-}) {
-  return (
-    <aside className="hidden lg:block">
-      <div className="sticky top-24 y-card p-4">
-        <div className="border-b border-border pb-3">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-foreground">
-            Kategoriler
-          </p>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-            {selectedCategory?.aciklama ?? "Yerel ürünleri kategori, konum ve güvene göre daralt."}
-          </p>
-        </div>
-
-        <div className="mt-3 grid gap-2">
-          <button
-            type="button"
-            onClick={() => onCategorySelect("all")}
-            className={cn(
-              "flex h-10 items-center justify-between rounded-md border px-3 text-sm font-bold transition",
-              activeId === "all"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-white text-foreground hover:border-primary/40 hover:bg-secondary/45",
-            )}
-          >
-            Tümü
-            <span className="text-xs text-muted-foreground">Pazar</span>
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => onCategorySelect(category.id)}
-              className={cn(
-                "flex h-10 items-center justify-between rounded-md border px-3 text-sm font-bold transition",
-                activeId === category.id
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-white text-foreground hover:border-primary/40 hover:bg-secondary/45",
-              )}
-            >
-              <span className="truncate">{category.adi}</span>
-              <ArrowRight className="size-3.5 text-muted-foreground" aria-hidden />
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 space-y-3 border-t border-border pt-4">
-          <Field label="Konum" htmlFor="market-city">
-            <Input
-              id="market-city"
-              value={cityFilter}
-              onChange={(event) => onCityChange(event.target.value)}
-              placeholder="Ardahan"
-              className="h-10 bg-background"
-            />
-          </Field>
-
-          <div className="grid gap-2">
-            <p className="text-xs font-bold text-muted-foreground">Fiyat Aralığı</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                min={0}
-                value={minPrice}
-                onChange={(event) => onMinPriceChange(event.target.value)}
-                placeholder="Min"
-                className="h-10 bg-background"
-              />
-              <Input
-                type="number"
-                min={0}
-                value={maxPrice}
-                onChange={(event) => onMaxPriceChange(event.target.value)}
-                placeholder="Maks"
-                className="h-10 bg-background"
-              />
-            </div>
-          </div>
-
-          <Field label="Güven puanı" htmlFor="market-rating">
-            <select
-              id="market-rating"
-              value={minRating}
-              onChange={(event) => onMinRatingChange(event.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
-            >
-              <option value="">Tüm puanlar</option>
-              <option value="4">4+ puan</option>
-              <option value="3">3+ puan</option>
-              <option value="2">2+ puan</option>
-            </select>
-          </Field>
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={inStockOnly}
-            onClick={onStockToggle}
-            className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-white px-3 text-sm font-bold transition hover:border-primary/40"
-          >
-            Yakınımdakiler / stokta
-            <span
-              className={cn(
-                "relative h-5 w-9 rounded-full transition",
-                inStockOnly ? "bg-primary" : "bg-muted-foreground/[0.3]",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-1 size-3 rounded-full bg-white shadow transition",
-                  inStockOnly ? "left-5" : "left-1",
-                )}
-              />
-            </span>
-          </button>
-
-          <Button type="button" className="w-full" onClick={onApply}>
-            <Filter aria-hidden />
-            Filtrele
-          </Button>
-          <Button type="button" variant="ghost" className="w-full" onClick={onClear}>
-            <RefreshCw aria-hidden />
-            Filtreleri temizle
-          </Button>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 function AppHeader({
   authUser,
   sellerProfile,
   dashboardSummary,
+  notificationUnreadCount,
   query,
   onQueryChange,
   onSearchSubmit,
@@ -1628,6 +1390,7 @@ function AppHeader({
   authUser: AuthState | null;
   sellerProfile: SellerProfileDto | null;
   dashboardSummary: DashboardSummaryDto | null;
+  notificationUnreadCount: number;
   query: string;
   onQueryChange: (value: string) => void;
   onSearchSubmit: () => void;
@@ -1636,17 +1399,18 @@ function AppHeader({
   onLogout: () => void;
 }) {
   const displayName = accountDisplayName(authUser, sellerProfile);
+  const unreadMessages = dashboardSummary?.unreadMessages ?? 0;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/96 shadow-[0_4px_16px_rgba(16,24,18,0.045)] backdrop-blur">
-      <div className="mx-auto grid min-h-[76px] max-w-[1440px] grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-2 sm:px-7">
+    <header className="sticky top-0 z-40 border-b border-border bg-white/98 shadow-[0_4px_16px_rgba(16,24,40,0.045)] backdrop-blur">
+      <div className="mx-auto grid min-h-[80px] max-w-[1500px] grid-cols-[auto_1fr_auto] items-center gap-5 px-4 py-2 sm:px-7">
         <Link href="/" className="min-w-0">
           <BrandLogo compact />
         </Link>
 
         <nav className="hidden items-center justify-start gap-9 text-base font-semibold text-foreground lg:flex">
           <a href="#kesif" className="text-red-600 transition hover:text-primary">
-            Urunler
+            Ürünler
           </a>
           <a href="#kesif" className="transition hover:text-primary">
             Kategoriler
@@ -1656,11 +1420,11 @@ function AppHeader({
             onClick={onSellerClick}
             className="transition hover:text-primary"
           >
-            Saticilar
+            Satıcılar
           </button>
         </nav>
 
-        <div className="col-span-3 grid gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mx-auto md:w-full md:max-w-2xl lg:col-start-2 lg:max-w-[620px]">
+        <div className="col-span-3 grid gap-2 md:col-span-1 md:col-start-2 md:row-start-1 md:mx-auto md:w-full md:max-w-2xl lg:col-start-2 lg:max-w-[650px]">
           <form
             className="relative"
             onSubmit={(event) => {
@@ -1673,7 +1437,7 @@ function AppHeader({
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder="Ara"
-              className="h-12 rounded-lg border-border bg-white pl-12 pr-12 text-base shadow-sm"
+              className="h-12 rounded-lg border-border bg-white pl-12 pr-12 text-base shadow-[0_4px_14px_rgba(16,24,40,0.05)]"
             />
             <Button
               type="submit"
@@ -1703,11 +1467,27 @@ function AppHeader({
             className="relative hidden sm:inline-flex"
           >
             <Bell aria-hidden />
-            {dashboardSummary && dashboardSummary.unreadMessages > 0 ? (
+            {notificationUnreadCount > 0 ? (
               <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-tomato text-[10px] font-black text-white">
-                {Math.min(99, dashboardSummary.unreadMessages)}
+                {Math.min(99, notificationUnreadCount)}
               </span>
             ) : null}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Mesajlar"
+            className="relative hidden sm:inline-flex"
+            asChild
+          >
+            <a href="#paneller">
+              <MessageCircle aria-hidden />
+              {unreadMessages > 0 ? (
+                <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-black text-white">
+                  {Math.min(99, unreadMessages)}
+                </span>
+              ) : null}
+            </a>
           </Button>
           {authUser ? (
             <>
@@ -1761,677 +1541,6 @@ function AppHeader({
         </div>
       </div>
     </header>
-  );
-}
-
-function AuthDialog({
-  open,
-  initialRole,
-  bootstrap,
-  onClose,
-  onAuthenticated,
-}: {
-  open: boolean;
-  initialRole: UserRole;
-  bootstrap: AppBootstrapDto | null;
-  onClose: () => void;
-  onAuthenticated: (user: AuthState) => void;
-}) {
-  const [mode, setMode] = useState<"login" | "buyer" | "seller" | "verify">("login");
-  const [role, setRole] = useState<UserRole>(initialRole);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [magazaAdi, setMagazaAdi] = useState("");
-  const [vergiNo, setVergiNo] = useState("");
-  const [adres, setAdres] = useState("");
-  const [sehir, setSehir] = useState("");
-  const [ilce, setIlce] = useState("");
-  const [verifyCode, setVerifyCode] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const devVerificationUrl =
-    bootstrap?.features.devVerificationInboxEnabled &&
-    bootstrap.verification.devVerificationInboxUrl
-      ? `${API_BASE_URL}${bootstrap.verification.devVerificationInboxUrl}`
-      : null;
-
-  if (!open) return null;
-
-  const chooseLoginRole = (nextRole: UserRole) => {
-    setRole(nextRole);
-    setMode("login");
-    setError(null);
-    setMessage(null);
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setStatus("loading");
-    setError(null);
-    setMessage(null);
-
-    try {
-      if (mode === "login") {
-        const login = await yoremioApi.login(email.trim(), password);
-        window.localStorage.setItem("yoremio-token", login.token);
-        window.localStorage.setItem("yoremio-user", JSON.stringify(login));
-
-        let fullUser: AuthState = {
-          token: login.token,
-          userId: login.userId,
-          email: login.email,
-          userName: login.email,
-          role: login.role,
-          roles: login.roles,
-          emailConfirmed: false,
-          phoneNumberConfirmed: false,
-        };
-
-        try {
-          const me = await yoremioApi.me(login.token);
-          fullUser = { ...me, token: login.token };
-        } catch {
-          // Login token is still usable; session bootstrap will retry /me later.
-        }
-
-        setStatus("success");
-        onAuthenticated(fullUser);
-        return;
-      }
-
-      if (mode === "buyer") {
-        await yoremioApi.registerBuyer({ email: email.trim(), password });
-        setMessage("Alıcı kaydı oluşturuldu. Doğrulama linkini kontrol et.");
-        setMode("login");
-        setPassword("");
-      }
-
-      if (mode === "seller") {
-        await yoremioApi.registerSeller({
-          email: email.trim(),
-          password,
-          phoneNumber,
-          magazaAdi,
-          vergiNo,
-          adres,
-          sehir,
-          ilce,
-        });
-        setMessage(
-          "Satıcı kaydı oluşturuldu. Email ve telefon doğrulaması tamamlanınca giriş yapabilirsin.",
-        );
-        setMode("login");
-        setPassword("");
-      }
-
-      if (mode === "verify") {
-        await yoremioApi.confirmEmail(email.trim(), verifyCode.trim());
-        setMessage("Doğrulama tamamlandı.");
-      }
-
-      setStatus("success");
-    } catch (caught) {
-      setError(apiErrorMessage(caught));
-      setStatus("idle");
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!email.trim()) {
-      setError("Doğrulama mesajı için e-posta gir.");
-      return;
-    }
-
-    setStatus("loading");
-    setError(null);
-    setMessage(null);
-
-    try {
-      await yoremioApi.resendVerification(email.trim());
-      setMessage("Doğrulama mesajı varsa yeniden gönderildi.");
-      setStatus("success");
-    } catch (caught) {
-      setError(apiErrorMessage(caught));
-      setStatus("idle");
-    }
-  };
-
-  const modeTitle =
-    mode === "login"
-      ? "Giriş yap"
-      : mode === "buyer"
-        ? "Alıcı kaydı"
-        : mode === "seller"
-          ? "Satıcı kaydı"
-          : "Hesabını doğrula";
-  const modeDescription =
-    mode === "login"
-      ? "Talep, teklif, favori ve chat akışlarına güvenli oturumla devam et."
-      : mode === "buyer"
-        ? "API'ye uygun olarak e-posta ve şifre ile alıcı hesabını oluştur."
-        : mode === "seller"
-          ? "Mağaza, vergi, adres ve iletişim bilgilerini satıcı API alanlarına göre gir."
-          : "E-posta veya telefon doğrulama kodunu gir, gerekirse mesajı yeniden gönder.";
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink/45 px-3 py-3 sm:px-4 sm:py-6">
-      <div
-        className="grid max-h-[92vh] w-full max-w-[1240px] overflow-hidden rounded-lg border border-border bg-white shadow-[0_24px_80px_rgba(0,0,0,0.24)] lg:grid-cols-[minmax(430px,560px)_minmax(0,1fr)]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auth-title"
-      >
-        <div className="min-h-0 overflow-y-auto">
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border bg-white px-5 py-4 sm:px-7">
-            <div className="max-w-xl">
-            <BrandLogo compact />
-            <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Güvenli oturum
-            </p>
-            <h2 id="auth-title" className="mt-1 text-3xl font-black text-brand-brown">
-              {modeTitle}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {modeDescription}
-            </p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={onClose} title="Kapat" className="shrink-0">
-              <X aria-hidden />
-            </Button>
-          </div>
-
-          <form className="space-y-4 p-5 sm:p-7" onSubmit={handleSubmit}>
-          <div className="grid rounded-md border border-border bg-muted/60 p-1 sm:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => chooseLoginRole("ALICI")}
-              className={cn(
-                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
-                mode === "login" && role === "ALICI"
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Alıcı
-            </button>
-            <button
-              type="button"
-              onClick={() => chooseLoginRole("SATICI")}
-              className={cn(
-                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
-                mode === "login" && role === "SATICI"
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Satıcı
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRole("ALICI");
-                setMode("buyer");
-              }}
-              className={cn(
-                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
-                mode === "buyer"
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Alıcı kayıt
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRole("SATICI");
-                setMode("seller");
-              }}
-              className={cn(
-                "h-9 rounded-sm px-3 text-sm font-black transition-colors",
-                mode === "seller"
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Satıcı kayıt
-            </button>
-          </div>
-
-          {mode === "verify" ? (
-            <div className="mx-auto grid w-full max-w-md gap-3">
-              <div className="grid place-items-center rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-5 text-center">
-                <span className="grid size-14 place-items-center rounded-full bg-white text-primary shadow-sm">
-                  <ShieldCheck className="size-7" aria-hidden />
-                </span>
-                <p className="mt-3 text-sm font-semibold text-muted-foreground">
-                  E-posta adresine gelen 6 haneli kodu gir.
-                </p>
-              </div>
-              <Field label="E-posta" htmlFor="verify-email">
-                <Input
-                  id="verify-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  placeholder="ornek@mail.com"
-                  required
-                />
-              </Field>
-              <Field label="Kod" htmlFor="verify-code">
-                <Input
-                  id="verify-code"
-                  value={verifyCode}
-                  onChange={(event) => setVerifyCode(event.target.value)}
-                  placeholder="123456"
-                  inputMode="numeric"
-                  required
-                />
-              </Field>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="E-posta" htmlFor="login-email">
-                <Input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  placeholder="ornek@mail.com"
-                  required
-                />
-              </Field>
-              <Field label="Şifre" htmlFor="login-password">
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete={mode === "login" ? "current-password" : "new-password"}
-                  placeholder="En az 8 karakter, güçlü şifre"
-                  required
-                />
-              </Field>
-            </div>
-          )}
-
-          {mode === "seller" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Telefon" htmlFor="seller-phone">
-                <Input
-                  id="seller-phone"
-                  value={phoneNumber}
-                  onChange={(event) => setPhoneNumber(event.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Mağaza adı" htmlFor="seller-store">
-                <Input
-                  id="seller-store"
-                  value={magazaAdi}
-                  onChange={(event) => setMagazaAdi(event.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Vergi no" htmlFor="seller-tax">
-                <Input
-                  id="seller-tax"
-                  value={vergiNo}
-                  onChange={(event) => setVergiNo(event.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Adres" htmlFor="seller-address">
-                <Input
-                  id="seller-address"
-                  value={adres}
-                  onChange={(event) => setAdres(event.target.value)}
-                />
-              </Field>
-              <Field label="Şehir" htmlFor="seller-city">
-                <Input
-                  id="seller-city"
-                  value={sehir}
-                  onChange={(event) => setSehir(event.target.value)}
-                />
-              </Field>
-              <Field label="İlçe" htmlFor="seller-district">
-                <Input
-                  id="seller-district"
-                  value={ilce}
-                  onChange={(event) => setIlce(event.target.value)}
-                />
-              </Field>
-            </div>
-          ) : null}
-
-          {error ? (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">
-              {error}
-            </div>
-          ) : null}
-
-          {message ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-              {message}
-            </div>
-          ) : null}
-
-          {(mode === "login" || mode === "seller") ? (
-            <div className="flex flex-col gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-muted-foreground">
-                Satıcı doğrulaması gelmediyse e-postanı yazıp tekrar iste.
-              </p>
-              <div className="flex flex-wrap gap-2">
-              {devVerificationUrl ? (
-                <a
-                  href={devVerificationUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                    className="inline-flex h-9 items-center rounded-md px-2 text-xs font-black text-primary underline-offset-4 hover:underline"
-                >
-                    Dev kutusu
-                </a>
-              ) : null}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleResendVerification}
-                  disabled={status === "loading"}
-                >
-                  <RefreshCw aria-hidden />
-                  Tekrar gönder
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setMode(mode === "verify" ? "login" : "verify")}
-            >
-              <ShieldCheck aria-hidden />
-              {mode === "verify" ? "Girişe dön" : "Doğrulama ekranı"}
-            </Button>
-            <Button type="submit" disabled={status === "loading"}>
-              {status === "loading" ? (
-                <>
-                  <Loader2 className="animate-spin" aria-hidden />
-                  İşleniyor
-                </>
-              ) : (
-                <>
-                  <Check aria-hidden />
-                  {mode === "login" ? "Giriş yap" : "Gönder"}
-                </>
-              )}
-            </Button>
-          </div>
-          </form>
-        </div>
-
-        <AuthMockupPanel mode={mode} />
-      </div>
-    </div>
-  );
-}
-
-function AuthMockupPanel({
-  mode,
-}: {
-  mode: "login" | "buyer" | "seller" | "verify";
-}) {
-  const features =
-    mode === "seller"
-      ? [
-          { icon: PackagePlus, label: "Ürünlerini ekle" },
-          { icon: ImagePlus, label: "Medya yükle" },
-          { icon: ClipboardList, label: "Talepleri al" },
-          { icon: CircleDollarSign, label: "Teklifleri yönet" },
-          { icon: MessageCircle, label: "Satıcıya yaz" },
-        ]
-      : [
-          { icon: Heart, label: "Favoriler" },
-          { icon: ClipboardList, label: "Talepler" },
-          { icon: MessageCircle, label: "Mesajlar" },
-          { icon: Star, label: "Puanla" },
-        ];
-
-  return (
-    <div className="relative hidden min-h-[680px] overflow-hidden border-l border-border bg-white lg:block">
-      <Image
-        src="/hero-market-1600.jpg"
-        alt=""
-        fill
-        sizes="680px"
-        className="object-cover"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.10)_48%,rgba(0,0,0,0.28))]" />
-      <div className="relative flex h-full flex-col justify-between p-8">
-        <div className="max-w-xl rounded-lg border border-white/60 bg-white/86 p-5 shadow-[0_14px_36px_rgba(16,24,18,0.16)] backdrop-blur">
-          <BrandLogo compact />
-          <h3 className="mt-5 max-w-xl text-3xl font-black leading-tight text-brand-brown">
-            {mode === "seller"
-              ? "Yoremio ile satıcı paneli talep, teklif ve chat merkezli çalışır."
-              : mode === "verify"
-                ? "Doğrulama tamamlanınca güvenli oturum akışları açılır."
-                : "Yerel ürünleri keşfet, üreticilerle doğrudan bağlan."}
-          </h3>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <span
-                  key={feature.label}
-                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-white/95 px-3 text-sm font-black text-brand-brown shadow-sm"
-                >
-                  <Icon className="size-4 text-primary" aria-hidden />
-                  {feature.label}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="grid gap-4">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              "/products/photo-yayla-bali.jpg",
-              "/products/photo-tulum-peyniri.jpg",
-              "/products/photo-koy-yumurtasi.jpg",
-            ].map((src, index) => (
-              <div
-                key={src}
-                className="overflow-hidden rounded-lg border border-border bg-white shadow-sm"
-              >
-                <div className="relative aspect-[4/3]">
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    sizes="180px"
-                    className="object-cover"
-                  />
-                  <Heart
-                    className="absolute right-2 top-2 size-5 rounded-full bg-white/90 p-1 text-red-600"
-                    aria-hidden
-                  />
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-1 text-sm font-black text-brand-brown">
-                    {index === 0 ? "Süzme Çiçek Balı" : index === 1 ? "Ezine Peyniri" : "Köy Yumurtası"}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-primary">
-                    {index === 0 ? "250 TL" : index === 1 ? "210 TL" : "70 TL"}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid gap-3 rounded-lg border border-white/60 bg-white/92 p-4 shadow-[0_14px_36px_rgba(16,24,18,0.16)] backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-black text-brand-brown">
-                  {mode === "verify" ? "Doğrulama durumu" : "Canlı API akışları"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {mode === "verify"
-                    ? "Kod, tekrar gönderme ve dev kutusu desteklenir."
-                    : "Talep, teklif, yorum, puan ve chat aynı modelde ilerler."}
-                </p>
-              </div>
-              <Badge variant={mode === "verify" ? "gold" : "green"}>
-                {mode === "verify" ? "Bekliyor" : "API-safe"}
-              </Badge>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <MiniMockStat icon={ShieldCheck} label="Güven" value="92" />
-              <MiniMockStat icon={ClipboardList} label="Talep" value="12" />
-              <MiniMockStat icon={MessageCircle} label="Mesaj" value="2" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniMockStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-background p-3">
-      <Icon className="size-4 text-primary" aria-hidden />
-      <p className="mt-2 text-xl font-black text-brand-brown">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function CategoryShelf({
-  categories,
-  activeId,
-  onSelect,
-  selectedCategory,
-  elevated = false,
-}: {
-  categories: CategoryDto[];
-  activeId: number | "all";
-  onSelect: (value: number | "all") => void;
-  selectedCategory?: CategoryDto;
-  elevated?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "px-3 py-3",
-        elevated
-          ? "rounded-lg border border-border bg-white/96 shadow-[0_14px_34px_rgba(16,24,18,0.14)]"
-          : "y-card",
-      )}
-    >
-      {!elevated ? (
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-black tracking-normal text-brand-brown">
-            Popüler Kategoriler
-          </h2>
-          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-            {selectedCategory?.aciklama ??
-              "Sebze, meyve, süt ürünleri, bakliyat ve kahvaltılık"}
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => onSelect("all")}>
-          <ArrowRight aria-hidden />
-          Tüm Kategoriler
-        </Button>
-      </div>
-      ) : null}
-      <div
-        className={cn(
-          "scroll-shelf flex gap-3 overflow-x-auto pb-1",
-          elevated ? "justify-start sm:justify-center" : "mt-3",
-        )}
-      >
-        <CategoryChip
-          active={activeId === "all"}
-          imageSrc="/hero-market.png"
-          label="Tümü"
-          onClick={() => onSelect("all")}
-        />
-        {categories.map((category, index) => {
-          const imageSrc = categoryImages[(category.id + index) % categoryImages.length];
-          return (
-            <CategoryChip
-              key={category.id}
-              active={activeId === category.id}
-              imageSrc={imageSrc}
-              label={category.adi}
-              onClick={() => onSelect(category.id)}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function CategoryChip({
-  active,
-  imageSrc,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  imageSrc: string;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "group flex w-[112px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-2.5 text-center outline-none transition-colors",
-        active
-            ? "border-primary/25 bg-secondary text-primary shadow-sm"
-          : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
-      )}
-    >
-      <span
-        className={cn(
-          "relative size-12 overflow-hidden rounded-full border bg-secondary transition-colors",
-          active
-            ? "border-primary ring-4 ring-primary/10"
-            : "border-border group-hover:border-primary/50",
-        )}
-      >
-        <Image
-          src={imageSrc}
-          alt=""
-          fill
-          sizes="80px"
-          className="object-cover"
-        />
-      </span>
-      <span className="line-clamp-2 min-h-8 text-xs font-semibold leading-4">
-        {label}
-      </span>
-    </button>
   );
 }
 
@@ -2500,89 +1609,6 @@ function MarketEmptyState({
   );
 }
 
-function FeaturedSellerStrip({
-  products,
-  onSelectProduct,
-}: {
-  products: ProductDto[];
-  onSelectProduct: (id: number) => void;
-}) {
-  const sellers = Array.from(
-    products
-      .reduce((map, product) => {
-        if (!map.has(product.saticiId)) {
-          map.set(product.saticiId, product);
-        }
-        return map;
-      }, new Map<string, ProductDto>())
-      .values(),
-  ).slice(0, 4);
-
-  if (sellers.length === 0) return null;
-
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-black text-brand-brown">One cikan saticilar</h2>
-          <p className="text-sm text-muted-foreground">
-            Liste verisindeki dogrulama, konum, puan ve favori sinyallerinden.
-          </p>
-        </div>
-        <Badge variant="outline">API-safe</Badge>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {sellers.map((product) => (
-          <button
-            key={product.saticiId}
-            type="button"
-            onClick={() => onSelectProduct(product.id)}
-            className="group relative min-h-[132px] overflow-hidden rounded-lg border border-border bg-ink text-left shadow-[0_8px_22px_rgba(32,39,52,0.045)] outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Image
-              src={productImage(product)}
-              alt=""
-              fill
-              sizes="(min-width: 1280px) 320px, 50vw"
-              className="object-cover opacity-72 transition group-hover:scale-[1.03]"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,24,18,0.76),rgba(20,24,18,0.34))]" />
-            <div className="relative flex h-full min-h-[132px] flex-col justify-end p-4 text-white">
-              <div className="flex items-center gap-3">
-                <span className="grid size-12 shrink-0 place-items-center rounded-full border border-white/45 bg-white/18 text-sm font-black">
-                  {sellerName(product).slice(0, 2).toUpperCase()}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-black">{sellerName(product)}</span>
-                  <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-white/82">
-                    <MapPin className="size-3.5" aria-hidden />
-                    {productLocation(product)}
-                  </span>
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {product.saticiDogrulanmis ? (
-                  <Badge className="border-emerald-200 bg-emerald-50 text-emerald-900" variant="green">
-                    <ShieldCheck className="size-3.5" aria-hidden />
-                    Dogrulanmis
-                  </Badge>
-                ) : null}
-                <Badge className="border-white/35 bg-white/88 text-brand-brown" variant="outline">
-                  <Star className="size-3.5 fill-accent text-accent" aria-hidden />
-                  {product.ortalamaPuan.toFixed(1)}
-                </Badge>
-                <Badge className="border-white/35 bg-white/88 text-brand-brown" variant="outline">
-                  {product.toplamFavori} favori
-                </Badge>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function ProductDetailDialog({
   open,
   onClose,
@@ -2626,130 +1652,6 @@ function ProductDetailDialog({
         </div>
       </div>
     </div>
-  );
-}
-
-function ProductCard({
-  product,
-  category,
-  active,
-  isFavorite,
-  onSelect,
-}: {
-  product: ProductDto;
-  category?: CategoryDto;
-  active: boolean;
-  isFavorite: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <article
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-      tabIndex={0}
-      className={cn(
-        "group grid min-w-0 cursor-pointer grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-lg border bg-white text-left shadow-[0_8px_22px_rgba(16,24,18,0.055)] outline-none transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(16,24,18,0.09)] focus-visible:ring-2 focus-visible:ring-ring sm:block",
-        active
-          ? "border-primary ring-2 ring-primary/[0.14]"
-          : "border-border hover:border-primary/[0.35]",
-      )}
-    >
-      <div className="relative min-h-[154px] overflow-hidden bg-muted sm:aspect-[1.12] sm:min-h-0">
-        <Image
-          src={productImage(product)}
-          alt={product.adi}
-          fill
-          sizes="(min-width: 1536px) 260px, (min-width: 768px) 45vw, 132px"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),transparent_58%,rgba(0,0,0,0.10))]" />
-        <div className="absolute left-2 top-2 flex max-w-[calc(100%-4rem)] flex-wrap gap-1.5">
-          {product.saticiDogrulanmis ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/95 px-2 py-1 text-[10px] font-black text-emerald-800 shadow-sm">
-              <ShieldCheck className="size-3" aria-hidden />
-              Sertifikalı
-            </span>
-          ) : null}
-          {category ? (
-            <span
-              className={cn(
-                "rounded-full border px-2 py-1 text-[10px] font-bold shadow-sm",
-                categoryTone(category.id),
-              )}
-            >
-              {category.adi}
-            </span>
-          ) : null}
-        </div>
-        <span
-          className={cn(
-            "absolute right-2 top-2 grid size-9 shrink-0 place-items-center rounded-full bg-white/96 shadow-sm",
-            isFavorite ? "text-red-600" : "text-primary",
-          )}
-        >
-          <Heart
-            className={cn("size-4", isFavorite && "fill-current")}
-            aria-hidden
-          />
-        </span>
-        {product.stokMiktari === 0 ? (
-          <Badge className="absolute bottom-2 left-2" variant="gold">
-            Stok bekliyor
-          </Badge>
-        ) : null}
-      </div>
-
-      <div className="min-w-0 space-y-2 p-3 sm:space-y-2.5">
-        <div>
-          <h3 className="line-clamp-2 text-sm font-bold text-foreground sm:line-clamp-1 sm:text-base">
-            {product.adi}
-          </h3>
-          <p className="mt-1 flex min-w-0 items-center gap-1 text-xs font-semibold text-primary">
-            <Store className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{sellerName(product)}</span>
-            {product.saticiDogrulanmis ? (
-              <BadgeCheck className="size-3.5 shrink-0" aria-hidden />
-            ) : null}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="min-w-0">
-            <p className="flex min-w-0 items-center gap-1 text-muted-foreground">
-              <MapPin className="size-3.5" aria-hidden />
-              <span className="truncate">{productLocation(product)}</span>
-            </p>
-          </div>
-          <p className="flex shrink-0 items-center gap-1 px-1 font-semibold text-foreground">
-            <Star className="size-3.5 fill-accent text-accent" aria-hidden />
-            {product.ortalamaPuan.toFixed(1)}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-[1fr_auto] items-end gap-2 border-t border-border pt-2">
-          <div className="min-w-0">
-            <p className="text-lg font-black text-primary sm:text-xl">
-              {formatPrice(product.fiyat)}
-            </p>
-            <p className="text-xs font-semibold text-muted-foreground">
-              {product.stokMiktari > 0 ? `${product.stokMiktari} stok` : "Stok bekliyor"} · {product.toplamYorum} yorum
-            </p>
-          </div>
-          <Button size="icon" variant={active ? "default" : "outline"} title="Ürünü incele">
-            <ArrowRight aria-hidden />
-          </Button>
-        </div>
-
-        <p className="line-clamp-1 text-xs font-semibold text-muted-foreground">
-          {product.aciklama || `${product.toplamFavori} kişi favorilerine ekledi.`}
-        </p>
-      </div>
-    </article>
   );
 }
 
@@ -3303,6 +2205,7 @@ function WorkspaceSection({
   chatTargetId,
   chatState,
   signalRState,
+  notificationUnreadCount,
   actionStatus,
   onLogin,
   onSelectProduct,
@@ -3318,6 +2221,7 @@ function WorkspaceSection({
   onCategoryDelete,
   onChatTargetChange,
   onSendMessage,
+  onLogout,
 }: {
   workspace: Workspace;
   setWorkspace: (value: Workspace) => void;
@@ -3339,6 +2243,7 @@ function WorkspaceSection({
   chatTargetId: string;
   chatState: LoadState;
   signalRState: string;
+  notificationUnreadCount: number;
   actionStatus: string | null;
   onLogin: () => void;
   onSelectProduct: (id: number) => void;
@@ -3366,6 +2271,7 @@ function WorkspaceSection({
   onCategoryDelete: (id: number) => void;
   onChatTargetChange: (value: string) => void;
   onSendMessage: (receiverId: string, message: string) => void;
+  onLogout: () => void;
 }) {
   return (
     <div className="mx-auto max-w-[1440px] px-3 py-6 sm:px-5">
@@ -3393,8 +2299,15 @@ function WorkspaceSection({
             );
           })}
           </nav>
-          <div className="mt-8 hidden rounded-lg border border-white/12 bg-white/8 p-4 text-sm leading-6 text-white/82 lg:block">
-            Yoremio paneli; favori, talep, teklif, ürün ve chat akışlarını API destekli şekilde toplar.
+          <div className="mt-8 hidden border-t border-white/15 pt-6 lg:grid lg:gap-2">
+            <a href="#kesif" className="inline-flex h-11 items-center gap-3 rounded-md px-3 text-sm font-bold text-white/82 hover:bg-white/10 hover:text-white">
+              <Search className="size-4" aria-hidden />
+              Pazara dön
+            </a>
+            <button type="button" onClick={onLogout} className="inline-flex h-11 items-center gap-3 rounded-md px-3 text-left text-sm font-bold text-white/82 hover:bg-white/10 hover:text-white">
+              <LogOut className="size-4" aria-hidden />
+              Çıkış
+            </button>
           </div>
         </aside>
 
@@ -3411,15 +2324,17 @@ function WorkspaceSection({
                     : "Admin Paneli"}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Mockup setindeki operasyon ekranlarıyla aynı panel ritmi.
+              {authUser ? accountDisplayName(authUser, sellerProfile) : "Güvenli oturum gerekli"}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" title="Bildirimler" className="relative bg-white">
               <Bell aria-hidden />
-              <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-red-600 text-[10px] font-black text-white">
-                3
-              </span>
+              {notificationUnreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-red-600 text-[10px] font-black text-white">
+                  {Math.min(99, notificationUnreadCount)}
+                </span>
+              ) : null}
             </Button>
             <Button variant="ghost" size="icon" title="Mesajlar" className="bg-white">
               <MessageCircle aria-hidden />
@@ -3544,20 +2459,44 @@ function BuyerWorkspace({
               {demands.map((demand) => (
                 <div key={demand.id} className="px-4 py-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
+                    <div className="grid min-w-0 grid-cols-[72px_minmax(0,1fr)] gap-3">
                       <button
                         type="button"
                         onClick={() => onSelectProduct(demand.urunId)}
-                        className="text-left font-semibold transition hover:text-primary"
+                        className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
+                        title={demand.urunAdi}
                       >
-                        {demand.urunAdi}
+                        <Image
+                          src={demandImage(demand)}
+                          alt=""
+                          fill
+                          sizes="72px"
+                          className="object-cover"
+                        />
                       </button>
-                      <p className="text-sm text-muted-foreground">
-                        {demand.miktar} adet · {formatShortDate(demand.olusturmaTarihi)}
-                      </p>
-                      {demand.not ? (
-                        <p className="mt-2 text-sm leading-6">{demand.not}</p>
-                      ) : null}
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => onSelectProduct(demand.urunId)}
+                          className="line-clamp-1 text-left font-semibold transition hover:text-primary"
+                        >
+                          {demand.urunAdi}
+                        </button>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {demand.miktar} adet · {formatShortDate(demand.olusturmaTarihi)}
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-primary">
+                          {demand.urunFiyat ? formatPrice(demand.urunFiyat) : "Fiyat üründe"}
+                        </p>
+                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          {[demand.saticiMagazaAdi, demand.saticiSehir, demand.saticiIlce]
+                            .filter(Boolean)
+                            .join(" · ") || "Satıcı bilgisi ürün detayında"}
+                        </p>
+                        {demand.not ? (
+                          <p className="mt-2 line-clamp-2 text-sm leading-6">{demand.not}</p>
+                        ) : null}
+                      </div>
                     </div>
                     <Badge variant={demand.durum === "ACIK" ? "green" : "plum"}>
                       {demand.durum}
@@ -3722,30 +2661,8 @@ function SellerWorkspace({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-      <div className="space-y-4">
-        <SellerIdentityPanel
-          profile={profile}
-          dashboard={dashboard}
-          productsCount={products.length}
-          openDemands={totalOpenDemands}
-        />
-        <SellerTrustMetricPanel
-          profile={profile}
-          dashboard={dashboard}
-          productsCount={products.length}
-          openDemands={totalOpenDemands}
-        />
-        <SellerProfileForm
-          profile={profile}
-          actionStatus={actionStatus}
-          onProfileUpdate={onProfileUpdate}
-        />
-        <SellerRuleCard />
-      </div>
-
-      <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
+    <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-4">
           <WorkspaceStat
             icon={Store}
             label="Aktif ürün"
@@ -3761,8 +2678,14 @@ function SellerWorkspace({
             label="Okunmamış"
             value={String(dashboard?.unreadMessages ?? 0)}
           />
+          <WorkspaceStat
+            icon={CircleDollarSign}
+            label="Teklif"
+            value={String(dashboard?.pendingOffers ?? demands.reduce((sum, demand) => sum + demand.teklifler.length, 0))}
+          />
         </div>
 
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <ProductManager
           categories={categories}
           products={products}
@@ -3775,26 +2698,45 @@ function SellerWorkspace({
           uploads={uploads}
         />
 
-        <Panel title="Gelen talepler" description="Açık taleplere teklif ver">
-          {demands.length > 0 ? (
-            <div className="grid gap-3 p-4">
-              {demands.map((demand) => (
-                <SellerDemandCard
-                  key={demand.id}
-                  demand={demand}
-                  actionStatus={actionStatus}
-                  onOffer={onOffer}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Inbox}
-              title="Gelen talep yok."
-              description="Ürünlerin için talep geldiğinde burada teklif verebilirsin."
-            />
-          )}
-        </Panel>
+        <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+          <SellerIdentityPanel
+            profile={profile}
+            dashboard={dashboard}
+            productsCount={products.length}
+            openDemands={totalOpenDemands}
+          />
+          <SellerTrustMetricPanel
+            profile={profile}
+            dashboard={dashboard}
+            productsCount={products.length}
+            openDemands={totalOpenDemands}
+          />
+          <Panel title="Gelen talepler" description="Açık taleplere teklif ver">
+            {demands.length > 0 ? (
+              <div className="grid gap-3 p-4">
+                {demands.slice(0, 3).map((demand) => (
+                  <SellerDemandCard
+                    key={demand.id}
+                    demand={demand}
+                    actionStatus={actionStatus}
+                    onOffer={onOffer}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                title="Gelen talep yok."
+                description="Ürünlerin için talep geldiğinde burada teklif verebilirsin."
+              />
+            )}
+          </Panel>
+          <SellerProfileForm
+            profile={profile}
+            actionStatus={actionStatus}
+            onProfileUpdate={onProfileUpdate}
+          />
+        </aside>
       </div>
     </div>
   );
@@ -3998,25 +2940,6 @@ function SellerProfileForm({
           Profili güncelle
         </Button>
       </form>
-    </Card>
-  );
-}
-
-function SellerRuleCard() {
-  return (
-    <Card className="p-4">
-      <div className="flex items-start gap-3">
-        <div className="grid size-10 shrink-0 place-items-center rounded-md bg-secondary text-primary">
-          <ShieldCheck className="size-5" aria-hidden />
-        </div>
-        <div>
-          <h3 className="font-bold">Kategori yönetimi admin alanında</h3>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Satıcılar ürün eklerken mevcut kategorileri seçer. Kategori oluşturma,
-            güncelleme ve silme işlemleri artık sadece ADMIN rolüyle yapılır.
-          </p>
-        </div>
-      </div>
     </Card>
   );
 }
@@ -4502,20 +3425,16 @@ function AdminWorkspace({
   ) => void;
   onCategoryDelete: (id: number) => void;
 }) {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | "new">("new");
+
   if (!hasRole(authUser, "ADMIN")) {
     return <LockedPanel role="ADMIN" onLogin={onLogin} />;
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[420px_minmax(0,1fr)]">
-      <CategoryManager
-        categories={categories}
-        actionStatus={actionStatus}
-        onCategorySave={onCategorySave}
-        onCategoryDelete={onCategoryDelete}
-      />
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <WorkspaceStat
             icon={Users}
             label="Kullanıcı"
@@ -4537,25 +3456,64 @@ function AdminWorkspace({
             value={String(dashboard?.unreadMessages ?? 0)}
           />
         </div>
-        <Panel title="Kategori sözleşmesi" description="Admin yetkili taksonomi yönetimi">
-          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Panel title="Kategoriler" description={`${categories.length} kayıt`}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead className="border-b border-border bg-background text-xs font-black uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3">Kategori adı</th>
+                  <th className="px-4 py-3">Açıklama</th>
+                  <th className="px-4 py-3 text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
             {categories.map((category) => (
-              <div
-                key={category.id}
-                className="rounded-lg border border-border bg-background p-4"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                  #{category.id}
-                </p>
-                <h3 className="mt-2 font-black text-brand-brown">{category.adi}</h3>
-                <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+              <tr key={category.id}>
+                <td className="px-4 py-3 font-semibold">{category.id}</td>
+                <td className="px-4 py-3 font-black text-brand-brown">{category.adi}</td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {category.aciklama || "Açıklama eklenmedi."}
-                </p>
-              </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={() => setSelectedCategoryId(category.id)}
+                    >
+                      <Edit3 aria-hidden />
+                      Düzenle
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={() => onCategoryDelete(category.id)}
+                      disabled={actionStatus === "category"}
+                      className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50"
+                    >
+                      <Trash2 aria-hidden />
+                      Sil
+                    </Button>
+                  </div>
+                </td>
+              </tr>
             ))}
+              </tbody>
+            </table>
           </div>
         </Panel>
       </div>
+      <CategoryManager
+        categories={categories}
+        actionStatus={actionStatus}
+        selectedId={selectedCategoryId}
+        onSelectedIdChange={setSelectedCategoryId}
+        onCategorySave={onCategorySave}
+        onCategoryDelete={onCategoryDelete}
+      />
     </div>
   );
 }
@@ -4563,18 +3521,21 @@ function AdminWorkspace({
 function CategoryManager({
   categories,
   actionStatus,
+  selectedId,
+  onSelectedIdChange,
   onCategorySave,
   onCategoryDelete,
 }: {
   categories: CategoryDto[];
   actionStatus: string | null;
+  selectedId: number | "new";
+  onSelectedIdChange: (id: number | "new") => void;
   onCategorySave: (
     values: { adi: string; aciklama: string },
     categoryToUpdate?: number,
   ) => void;
   onCategoryDelete: (id: number) => void;
 }) {
-  const [selectedId, setSelectedId] = useState<number | "new">("new");
   const selectedCategory =
     selectedId === "new"
       ? undefined
@@ -4611,7 +3572,7 @@ function CategoryManager({
         <select
           value={selectedId}
           onChange={(event) =>
-            setSelectedId(event.target.value === "new" ? "new" : Number(event.target.value))
+            onSelectedIdChange(event.target.value === "new" ? "new" : Number(event.target.value))
           }
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
         >
@@ -4677,12 +3638,26 @@ function SellerDemandCard({
   return (
     <div className="rounded-lg border border-border bg-background p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="font-semibold">{demand.urunAdi}</p>
-          <p className="text-sm text-muted-foreground">
-            {demand.miktar} adet · {formatShortDate(demand.olusturmaTarihi)}
-          </p>
-          {demand.not ? <p className="mt-2 text-sm leading-6">{demand.not}</p> : null}
+        <div className="grid min-w-0 grid-cols-[64px_minmax(0,1fr)] gap-3">
+          <div className="relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
+            <Image
+              src={demandImage(demand)}
+              alt=""
+              fill
+              sizes="64px"
+              className="object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="line-clamp-1 font-semibold">{demand.urunAdi}</p>
+            <p className="text-sm text-muted-foreground">
+              {demand.miktar} adet · {formatShortDate(demand.olusturmaTarihi)}
+            </p>
+            <p className="mt-1 text-sm font-bold text-primary">
+              {demand.urunFiyat ? formatPrice(demand.urunFiyat) : "Fiyat üründe"}
+            </p>
+            {demand.not ? <p className="mt-2 line-clamp-2 text-sm leading-6">{demand.not}</p> : null}
+          </div>
         </div>
         <Badge variant={demand.durum === "ACIK" ? "green" : "plum"}>
           {demand.durum}
@@ -5193,3 +4168,4 @@ function Toast({
     </div>
   );
 }
+

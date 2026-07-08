@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f9f6;
-  --foreground: #121712;
+  --background: #f8faf8;
+  --foreground: #111827;
   --card: #ffffff;
-  --card-foreground: #121712;
-  --primary: #0f6b36;
+  --card-foreground: #111827;
+  --primary: #006b35;
   --primary-foreground: #ffffff;
-  --secondary: #edf6ec;
-  --secondary-foreground: #0e4f2b;
-  --accent: #f4a40b;
-  --accent-foreground: #271704;
-  --muted: #f4f6f3;
-  --muted-foreground: #66706a;
-  --border: #e2e7e1;
-  --input: #d9dfd8;
-  --ring: #0f7a3e;
-  --brand-brown: #064526;
+  --secondary: #eef7ef;
+  --secondary-foreground: #00592d;
+  --accent: #f59e0b;
+  --accent-foreground: #1f1603;
+  --muted: #f3f5f2;
+  --muted-foreground: #667085;
+  --border: #e4e7ec;
+  --input: #d0d5dd;
+  --ring: #007a3d;
+  --brand-brown: #00592d;
   --plum: #714460;
-  --tomato: #c7513a;
-  --ink: #17211d;
+  --tomato: #e03131;
+  --ink: #101828;
   --sky: #2f6f86;
 }
 
@@ -57,9 +57,7 @@
 
 body {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 249, 246, 0.98)),
-    #f7f9f6;
+  background: #f8faf8;
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
@@ -117,20 +115,20 @@ textarea {
   .surface-glass {
     border: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 8px 22px rgba(16, 24, 18, 0.055);
+    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
   }
 
   .surface-soft {
     border: 1px solid var(--border);
     background: #ffffff;
-    box-shadow: 0 8px 22px rgba(16, 24, 18, 0.055);
+    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
   }
 
   .y-card {
     border: 1px solid var(--border);
     border-radius: 8px;
     background: #ffffff;
-    box-shadow: 0 8px 22px rgba(16, 24, 18, 0.055);
+    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
   }
 
   .y-card-flat {
