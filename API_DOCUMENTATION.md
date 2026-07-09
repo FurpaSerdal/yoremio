@@ -296,6 +296,7 @@ Ana ekranlar:
 - `GET /api/Urun/favorilerim`
 - `POST /api/Urun/{urunId}/favori`
 - `DELETE /api/Urun/{urunId}/favori`
+- `GET /api/Urun/{urunId}/yorum-yetkisi`
 - `POST /api/Puan/puan-ekle`
 - `POST /api/Yorum`
 - `POST /api/Talep`
@@ -324,7 +325,7 @@ Ana ekranlar:
 - `GET /api/Urun/urunlerim`
 - `POST /api/Urun/urun-ekle`
 - `PUT /api/Urun/{urunId}`
-- `PATCH /api/Urun/{urunId}/status`
+- `PUT/PATCH /api/Urun/{urunId}/status`
 - `DELETE /api/Urun/{urunId}`
 - `DELETE /api/Urun/{urunId}/resimler/{resimId}`
 - `DELETE /api/Urun/{urunId}/videolar/{videoId}`
@@ -402,7 +403,8 @@ Liste response `data` formatı:
 2. `GET /api/Yorum/{urunId}` veya ürün DTO içindeki `yorumlar`
 3. `GET /api/Puan/ortalama/{urunId}` veya ürün DTO içindeki `ortalamaPuan`
 4. `GET /api/Profil/satici/{saticiId}/guven-skoru`
-5. Alıcı login ise favori durumunu anlamak için `GET /api/Urun/favorilerim`
+5. Alıcı login ise yorum formu uygunluğu için `GET /api/Urun/{urunId}/yorum-yetkisi`
+6. Alıcı login ise favori durumunu anlamak için `GET /api/Urun/favorilerim`
 
 Ürün detay UI alanları:
 
@@ -444,7 +446,7 @@ Alıcı aksiyonları:
 
 Aktif/pasif durumu:
 
-- `PATCH /api/Urun/{urunId}/status`
+- `PUT/PATCH /api/Urun/{urunId}/status`
 - Body: `{ "aktifMi": false }`
 - UI'da toggle veya menu aksiyonu olarak kullanin. Pasife alinan urun public listelemede gosterilmez, saticinin `urunlerim` ekraninda yonetilmeye devam eder.
 
@@ -554,6 +556,20 @@ Response:
   "success": true,
   "message": "Satıcı kaydı başarılı.",
   "data": null,
+  "traceId": "..."
+}
+```
+
+Dogrulama mesaji gonderimi SMTP/SMS kaynakli basarisiz olursa kayit geri alinmaz; response yine `success=true` doner:
+
+```json
+{
+  "success": true,
+  "message": "Satici kaydi alindi. Dogrulama mesaji gonderilemedi; daha sonra yeniden gonderebilirsiniz.",
+  "data": {
+    "verificationMessageSent": false,
+    "warning": "Dogrulama mesaji gonderilemedi: Email: Failure sending mail."
+  },
   "traceId": "..."
 }
 ```
@@ -1007,7 +1023,8 @@ Response `data`:
     "toplamYorum": 12,
     "toplamFavori": 30,
     "guvenSkoru": 87.5,
-    "kapakResimUrl": "/demo-media/yayla-bali/resimler/1.jpg"
+    "kapakResimUrl": "/demo-media/yayla-bali/resimler/1.jpg",
+    "vitrinUrunId": 12
   }
 ]
 ```
@@ -1016,6 +1033,7 @@ UI kullanimi:
 
 - Ana sayfadaki one cikan veya dogrulanmis saticilar bandi.
 - Satici kartinda magazanin kapak gorseli icin `kapakResimUrl`.
+- Satici kartina tiklaninca gidilecek urun icin `vitrinUrunId` kullanilabilir.
 - Rozet icin `dogrulanmisSatici`, sosyal kanit icin `ortalamaPuan`, `toplamYorum`, `toplamFavori`.
 - `kapakResimUrl` de urun medyasi gibi relative veya absolute olabilir; `resolveMediaUrl` helper'i kullanilmalidir.
 
@@ -1040,6 +1058,10 @@ Auth: Yok
 Response:
 
 - `data`: `KategoriDto[]`
+
+Not:
+
+- Veritabani kategori tablosu bossa servis varsayilan kategori setini DB'ye ekleyip listeyi dolu dondurur.
 
 UI kullanımı:
 
@@ -1353,7 +1375,9 @@ Form alanları:
 
 ### 9.11 Urun Durumu Guncelle
 
-`PATCH /api/Urun/{urunId}/status`
+`PUT /api/Urun/{urunId}/status`
+
+Geriye uyumluluk icin `PATCH /api/Urun/{urunId}/status` da ayni body ile desteklenir.
 
 Auth: `SATICI`
 
@@ -1560,6 +1584,26 @@ Response:
 
 - `data`: `YorumDto[]`
 
+### 11.5 Yorum Yetkisi
+
+`GET /api/Urun/{urunId}/yorum-yetkisi`
+
+Auth: `ALICI`
+
+Response `data`:
+
+```json
+{
+  "yorumYapabilir": false,
+  "sebep": "Yorum yapabilmek icin bu urunle ilgili kabul edilmis bir talebiniz olmalidir."
+}
+```
+
+Not:
+
+- UI yorum formunu acmadan once bu endpoint ile formu aktif/pasif gosterebilir.
+- `yorumYapabilir=true` ise `sebep` bos donebilir.
+
 ## 12. Talep API
 
 ### 12.1 Talep DTO
@@ -1698,6 +1742,40 @@ Mantık:
 Response:
 
 - `data`: güncel `TalepDto`
+
+### 12.7 Yardim/Destek Talebi
+
+`POST /api/Destek/talep`
+
+Auth: Yok
+
+Body:
+
+```json
+{
+  "konu": "Urun formunda kategori secemiyorum",
+  "mesaj": "Kategori listesi bos geliyor.",
+  "email": "user@example.com",
+  "telefon": "+905551112233",
+  "ekran": "satici-urun-ekle",
+  "ilgiliVarlikTuru": "Urun",
+  "ilgiliVarlikId": "10"
+}
+```
+
+Response `data`:
+
+```json
+{
+  "talepId": "DST-20260709123000-abc123",
+  "alinmaTarihi": "2026-07-09T12:30:00Z"
+}
+```
+
+Not:
+
+- `konu` ve `mesaj` zorunludur; diger alanlar opsiyoneldir.
+- Talep backend tarafinda loglanir ve takip icin `talepId` dondurulur.
 
 ## 13. Chat API
 
@@ -2329,7 +2407,7 @@ Urun guncelleme:
 
 Urun aktif/pasif:
 
-- `PATCH /api/Urun/{urunId}/status` sadece urun sahibi satici tarafindan kullanilir.
+- `PUT /api/Urun/{urunId}/status` sadece urun sahibi satici tarafindan kullanilir; `PATCH` ayni body ile geriye uyumluluk icin desteklenir.
 - `aktifMi=false` urunu silmez; public kesif listesinde gizler.
 - UI delete aksiyonundan once pasife alma secenegini one cikarmalidir.
 
@@ -2626,6 +2704,8 @@ Auth ek endpoint:
 | `DELETE` | `/api/Urun/{urunId}/favori` | Evet | `ALICI` | Favoriden çıkar |
 | `POST` | `/api/Urun/urun-ekle` | Evet | `SATICI` | Ürün ekle |
 | `PUT` | `/api/Urun/{urunId}` | Evet | `SATICI` | Ürün güncelle |
+| `GET` | `/api/Urun/{urunId}/yorum-yetkisi` | Evet | `ALICI` | Yorum uygunluk kontrolu |
+| `PUT` | `/api/Urun/{urunId}/status` | Evet | `SATICI` | Ürün aktif/pasif durumu |
 | `PATCH` | `/api/Urun/{urunId}/status` | Evet | `SATICI` | Ürün aktif/pasif durumu |
 | `DELETE` | `/api/Urun/{urunId}` | Evet | `SATICI` | Ürün sil |
 | `DELETE` | `/api/Urun/{urunId}/resimler/{resimId}` | Evet | `SATICI` | Ürün resmi sil |
@@ -2658,6 +2738,12 @@ Auth ek endpoint:
 | `POST` | `/api/Talep/{talepId}/teklif` | Evet | `SATICI` | Teklif ver/güncelle |
 | `POST` | `/api/Talep/teklif/{teklifId}/kabul` | Evet | `ALICI` | Teklif kabul |
 
+### Destek
+
+| Method | Endpoint | Auth | Rol | Açıklama |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/Destek/talep` | Hayır | - | Yardım/destek talebi al |
+
 ### Chat
 
 | Method | Endpoint | Auth | Rol | Açıklama |
@@ -2685,7 +2771,7 @@ Frontend tarafında özellikle unutulmaması gerekenler:
 - Tüm response'larda `success/message/data/errors/traceId` envelope bekleyin.
 - Login sonrasi header badge ve bos state kararlarini `GET /api/Dashboard/summary` ile besleyin.
 - Satici paneli KPI kartlarini `GET /api/Dashboard/satici` ile, admin paneli KPI kartlarini `GET /api/Dashboard/admin` ile doldurun.
-- Satici urun listesinde kalici silme yerine once `PATCH /api/Urun/{urunId}/status` aktif/pasif toggle'ini one cikarin.
+- Satici urun listesinde kalici silme yerine once `PUT /api/Urun/{urunId}/status` aktif/pasif toggle'ini one cikarin.
 - Upload endpointlerinde JSON değil `multipart/form-data` kullanın.
 - Upload alan adlarını backend DTO adlarıyla gönderin: `Adi`, `Fiyat`, `Resimler`, `Videolar`.
 - Media URL'leri local/demo için relative, Cloudinary için absolute gelebilir; `http` ile başlıyorsa direkt kullanın, değilse API base URL ile birleştirin.

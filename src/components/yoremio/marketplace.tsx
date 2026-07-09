@@ -82,6 +82,7 @@ import {
   type ProductDto,
   type ProductFormValues,
   type RatingDto,
+  type ReviewEligibilityDto,
   type SellerDashboardDto,
   type SellerProfileDto,
   type SellerTrustScoreDto,
@@ -619,14 +620,21 @@ export function YoremioMarketplace() {
     };
   }, [authUser, chatTargetId, showToast]);
 
-  const selectProduct = useCallback(
-    (product: ProductDto, nextScreen: Screen = "discover") => {
-      setActiveProductId(product.id);
+  const selectProductById = useCallback(
+    (productId: number, nextScreen: Screen = "discover") => {
+      setActiveProductId(productId);
       setProductDetail(null);
       setProductDraftSource(null);
       navigate(nextScreen);
     },
     [navigate],
+  );
+
+  const selectProduct = useCallback(
+    (product: ProductDto, nextScreen: Screen = "discover") => {
+      selectProductById(product.id, nextScreen);
+    },
+    [selectProductById],
   );
 
   const requireRole = useCallback(
@@ -779,6 +787,29 @@ export function YoremioMarketplace() {
           setProductDetail(null);
         }
         showToast("Urun silindi.", "success");
+        await refreshRoleData();
+      } catch (error) {
+        showToast(apiErrorMessage(error), "error");
+      } finally {
+        setActionStatus(null);
+      }
+    },
+    [activeProductId, authUser, refreshRoleData, requireRole, showToast],
+  );
+
+  const toggleProductStatus = useCallback(
+    async (product: ProductDto) => {
+      if (!requireRole("SATICI") || !authUser) return;
+
+      const nextStatus = product.aktifMi === false;
+      setActionStatus(`product-status-${product.id}`);
+      try {
+        const updatedProduct = await yoremioApi.updateProductStatus(authUser.token, product.id, nextStatus);
+        setSellerProducts((current) =>
+          current.map((item) => (item.id === product.id ? updatedProduct : item)),
+        );
+        if (activeProductId === product.id) setProductDetail(updatedProduct);
+        showToast(nextStatus ? "Ürün aktif edildi." : "Ürün pasife alındı.", "success");
         await refreshRoleData();
       } catch (error) {
         showToast(apiErrorMessage(error), "error");
@@ -1008,6 +1039,7 @@ export function YoremioMarketplace() {
         onNewProduct={startNewProduct}
         onDuplicateProduct={duplicateProduct}
         onDeleteProduct={handleProductDelete}
+        onToggleProductStatus={toggleProductStatus}
         actionStatus={actionStatus}
       />
     );
@@ -1099,6 +1131,7 @@ export function YoremioMarketplace() {
         favoriteIds={favoriteIds}
         onCategoryChange={setCategoryId}
         onSelectProduct={selectProduct}
+        onSelectProductId={selectProductById}
         onToggleFavorite={toggleFavorite}
       />
     );
@@ -1129,6 +1162,7 @@ function HomeScreen({
   favoriteIds,
   onCategoryChange,
   onSelectProduct,
+  onSelectProductId,
   onToggleFavorite,
 }: {
   authUser: AuthState | null;
@@ -1147,6 +1181,7 @@ function HomeScreen({
   favoriteIds: Set<number>;
   onCategoryChange: (value: number | "all") => void;
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
+  onSelectProductId: (productId: number, screen?: Screen) => void;
   onToggleFavorite: (product: ProductDto) => void;
 }) {
   return (
@@ -1215,7 +1250,7 @@ function HomeScreen({
           />
         )}
 
-        <FeaturedSellerRow sellers={sellers} products={products} onSelectProduct={onSelectProduct} />
+        <FeaturedSellerRow sellers={sellers} products={products} onSelectProductId={onSelectProductId} />
         <PromiseBar />
       </section>
     </main>
@@ -1450,11 +1485,11 @@ function HomeProductCard({
 function FeaturedSellerRow({
   sellers,
   products,
-  onSelectProduct,
+  onSelectProductId,
 }: {
   sellers: FeaturedSellerDto[];
   products: ProductDto[];
-  onSelectProduct: (product: ProductDto, screen?: Screen) => void;
+  onSelectProductId: (productId: number, screen?: Screen) => void;
 }) {
   if (sellers.length === 0) return null;
 
@@ -1465,14 +1500,16 @@ function FeaturedSellerRow({
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {sellers.slice(0, 4).map((seller) => {
-          const product = products.find((item) => item.saticiId === seller.kullaniciId);
+          const product = products.find((item) => item.id === seller.vitrinUrunId)
+            ?? products.find((item) => item.saticiId === seller.kullaniciId);
+          const productId = seller.vitrinUrunId ?? product?.id;
           return (
             <button
               key={seller.kullaniciId}
               type="button"
-              disabled={!product}
+              disabled={!productId}
               onClick={() => {
-                if (product) onSelectProduct(product, "discover");
+                if (productId) onSelectProductId(productId, "discover");
               }}
               className="relative min-h-[142px] overflow-hidden rounded-lg border border-border bg-ink text-left text-white shadow-[0_8px_22px_rgba(16,24,40,0.1)] disabled:cursor-not-allowed disabled:opacity-70"
             >
@@ -2801,7 +2838,7 @@ function VerificationScreen({
         <Button
           type="button"
           variant="ghost"
-          onClick={() => showToast("Destek akışı için backend endpointi henüz bağlı değil.", "info")}
+          onClick={() => onNavigate("states")}
         >
           <CircleHelp aria-hidden />
           Yardıma ihtiyacın varsa
@@ -3099,6 +3136,7 @@ function SellerDashboard({
   onNewProduct,
   onDuplicateProduct,
   onDeleteProduct,
+  onToggleProductStatus,
   actionStatus,
 }: {
   authUser: AuthState | null;
@@ -3114,6 +3152,7 @@ function SellerDashboard({
   onNewProduct: () => void;
   onDuplicateProduct: (product: ProductDto) => void;
   onDeleteProduct: (product: ProductDto) => void;
+  onToggleProductStatus: (product: ProductDto) => void;
   actionStatus: string | null;
 }) {
   const totalProducts = dashboard?.totalProducts ?? products.length;
@@ -3164,6 +3203,7 @@ function SellerDashboard({
                 onSelectProduct={onSelectProduct}
                 onDuplicateProduct={onDuplicateProduct}
                 onDeleteProduct={onDeleteProduct}
+                onToggleProductStatus={onToggleProductStatus}
               />
             ) : (
               <EmptyState icon={PackagePlus} title="Ürün yok" description="İlk ürünü eklemek için Yeni ürün aksiyonunu kullan." />
@@ -3688,6 +3728,8 @@ function ReviewsScreen({
   const [tab, setTab] = useState<ReviewTab>("comments");
   const [comments, setComments] = useState<CommentDto[]>([]);
   const [ratings, setRatings] = useState<RatingDto[]>([]);
+  const [reviewEligibility, setReviewEligibility] = useState<ReviewEligibilityDto | null>(null);
+  const [eligibilityStatus, setEligibilityStatus] = useState<"idle" | "loading">("idle");
   const [reviewStatus, setReviewStatus] = useState<"idle" | "loading">("idle");
 
   useEffect(() => {
@@ -3722,6 +3764,37 @@ function ReviewsScreen({
     };
   }, [product]);
 
+  useEffect(() => {
+    if (!product || !authUser || !hasRole(authUser, "ALICI")) {
+      setReviewEligibility(null);
+      setEligibilityStatus("idle");
+      return;
+    }
+
+    let ignore = false;
+    setEligibilityStatus("loading");
+    yoremioApi
+      .reviewEligibility(authUser.token, product.id)
+      .then((eligibility) => {
+        if (!ignore) setReviewEligibility(eligibility);
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setReviewEligibility({
+            yorumYapabilir: false,
+            sebep: apiErrorMessage(error),
+          });
+        }
+      })
+      .finally(() => {
+        if (!ignore) setEligibilityStatus("idle");
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [authUser, product]);
+
   const reviews: ReviewItem[] = comments.map((comment) => ({
     name: comment.kullaniciAdi ?? "Yöremio kullanıcısı",
     date: shortDate(comment.tarih),
@@ -3729,11 +3802,29 @@ function ReviewsScreen({
     text: comment.icerik,
     helpful: 0,
   }));
+  const canWriteReview = Boolean(authUser && hasRole(authUser, "ALICI") && reviewEligibility?.yorumYapabilir);
+  const reviewGateMessage = !authUser
+    ? "Yorum yazmak için alıcı girişi gerekli."
+    : !hasRole(authUser, "ALICI")
+      ? "Yorum yazmak için alıcı rolü gerekli."
+      : eligibilityStatus === "loading"
+        ? "Yorum yetkisi kontrol ediliyor."
+        : reviewEligibility?.yorumYapabilir
+          ? "Bu ürün için yorum ve puan gönderebilirsin."
+          : reviewEligibility?.sebep ?? "Yorum yazabilmek için bu ürünle ilgili kabul edilmiş bir talebin olmalı.";
+  const disableReviewSubmit =
+    reviewStatus === "loading" ||
+    eligibilityStatus === "loading" ||
+    Boolean(authUser && hasRole(authUser, "ALICI") && !canWriteReview);
 
   const submitReview = async () => {
     if (!authUser || !product) {
       showToast("Yorum için alıcı girişi gerekli.", "info");
       onNavigate("login");
+      return;
+    }
+    if (!hasRole(authUser, "ALICI") || !reviewEligibility?.yorumYapabilir) {
+      showToast(reviewGateMessage, "info");
       return;
     }
     if (!reviewText.trim() && rating === 0) {
@@ -3849,7 +3940,7 @@ function ReviewsScreen({
             <ShieldCheck className="size-8 text-primary" aria-hidden />
             <h2 className="mt-4 text-xl font-black text-primary">Yorum yetkisi backend tarafından doğrulanır</h2>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              Puan ve yorum gönderimi canlı API&apos;ye yapılır. Kullanıcının bu ürün için yorum hakkı yoksa backend hata mesajı döndürür.
+              {reviewGateMessage}
             </p>
           </Card>
         </div>
@@ -3923,14 +4014,20 @@ function ReviewsScreen({
           <Card className="p-5">
             <h2 className="text-xl font-black">Yorum yaz</h2>
             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-950">
-              <p className="font-black">Anlaşılmış talep gerekli</p>
-              <p className="mt-1">Yorum yazabilmek için bu ürün için satıcı ile anlaşılmış talebin olmalı.</p>
+              <p className="font-black">{canWriteReview ? "Yorum hakkı açık" : "Yorum hakkı kapalı"}</p>
+              <p className="mt-1">{reviewGateMessage}</p>
             </div>
             <div className="mt-5">
               <p className="font-bold">Puan ver</p>
               <div className="mt-2 flex gap-2">
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <button key={index} type="button" onClick={() => setRating(index + 1)}>
+                  <button
+                    key={index}
+                    type="button"
+                    disabled={!canWriteReview || reviewStatus === "loading"}
+                    onClick={() => setRating(index + 1)}
+                    className="disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     <Star className={cn("size-7", index < rating ? "fill-amber-400 text-amber-400" : "text-slate-300")} aria-hidden />
                   </button>
                 ))}
@@ -3942,10 +4039,11 @@ function ReviewsScreen({
                 value={reviewText}
                 onChange={(event) => setReviewText(event.target.value)}
                 placeholder="Deneyiminizi paylaşın..."
+                disabled={!canWriteReview || reviewStatus === "loading"}
                 className="min-h-28 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
               />
             </Field>
-            <Button className="mt-4 w-full" disabled={reviewStatus === "loading"} onClick={submitReview}>
+            <Button className="mt-4 w-full" disabled={disableReviewSubmit} onClick={submitReview}>
               {reviewStatus === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : null}
               Gönder
             </Button>
@@ -4107,8 +4205,114 @@ function GlobalStatesScreen({
             ))}
           </div>
         )}
+        <div className="mt-8">
+          <SupportRequestPanel authUser={authUser} showToast={showToast} ekran="bildirim-destek" />
+        </div>
       </section>
     </main>
+  );
+}
+
+function SupportRequestPanel({
+  authUser,
+  showToast,
+  ekran,
+}: {
+  authUser: AuthState | null;
+  showToast: (message: string, kind: ToastKind) => void;
+  ekran: string;
+}) {
+  const [konu, setKonu] = useState("");
+  const [mesaj, setMesaj] = useState("");
+  const [email, setEmail] = useState(authUser?.email ?? "");
+  const [telefon, setTelefon] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading">("idle");
+  const [talepId, setTalepId] = useState("");
+
+  useEffect(() => {
+    if (authUser?.email) setEmail(authUser.email);
+  }, [authUser?.email]);
+
+  const submitSupport = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!konu.trim() || !mesaj.trim()) {
+      showToast("Destek için konu ve mesaj gerekli.", "info");
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const result = await yoremioApi.createSupportRequest({
+        konu: konu.trim(),
+        mesaj: mesaj.trim(),
+        email: email.trim() || undefined,
+        telefon: telefon.trim() || undefined,
+        ekran,
+      });
+      setTalepId(result.talepId);
+      setMesaj("");
+      showToast(`Destek talebi alındı: ${result.talepId}`, "success");
+    } catch (error) {
+      showToast(apiErrorMessage(error), "error");
+    } finally {
+      setStatus("idle");
+    }
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-xl font-black">Yardım / destek</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Talebin backend tarafından kayıt altına alınır.</p>
+        </div>
+        {talepId ? <Badge variant="green">{talepId}</Badge> : null}
+      </div>
+      <form onSubmit={submitSupport} className="mt-5 grid gap-4 md:grid-cols-2">
+        <Field label="Konu *" htmlFor="support-subject">
+          <Input
+            id="support-subject"
+            value={konu}
+            onChange={(event) => setKonu(event.target.value)}
+            placeholder="Kısa başlık"
+            required
+          />
+        </Field>
+        <Field label="E-posta" htmlFor="support-email">
+          <Input
+            id="support-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="ornek@eposta.com"
+          />
+        </Field>
+        <Field label="Telefon" htmlFor="support-phone">
+          <Input
+            id="support-phone"
+            value={telefon}
+            onChange={(event) => setTelefon(event.target.value)}
+            placeholder="+90..."
+          />
+        </Field>
+        <Field label="Mesaj *" htmlFor="support-message" className="md:col-span-2">
+          <textarea
+            id="support-message"
+            value={mesaj}
+            onChange={(event) => setMesaj(event.target.value)}
+            placeholder="Neye takıldığını yaz..."
+            required
+            className="min-h-28 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
+          />
+        </Field>
+        <div className="md:col-span-2">
+          <Button disabled={status === "loading"}>
+            {status === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}
+            Destek talebi gönder
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -4445,12 +4649,14 @@ function SellerProductTable({
   onSelectProduct,
   onDuplicateProduct,
   onDeleteProduct,
+  onToggleProductStatus,
 }: {
   products: ProductDto[];
   actionStatus: string | null;
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
   onDuplicateProduct: (product: ProductDto) => void;
   onDeleteProduct: (product: ProductDto) => void;
+  onToggleProductStatus: (product: ProductDto) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -4494,6 +4700,21 @@ function SellerProductTable({
                   </Button>
                   <Button variant="outline" size="icon" title="Kopyala" onClick={() => onDuplicateProduct(product)}>
                     <Package aria-hidden />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title={product.aktifMi === false ? "Aktif yap" : "Pasife al"}
+                    disabled={actionStatus === `product-status-${product.id}`}
+                    onClick={() => onToggleProductStatus(product)}
+                  >
+                    {actionStatus === `product-status-${product.id}` ? (
+                      <Loader2 className="animate-spin" aria-hidden />
+                    ) : product.aktifMi === false ? (
+                      <Check aria-hidden />
+                    ) : (
+                      <X aria-hidden />
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -5234,14 +5455,16 @@ function PaginationBar({
 function Field({
   label,
   htmlFor,
+  className,
   children,
 }: {
   label: string;
   htmlFor: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <label className="block space-y-2 text-sm font-semibold" htmlFor={htmlFor}>
+    <label className={cn("block space-y-2 text-sm font-semibold", className)} htmlFor={htmlFor}>
       <span>{label}</span>
       {children}
     </label>

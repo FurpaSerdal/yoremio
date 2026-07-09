@@ -231,6 +231,12 @@ export type FeaturedSellerDto = SellerTrustScoreDto & {
   sehir?: string | null;
   ilce?: string | null;
   kapakResimUrl?: string | null;
+  vitrinUrunId?: number | null;
+};
+
+export type ReviewEligibilityDto = {
+  yorumYapabilir: boolean;
+  sebep?: string | null;
 };
 
 export type OfferDto = {
@@ -306,6 +312,21 @@ export type NotificationDto = {
 
 export type NotificationsPageDto = Paginated<NotificationDto> & {
   okunmamisSayisi: number;
+};
+
+export type SupportRequestValues = {
+  konu: string;
+  mesaj: string;
+  email?: string;
+  telefon?: string;
+  ekran?: string;
+  ilgiliVarlikTuru?: string;
+  ilgiliVarlikId?: string;
+};
+
+export type SupportRequestResultDto = {
+  talepId: string;
+  alinmaTarihi: string;
 };
 
 type UnreadNotificationCountResponse =
@@ -546,7 +567,7 @@ export const yoremioApi = {
     }),
   updateProductStatus: (token: string, urunId: number, aktifMi: boolean) =>
     request<ProductDto>(`/api/Urun/${urunId}/status`, {
-      method: "PATCH",
+      method: "PUT",
       token,
       body: JSON.stringify({ aktifMi }),
     }),
@@ -659,6 +680,10 @@ export const yoremioApi = {
     request<RatingDto[]>(`/api/Puan/urun/${urunId}`),
   averageRating: (urunId: number) =>
     request<{ ortalama: number }>(`/api/Puan/ortalama/${urunId}`),
+  reviewEligibility: (token: string, urunId: number) =>
+    request<ReviewEligibilityDto>(`/api/Urun/${urunId}/yorum-yetkisi`, {
+      token,
+    }),
 
   comments: (urunId: number) => request<CommentDto[]>(`/api/Yorum/${urunId}`),
   addComment: (token: string, urunId: number, icerik: string) =>
@@ -753,5 +778,10 @@ export const yoremioApi = {
     request<null>("/api/Bildirim/tumunu-okundu", {
       method: "POST",
       token,
+    }),
+  createSupportRequest: (values: SupportRequestValues) =>
+    request<SupportRequestResultDto>("/api/Destek/talep", {
+      method: "POST",
+      body: JSON.stringify(values),
     }),
 };

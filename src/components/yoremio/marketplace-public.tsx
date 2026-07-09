@@ -269,7 +269,8 @@ export function FeaturedSellerStrip({
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {visibleSellers.map((seller) => {
-          const productId = products.find((product) => product.saticiId === seller.kullaniciId)?.id;
+          const productId = seller.vitrinUrunId
+            ?? products.find((product) => product.saticiId === seller.kullaniciId)?.id;
           const title = seller.magazaAdi;
           const image = sellerCoverImage(seller);
           const location = featuredSellerLocation(seller);
