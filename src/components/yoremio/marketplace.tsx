@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useState,
+  type ChangeEvent,
   type ComponentProps,
   type FormEvent,
   type ReactNode,
@@ -24,6 +25,7 @@ import {
   Edit3,
   Eye,
   EyeOff,
+  Camera,
   Filter,
   Heart,
   Home,
@@ -653,6 +655,13 @@ export function YoremioMarketplace() {
       setProductDetail(null);
       setProductDraftSource(null);
       navigate(nextScreen);
+      if (nextScreen === "discover" && !window.matchMedia("(min-width: 1024px)").matches) {
+        window.setTimeout(() => {
+          document
+            .getElementById("product-detail-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 140);
+      }
     },
     [navigate],
   );
@@ -1238,7 +1247,7 @@ function HomeScreen({
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,25,12,0.18),rgba(8,25,12,0.02)_38%,rgba(8,25,12,0.16))]" />
           <div className="absolute inset-0 grid place-items-center px-4 pb-12 text-center">
-            <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_5px_20px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
+            <h1 className="font-serif text-3xl font-black leading-none text-white drop-shadow-[0_5px_20px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
               Yerel ürünler
             </h1>
           </div>
@@ -1868,7 +1877,7 @@ function DiscoveryScreen({
           <PaginationBar page={page} totalPages={productsPage.totalPages} onPageChange={onPageChange} />
         </section>
 
-        <aside className="min-w-0 bg-white p-3 sm:p-5">
+        <aside id="product-detail-panel" className="scroll-mt-32 min-w-0 bg-white p-3 sm:p-5">
           {selectedProduct ? (
             <ProductDetailPanel
               product={selectedProduct}
@@ -2207,7 +2216,7 @@ function ProductDetailPanel({
 
   return (
     <div className="space-y-4 lg:sticky lg:top-[92px] lg:space-y-5">
-      <div className="relative aspect-[1.44] overflow-hidden rounded-lg bg-muted">
+      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted sm:aspect-[1.44]">
         <Image
           src={activeGallerySrc}
           alt={product.adi}
@@ -2222,7 +2231,7 @@ function ProductDetailPanel({
           type="button"
           onClick={onToggleFavorite}
           disabled={favoritePending}
-          className="absolute right-4 top-4 inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-black shadow-md disabled:cursor-wait disabled:opacity-80"
+          className="absolute right-3 top-3 inline-flex h-9 items-center gap-2 rounded-full bg-white px-3 text-sm font-black shadow-md disabled:cursor-wait disabled:opacity-80 sm:right-4 sm:top-4 sm:h-10 sm:px-4"
           title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
           aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
         >
@@ -2231,10 +2240,10 @@ function ProductDetailPanel({
           ) : (
             <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
           )}
-          {isFavorite ? "Favoride" : "Favori"}
+          <span className="hidden min-[380px]:inline">{isFavorite ? "Favoride" : "Favori"}</span>
         </button>
         <button
-          className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45"
+          className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45 sm:left-4 sm:size-11"
           type="button"
           disabled={gallery.length <= 1}
           onClick={() =>
@@ -2246,7 +2255,7 @@ function ProductDetailPanel({
           <ChevronLeft aria-hidden />
         </button>
         <button
-          className="absolute right-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45"
+          className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45 sm:right-4 sm:size-11"
           type="button"
           disabled={gallery.length <= 1}
           onClick={() =>
@@ -2292,8 +2301,8 @@ function ProductDetailPanel({
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-white p-4 shadow-[0_8px_20px_rgba(16,24,40,0.06)]">
-        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+      <div className="rounded-lg border border-border bg-white p-3 shadow-[0_8px_20px_rgba(16,24,40,0.06)] sm:p-4">
+        <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:items-center sm:gap-4">
           <div className="relative size-16 overflow-hidden rounded-full border border-border bg-muted">
             <Image src={productImage(product)} alt="" fill sizes="64px" className="object-cover" />
           </div>
@@ -2310,7 +2319,9 @@ function ProductDetailPanel({
               {productLocation(product)}
             </p>
           </div>
-          <TrustDial score={trustScore?.guvenSkoru ?? (product.saticiDogrulanmis ? 88 : 62)} />
+          <div className="ml-auto">
+            <TrustDial score={trustScore?.guvenSkoru ?? (product.saticiDogrulanmis ? 88 : 62)} />
+          </div>
         </div>
       </div>
 
@@ -2929,27 +2940,29 @@ function VerificationScreen({
 
   return (
     <main className="min-h-screen bg-[#fbfaf7]">
-      <header className="flex min-h-[80px] items-center justify-between border-b border-border bg-white px-5 sm:px-8">
-        <button type="button" onClick={() => onNavigate("home")}>
-          <BrandLogo />
+      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-3 border-b border-border bg-white px-3 py-3 sm:min-h-[80px] sm:px-8 sm:py-0">
+        <button type="button" onClick={() => onNavigate("home")} className="min-w-0">
+          <BrandLogo compact className="max-w-[145px] sm:max-w-none" />
         </button>
         <Button
           type="button"
           variant="ghost"
+          className="h-9 px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
           onClick={() => onNavigate("states")}
         >
           <CircleHelp aria-hidden />
-          Yardıma ihtiyacın varsa
+          <span className="hidden min-[420px]:inline">Yardıma ihtiyacın varsa</span>
+          <span className="min-[420px]:hidden">Yardım</span>
         </Button>
       </header>
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
         <div className="text-center">
-          <h1 className="text-4xl font-black">Hesabını doğrula</h1>
+          <h1 className="text-3xl font-black sm:text-4xl">Hesabını doğrula</h1>
           <p className="mt-2 text-muted-foreground">
             Email adresine gönderilen kodu gir.
           </p>
         </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="mt-6 grid gap-4 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-5">
           <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_12px_36px_rgba(16,24,40,0.08)]">
             <div className="border-b border-border">
               <div className="border-b-2 border-primary px-6 py-4 text-center font-black">
@@ -2976,7 +2989,7 @@ function VerificationScreen({
           <div className="space-y-4">
             <StatusBox kind="warning" title="Bekliyor" text="Email doğrulama kodu girilmeli." />
             <StatusBox kind="success" title="Email" text="Doğrulama tamamlanınca satıcı hesabı aktif olur." />
-            <Card className="p-5">
+            <Card className="p-4 sm:p-5">
               <ShieldCheck className="size-9 text-primary" aria-hidden />
               <h3 className="mt-4 font-black">Hesabını doğrulamak güvenliği artırır</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -3110,6 +3123,9 @@ function BuyerDashboard({
   onAcceptOffer: (offerId: number) => void;
 }) {
   const displayName = authUser ? accountName(authUser, sellerProfile) : "Misafir";
+  const unreadMessages = dashboardSummary?.unreadMessages ?? conversations.reduce((sum, item) => sum + item.unreadCount, 0);
+  const offerCount = demands.reduce((sum, demand) => sum + demand.teklifler.length, 0);
+  const openDemandCount = demands.filter((demand) => demand.durum === "ACIK").length;
 
   return (
     <DashboardFrame
@@ -3131,27 +3147,34 @@ function BuyerDashboard({
         ["Hesap Ayarları", Settings, "states"],
       ]}
     >
-      <section className="space-y-5">
+      <section className="space-y-4 sm:space-y-5">
+        <div className="grid gap-2 min-[360px]:grid-cols-2 lg:hidden">
+          <BuyerMobileAction icon={Heart} label="Favori" value={favorites.length} onClick={() => onNavigate("discover")} />
+          <BuyerMobileAction icon={ClipboardList} label="Açık talep" value={openDemandCount} onClick={() => onNavigate("discover")} />
+          <BuyerMobileAction icon={Tag} label="Teklif" value={offerCount} onClick={() => onNavigate("buyer")} />
+          <BuyerMobileAction icon={MessageCircle} label="Okunmamış" value={unreadMessages} onClick={() => onNavigate("buyer")} />
+        </div>
+
         <PanelHeader title="Favoriler" action="Tumunu gor" onAction={() => onNavigate("discover")} />
         {favorites.length > 0 ? (
-          <div className="scroll-shelf flex gap-3 overflow-x-auto pb-1">
+          <div className="scroll-shelf flex gap-2 overflow-x-auto pb-1 sm:gap-3">
             {favorites.slice(0, 8).map((product) => (
               <button
                 key={product.id}
                 type="button"
                 onClick={() => onSelectProduct(product, "discover")}
-                className="w-40 shrink-0 overflow-hidden rounded-lg border border-border bg-white text-left shadow-sm"
+                className="w-[136px] shrink-0 overflow-hidden rounded-lg border border-border bg-white text-left shadow-sm sm:w-40"
               >
                 <div className="relative aspect-square">
-                  <Image src={productImage(product)} alt={product.adi} fill sizes="160px" className="object-cover" />
-                  <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-white text-red-600 shadow">
+                  <Image src={productImage(product)} alt={product.adi} fill sizes="(max-width: 640px) 136px, 160px" className="object-cover" />
+                  <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-white text-red-600 shadow sm:size-8">
                     <Heart className="size-4 fill-current" aria-hidden />
                   </span>
                 </div>
-                <div className="space-y-1 p-3">
+                <div className="space-y-1 p-2.5 sm:p-3">
                   <p className="line-clamp-1 text-sm font-bold">{product.adi}</p>
                   <p className="text-xs text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"}</p>
-                  <p className="text-right font-black text-primary">{formatPrice(product.fiyat)}</p>
+                  <p className="truncate text-right text-sm font-black text-primary sm:text-base">{formatPrice(product.fiyat)}</p>
                 </div>
               </button>
             ))}
@@ -3160,15 +3183,16 @@ function BuyerDashboard({
           <EmptyState icon={Heart} title="Favori yok" description="Beğendiğin ürünleri favoriye eklediğinde burada görünür." />
         )}
 
-        <div className="grid gap-4 xl:grid-cols-[1fr_1fr_1.35fr]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.35fr] xl:gap-4">
           <Panel title="Taleplerim">
             <DemandTable demands={demands} />
           </Panel>
           <Panel title="Teklifler">
             <OfferCards demands={demands} actionStatus={actionStatus} onAcceptOffer={onAcceptOffer} />
           </Panel>
-          <Panel title="Mesajlar" badge={dashboardSummary?.unreadMessages ?? conversations.reduce((sum, item) => sum + item.unreadCount, 0)}>
+          <Panel title="Mesajlar" badge={unreadMessages} className="md:col-span-2 xl:col-span-1">
             <ChatPanel
+              compact
               conversations={conversations}
               messages={messages}
               targetId={chatTargetId}
@@ -3179,11 +3203,11 @@ function BuyerDashboard({
           </Panel>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1.2fr] lg:gap-4">
           <Panel title="Kabul edilen teklif">
             <AcceptedOffer demands={demands} onNavigate={onNavigate} />
           </Panel>
-          <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-950">
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold leading-6 text-emerald-950 sm:p-4">
             <ShieldCheck className="mb-2 size-5 text-primary" aria-hidden />
             Doğrulanmış satıcılar ve talep/teklif akışı ile güvenli alışveriş yapın.
           </div>
@@ -3191,7 +3215,7 @@ function BuyerDashboard({
 
         <Panel title="Önerilen ürünler">
           {products.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 min-[380px]:grid-cols-2 lg:grid-cols-5">
               {products.map((product) => (
                 <MiniProductButton key={product.id} product={product} onClick={() => onSelectProduct(product, "discover")} />
               ))}
@@ -3202,6 +3226,34 @@ function BuyerDashboard({
         </Panel>
       </section>
     </DashboardFrame>
+  );
+}
+
+function BuyerMobileAction({
+  icon: Icon,
+  label,
+  value,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-16 items-center justify-between gap-3 rounded-lg border border-border bg-white px-3 py-2 text-left shadow-sm transition hover:border-primary/40"
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+          <Icon className="size-4" aria-hidden />
+        </span>
+        <span className="truncate text-sm font-black">{label}</span>
+      </span>
+      <span className="shrink-0 text-xl font-black text-primary">{value}</span>
+    </button>
   );
 }
 
@@ -3440,8 +3492,8 @@ function SellerProductScreen({
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <Card className="overflow-hidden">
           <form onSubmit={handleSubmit} className="grid lg:grid-cols-[0.75fr_1fr]">
-            <div className="space-y-5 border-b border-border p-5 lg:border-b-0 lg:border-r">
-              <h2 className="text-2xl font-black">Ürün formu</h2>
+            <div className="space-y-4 border-b border-border p-4 sm:space-y-5 sm:p-5 lg:border-b-0 lg:border-r">
+              <h2 className="text-xl font-black sm:text-2xl">Ürün formu</h2>
               <Field label="Ürün adı *" htmlFor="product-name">
                 <Input id="product-name" value={adi} onChange={(event) => setAdi(event.target.value)} maxLength={50} required />
               </Field>
@@ -3480,7 +3532,7 @@ function SellerProductScreen({
                 </div>
               </div>
             </div>
-            <div className="space-y-6 p-5">
+            <div className="space-y-5 p-4 sm:space-y-6 sm:p-5">
               <MediaGrid
                 title="Resimler"
                 icon={ImagePlus}
@@ -3512,13 +3564,13 @@ function SellerProductScreen({
             </div>
           </form>
         </Card>
-        <Card className="p-5">
-          <h2 className="text-2xl font-black">Önizleme</h2>
+        <Card className="p-4 sm:p-5">
+          <h2 className="text-xl font-black sm:text-2xl">Önizleme</h2>
           <div className="relative mt-5 aspect-[1.1] overflow-hidden rounded-lg bg-muted">
             <Image src={productImage(previewProduct)} alt={previewProduct.adi} fill sizes="380px" className="object-cover" />
           </div>
-          <h3 className="mt-5 text-2xl font-black">{previewProduct.adi}</h3>
-          <p className="mt-2 text-3xl font-black text-primary">{formatPrice(previewProduct.fiyat)}</p>
+          <h3 className="mt-5 line-clamp-2 text-xl font-black sm:text-2xl">{previewProduct.adi}</h3>
+          <p className="mt-2 break-words text-2xl font-black text-primary sm:text-3xl">{formatPrice(previewProduct.fiyat)}</p>
           <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
             <span>{previewProduct.kategoriAdi}</span>
             <Badge variant={active ? "green" : "outline"}>{active ? "Aktif" : "Pasif"}</Badge>
@@ -3625,9 +3677,9 @@ function SellerProfileScreen({
       ]}
     >
       <div className="grid gap-5 xl:grid-cols-[1fr_560px]">
-        <Card className="p-6">
-          <h2 className="text-2xl font-black">Profil</h2>
-          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+        <Card className="p-4 sm:p-6">
+          <h2 className="text-xl font-black sm:text-2xl">Profil</h2>
+          <form onSubmit={handleSubmit} className="mt-5 space-y-5 sm:mt-6 sm:space-y-6">
             <ProfileRow label="Mağaza adı">
               <Input value={magazaAdi} onChange={(event) => setMagazaAdi(event.target.value)} />
             </ProfileRow>
@@ -3654,15 +3706,15 @@ function SellerProfileScreen({
                 {profile ? (profile.aktifMi ? "Aktif" : "Pasif") : "Profil bekleniyor"}
               </Badge>
             </ProfileRow>
-            <Button disabled={status === "loading"}>
+            <Button className="w-full sm:w-auto" disabled={status === "loading"}>
               {status === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : null}
               Kaydet
             </Button>
           </form>
         </Card>
         <div className="space-y-5">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col gap-4 min-[420px]:flex-row min-[420px]:items-center">
               <span className="grid size-14 place-items-center rounded-full bg-primary text-white">
                 <Check aria-hidden />
               </span>
@@ -3679,7 +3731,7 @@ function SellerProfileScreen({
               </div>
             </div>
           </Card>
-          <Card className="p-6">
+          <Card className="p-4 sm:p-6">
             <h2 className="text-xl font-black">Güven skoru</h2>
             <div className="mt-5 grid gap-6 sm:grid-cols-[160px_1fr]">
               <TrustDial large score={dashboard?.trustScore ?? 0} />
@@ -4391,7 +4443,7 @@ function SupportRequestPanel({
           />
         </Field>
         <div className="md:col-span-2">
-          <Button disabled={status === "loading"}>
+          <Button className="w-full sm:w-auto" disabled={status === "loading"}>
             {status === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}
             Destek talebi gönder
           </Button>
@@ -4655,17 +4707,19 @@ function Panel({
   title,
   action,
   badge,
+  className,
   onAction,
   children,
 }: {
   title: string;
   action?: string;
   badge?: number;
+  className?: string;
   onAction?: () => void;
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_18px_rgba(16,24,40,0.05)]">
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_18px_rgba(16,24,40,0.05)]", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-4">
         <h2 className="flex min-w-0 items-center gap-2 text-base font-black sm:text-lg">
           {title}
@@ -5080,6 +5134,7 @@ function OfferCards({
 }
 
 function ChatPanel({
+  compact = false,
   conversations,
   messages,
   targetId,
@@ -5087,6 +5142,7 @@ function ChatPanel({
   onTargetChange,
   onSendMessage,
 }: {
+  compact?: boolean;
   conversations: ChatConversationDto[];
   messages: ChatMessageDto[];
   targetId: string;
@@ -5104,7 +5160,7 @@ function ChatPanel({
   }
 
   return (
-    <div className="grid min-h-[360px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border sm:min-h-[560px]">
+    <div className={cn("grid grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border", compact ? "min-h-[300px] sm:min-h-[420px] xl:min-h-[520px]" : "min-h-[360px] sm:min-h-[560px]")}>
       <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-4">
         <div className="flex items-center gap-3">
           <div>
@@ -5115,14 +5171,14 @@ function ChatPanel({
       </div>
       <div className="space-y-3 overflow-y-auto bg-[#fbfcfa] p-3 sm:p-4">
         {conversations.length > 0 ? (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="scroll-shelf mb-3 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
             {conversations.map((conversation) => (
               <button
                 key={conversation.userId}
                 type="button"
                 onClick={() => onTargetChange(conversation.userId)}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-xs font-bold",
+                  "max-w-[180px] shrink-0 truncate rounded-full border px-3 py-1 text-xs font-bold",
                   currentTarget === conversation.userId ? "border-primary bg-secondary text-primary" : "border-border bg-white",
                 )}
               >
@@ -5213,10 +5269,20 @@ function MediaGrid({
   video?: boolean;
 }) {
   const mediaItems = product ? (video ? product.videolar : product.resimler) : [];
+  const accept = video ? "video/*" : "image/*";
+  const addFiles = (fileList: FileList | null) => {
+    const selectedFiles = Array.from(fileList ?? []);
+    if (selectedFiles.length === 0) return;
+    onFilesChange([...files, ...selectedFiles]);
+  };
+  const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(event.currentTarget.files);
+    event.currentTarget.value = "";
+  };
 
   return (
     <div>
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-black">{title}</h3>
           <p className="text-sm text-muted-foreground">
@@ -5225,13 +5291,24 @@ function MediaGrid({
         </div>
         <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55 sm:w-auto">
           <UploadCloud aria-hidden />
-          Medya yükle
+          Galeriden seç
           <input
             type="file"
             className="sr-only"
-            accept={video ? "video/*" : "image/*"}
+            accept={accept}
             multiple
-            onChange={(event) => onFilesChange(Array.from(event.target.files ?? []))}
+            onChange={handleFileInputChange}
+          />
+        </label>
+        <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary/40 bg-secondary px-4 text-sm font-bold text-primary transition hover:border-primary/70 sm:w-auto">
+          <Camera aria-hidden />
+          {video ? "Video çek" : "Fotoğraf çek"}
+          <input
+            type="file"
+            className="sr-only"
+            accept={accept}
+            capture="environment"
+            onChange={handleFileInputChange}
           />
         </label>
       </div>
@@ -5268,13 +5345,24 @@ function MediaGrid({
         ))}
         <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input p-2 text-center text-sm font-bold text-muted-foreground">
           <Icon className="mb-2 size-7 text-muted-foreground" aria-hidden />
-          {video ? "Video ekle" : "Görsel ekle"}
+          {video ? "Video seç" : "Görsel seç"}
           <input
             type="file"
             className="sr-only"
-            accept={video ? "video/*" : "image/*"}
+            accept={accept}
             multiple
-            onChange={(event) => onFilesChange(Array.from(event.target.files ?? []))}
+            onChange={handleFileInputChange}
+          />
+        </label>
+        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary/60 p-2 text-center text-sm font-bold text-primary transition hover:border-primary">
+          <Camera className="mb-2 size-7" aria-hidden />
+          {video ? "Video çek" : "Kamera"}
+          <input
+            type="file"
+            className="sr-only"
+            accept={accept}
+            capture="environment"
+            onChange={handleFileInputChange}
           />
         </label>
       </div>
@@ -5743,7 +5831,7 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-white p-8 text-center">
+    <div className="rounded-lg border border-dashed border-border bg-white p-5 text-center sm:p-8">
       <Icon className="mx-auto size-9 text-muted-foreground" aria-hidden />
       <h3 className="mt-3 text-lg font-black">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -5797,7 +5885,7 @@ function Toast({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-[min(420px,calc(100vw-32px))] rounded-lg border border-border bg-white p-4 shadow-[0_24px_70px_rgba(0,0,0,0.2)]">
+    <div className="fixed inset-x-3 bottom-3 z-50 rounded-lg border border-border bg-white p-3 shadow-[0_24px_70px_rgba(0,0,0,0.2)] sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[min(420px,calc(100vw-32px))] sm:p-4">
       <div className="flex items-start gap-3">
         <div
           className={cn(
