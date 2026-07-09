@@ -72,13 +72,16 @@ import {
   type CategoryDto,
   type ChatConversationDto,
   type ChatMessageDto,
+  type CommentDto,
   type DashboardSummaryDto,
   type DemandDto,
   type FeaturedSellerDto,
   type LoginResponse,
+  type NotificationDto,
   type Paginated,
   type ProductDto,
   type ProductFormValues,
+  type RatingDto,
   type SellerDashboardDto,
   type SellerProfileDto,
   type SellerTrustScoreDto,
@@ -106,6 +109,9 @@ type Screen =
   | "states";
 
 type AuthState = SessionUser & Pick<LoginResponse, "token">;
+type AuthCompleteOptions = {
+  silent?: boolean;
+};
 type ToastKind = "success" | "error" | "info";
 type ToastState = {
   kind: ToastKind;
@@ -113,8 +119,20 @@ type ToastState = {
 } | null;
 type LoadState = "idle" | "loading" | "error";
 type SortKey = string;
+type ProductSubmitValues = ProductFormValues & {
+  aktifMi?: boolean;
+};
+type ProductListMode = "grid" | "list";
+type ReviewTab = "comments" | "ratings" | "description";
+type ReviewItem = {
+  name: string;
+  date: string;
+  rating: number;
+  text: string;
+  helpful: number;
+};
 
-const fallbackProductSorts = [
+const defaultProductSorts = [
   "newest",
   "price_asc",
   "price_desc",
@@ -134,338 +152,6 @@ const sortLabels: Record<string, string> = {
   most_reviewed: "En çok yorum",
   most_favorited: "En çok favori",
 };
-
-const demoCategories: CategoryDto[] = [
-  { id: 1, adi: "Bal ve Arı Ürünleri", aciklama: "Bal, polen ve arıcılık ürünleri" },
-  { id: 2, adi: "Süt Ürünleri", aciklama: "Peynir, yoğurt ve tereyağı" },
-  { id: 3, adi: "Yumurta", aciklama: "Köy yumurtası ve doğal üretim" },
-  { id: 4, adi: "Meyve ve Sebze", aciklama: "Mevsimlik taze ürünler" },
-  { id: 5, adi: "Bakliyat", aciklama: "Mercimek, nohut ve fasulye" },
-  { id: 6, adi: "Reçel ve Marmelat", aciklama: "Ev yapımı reçel ve marmelatlar" },
-];
-
-const demoProducts: ProductDto[] = [
-  {
-    id: -101,
-    adi: "Süzme Çiçek Balı",
-    aciklama:
-      "Kazdağı eteklerinde, doğal çiçeklerden elde edilen katkısız süzme bal.",
-    fiyat: 350,
-    stokMiktari: 48,
-    aktifMi: true,
-    kategoriId: 1,
-    kategoriAdi: "Bal ve Arı Ürünleri",
-    saticiId: "demo-ari-vadi",
-    saticiMagazaAdi: "Arı Vadi",
-    saticiSehir: "Muğla",
-    saticiIlce: "Köyceğiz",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.9,
-    toplamPuan: 628,
-    toplamYorum: 128,
-    toplamFavori: 210,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 1, url: "/products/photo-yayla-bali.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -102,
-    adi: "Ezine Klasik Peynir",
-    aciklama: "Tam yağlı beyaz peynir, serin zincirde günlük hazırlanır.",
-    fiyat: 290,
-    stokMiktari: 18,
-    aktifMi: true,
-    kategoriId: 2,
-    kategoriAdi: "Süt Ürünleri",
-    saticiId: "demo-kazdagi",
-    saticiMagazaAdi: "Kazdağı Çiftliği",
-    saticiSehir: "Çanakkale",
-    saticiIlce: "Ezine",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.8,
-    toplamPuan: 460,
-    toplamYorum: 96,
-    toplamFavori: 162,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 2, url: "/products/photo-tulum-peyniri.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -103,
-    adi: "Doğal Köy Yumurtası",
-    aciklama: "Serbest gezen tavuklardan günlük toplanan 10'lu yumurta.",
-    fiyat: 120,
-    stokMiktari: 64,
-    aktifMi: true,
-    kategoriId: 3,
-    kategoriAdi: "Yumurta",
-    saticiId: "demo-gunesli",
-    saticiMagazaAdi: "Güneşli Köy",
-    saticiSehir: "Aydın",
-    saticiIlce: "Söke",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.9,
-    toplamPuan: 810,
-    toplamYorum: 210,
-    toplamFavori: 240,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 3, url: "/products/photo-koy-yumurtasi.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -104,
-    adi: "Pembe Domates",
-    aciklama: "Seferihisar bahçelerinden günlük hasat edilen pembe domates.",
-    fiyat: 45,
-    stokMiktari: 30,
-    aktifMi: true,
-    kategoriId: 4,
-    kategoriAdi: "Meyve ve Sebze",
-    saticiId: "demo-seferihisar",
-    saticiMagazaAdi: "Seferihisar Bahçesi",
-    saticiSehir: "İzmir",
-    saticiIlce: "Seferihisar",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.7,
-    toplamPuan: 350,
-    toplamYorum: 75,
-    toplamFavori: 132,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 4, url: "/products/photo-tarla-domatesi.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -105,
-    adi: "Ahududu Reçeli",
-    aciklama: "Dağ meyveleriyle düşük şekerli ev yapımı ahududu reçeli.",
-    fiyat: 150,
-    stokMiktari: 14,
-    aktifMi: true,
-    kategoriId: 6,
-    kategoriAdi: "Reçel ve Marmelat",
-    saticiId: "demo-dag-evi",
-    saticiMagazaAdi: "Dağ Evi",
-    saticiSehir: "Bolu",
-    saticiIlce: "Mengen",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.8,
-    toplamPuan: 280,
-    toplamYorum: 60,
-    toplamFavori: 126,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 5, url: "/products/photo-yayla-bali.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -106,
-    adi: "Kırmızı Mercimek",
-    aciklama: "Konya ovasından yeni sezon kırmızı mercimek.",
-    fiyat: 70,
-    stokMiktari: 90,
-    aktifMi: true,
-    kategoriId: 5,
-    kategoriAdi: "Bakliyat",
-    saticiId: "demo-anadolu",
-    saticiMagazaAdi: "Anadolu Tarlası",
-    saticiSehir: "Konya",
-    saticiIlce: "Karatay",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.9,
-    toplamPuan: 610,
-    toplamYorum: 142,
-    toplamFavori: 180,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 6, url: "/products/photo-kocbasi-nohut.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -107,
-    adi: "Taze Ispanak",
-    aciklama: "Sakarya üreticisinden sabah hasadı taze ıspanak.",
-    fiyat: 30,
-    stokMiktari: 24,
-    aktifMi: true,
-    kategoriId: 4,
-    kategoriAdi: "Meyve ve Sebze",
-    saticiId: "demo-yesil-bahce",
-    saticiMagazaAdi: "Yeşil Bahçe",
-    saticiSehir: "Sakarya",
-    saticiIlce: "Serdivan",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.6,
-    toplamPuan: 175,
-    toplamYorum: 38,
-    toplamFavori: 92,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 7, url: "/products/photo-tarla-domatesi.jpg" }],
-    videolar: [],
-  },
-  {
-    id: -108,
-    adi: "Natürel Sızma Zeytinyağı",
-    aciklama:
-      "Erken hasat zeytinlerden soğuk sıkım yöntemiyle elde edilmiş zeytinyağı.",
-    fiyat: 450,
-    stokMiktari: 22,
-    aktifMi: true,
-    kategoriId: 4,
-    kategoriAdi: "Doğal Ürünler",
-    saticiId: "demo-ege",
-    saticiMagazaAdi: "Ege Yöresi Çiftliği",
-    saticiSehir: "Balıkesir",
-    saticiIlce: "Ayvalık",
-    saticiDogrulanmis: true,
-    ortalamaPuan: 4.9,
-    toplamPuan: 620,
-    toplamYorum: 128,
-    toplamFavori: 257,
-    yorumlar: [],
-    puanlar: [],
-    resimler: [{ id: 8, url: "/products/photo-yayla-bali.jpg" }],
-    videolar: [],
-  },
-];
-
-const demoDemands: DemandDto[] = [
-  {
-    id: -201,
-    aliciId: "demo-buyer",
-    urunId: -103,
-    urunAdi: "Köy Yumurtası",
-    urunResimUrl: "/products/photo-koy-yumurtasi.jpg",
-    urunFiyat: 120,
-    saticiId: "demo-gunesli",
-    saticiMagazaAdi: "Güneşli Köy",
-    saticiSehir: "Aydın",
-    saticiIlce: "Söke",
-    miktar: 10,
-    not: "Haftalık teslim için teklif bekleniyor.",
-    durum: "ACIK",
-    olusturmaTarihi: "2026-07-08T09:25:00Z",
-    teklifler: [
-      {
-        id: -301,
-        talepId: -201,
-        saticiId: "demo-gunesli",
-        saticiMagazaAdi: "Güneşli Köy",
-        birimFiyat: 70,
-        mesaj: "Günlük üretimden hazırlayabiliriz.",
-        durum: "BEKLEMEDE",
-        olusturmaTarihi: "2026-07-08T10:24:00Z",
-      },
-    ],
-  },
-  {
-    id: -202,
-    aliciId: "demo-buyer",
-    urunId: -102,
-    urunAdi: "Ezine Peyniri",
-    urunResimUrl: "/products/photo-tulum-peyniri.jpg",
-    urunFiyat: 290,
-    saticiId: "demo-kazdagi",
-    saticiMagazaAdi: "Kazdağı Çiftliği",
-    saticiSehir: "Çanakkale",
-    saticiIlce: "Ezine",
-    miktar: 2,
-    not: "Soğuk zincir bilgisi istendi.",
-    durum: "ANLASILDI",
-    olusturmaTarihi: "2026-07-07T13:10:00Z",
-    teklifler: [
-      {
-        id: -302,
-        talepId: -202,
-        saticiId: "demo-kazdagi",
-        saticiMagazaAdi: "Kazdağı Çiftliği",
-        birimFiyat: 420,
-        mesaj: "Vakumlu ve günlük üretim gönderebiliriz.",
-        durum: "KABUL",
-        olusturmaTarihi: "2026-07-07T14:04:00Z",
-      },
-    ],
-  },
-];
-
-const demoConversations: ChatConversationDto[] = [
-  {
-    userId: "demo-kazdagi",
-    userName: "Kazdağı Çiftliği",
-    email: "info@kazdagi.local",
-    lastMessage: "Tahmini teslimat tarihini paylaştık.",
-    lastSenderId: "demo-kazdagi",
-    lastMessageAt: "2026-07-08T10:29:00Z",
-    unreadCount: 2,
-  },
-  {
-    userId: "demo-ege",
-    userName: "Ege Yöresi Çiftliği",
-    email: "ege@local",
-    lastMessage: "Zeytinyağı için yeni teklif hazır.",
-    lastSenderId: "demo-ege",
-    lastMessageAt: "2026-07-08T09:15:00Z",
-    unreadCount: 0,
-  },
-];
-
-const demoMessages: ChatMessageDto[] = [
-  {
-    id: -401,
-    senderId: "demo-kazdagi",
-    receiverId: "demo-buyer",
-    message: "Merhaba, talebiniz için teşekkürler. Ezine peynirimiz günlük üretiliyor.",
-    sentAt: "2026-07-08T10:25:00Z",
-    readAt: null,
-    isMine: false,
-  },
-  {
-    id: -402,
-    senderId: "demo-buyer",
-    receiverId: "demo-kazdagi",
-    message: "Merhaba, peyniri vakumlu gönderebiliyor musunuz?",
-    sentAt: "2026-07-08T10:26:00Z",
-    readAt: "2026-07-08T10:26:30Z",
-    isMine: true,
-  },
-  {
-    id: -403,
-    senderId: "demo-kazdagi",
-    receiverId: "demo-buyer",
-    message: "Evet, vakumlu ve soğuk zincir ile gönderiyoruz.",
-    sentAt: "2026-07-08T10:27:00Z",
-    readAt: null,
-    isMine: false,
-  },
-];
-
-const demoReviews = [
-  {
-    name: "Zeynep A.",
-    date: "14 Mayıs 2026",
-    rating: 5,
-    text: "Gerçekten harika bir bal. Kokusu ve tadı çok doğal.",
-    helpful: 12,
-  },
-  {
-    name: "Mehmet T.",
-    date: "11 Mayıs 2026",
-    rating: 5,
-    text: "Kıvamı ve aroması mükemmel. Sabahları tüketmek için birebir.",
-    helpful: 8,
-  },
-  {
-    name: "Elif K.",
-    date: "08 Mayıs 2026",
-    rating: 4,
-    text: "Lezzeti çok iyi, biraz daha yoğun kıvamlı olmasını isterdim.",
-    helpful: 4,
-  },
-];
 
 function rolesOf(authUser: AuthState | null) {
   if (!authUser) return [];
@@ -530,6 +216,17 @@ function accountName(authUser: AuthState | null, profile?: SellerProfileDto | nu
     : authUser.email;
 }
 
+function dashboardScreenFor(authUser: AuthState | null): Screen {
+  if (!authUser) return "login";
+  if (hasRole(authUser, "ADMIN")) return "admin";
+  if (hasRole(authUser, "SATICI")) return "seller";
+  return "buyer";
+}
+
+function buyerScreenFor(authUser: AuthState | null): Screen {
+  return hasRole(authUser, "ALICI") ? "buyer" : "login";
+}
+
 function shortDate(value?: string | null) {
   if (!value) return "";
   try {
@@ -539,30 +236,6 @@ function shortDate(value?: string | null) {
   }
 }
 
-function demoFeaturedSellers(products: ProductDto[]): FeaturedSellerDto[] {
-  const seen = new Set<string>();
-  return products
-    .filter((product) => {
-      if (seen.has(product.saticiId)) return false;
-      seen.add(product.saticiId);
-      return true;
-    })
-    .slice(0, 4)
-    .map((product, index) => ({
-      kullaniciId: product.saticiId,
-      magazaAdi: product.saticiMagazaAdi ?? "Yöremio satıcısı",
-      dogrulanmisSatici: product.saticiDogrulanmis,
-      urunSayisi: 24 + index * 7,
-      ortalamaPuan: product.ortalamaPuan,
-      toplamPuan: product.toplamPuan,
-      toplamYorum: product.toplamYorum,
-      toplamFavori: product.toplamFavori,
-      guvenSkoru: 88 + index,
-      sehir: product.saticiSehir,
-      ilce: product.saticiIlce,
-      kapakResimUrl: productImage(product),
-    }));
-}
 
 export function YoremioMarketplace() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -577,7 +250,7 @@ export function YoremioMarketplace() {
   const [page, setPage] = useState(1);
   const [authUser, setAuthUser] = useState<AuthState | null>(null);
   const [bootstrap, setBootstrap] = useState<AppBootstrapDto | null>(null);
-  const [categories, setCategories] = useState<CategoryDto[]>(demoCategories);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [productsPage, setProductsPage] = useState<Paginated<ProductDto>>(
     emptyProductsResult(),
   );
@@ -585,6 +258,7 @@ export function YoremioMarketplace() {
   const [marketError, setMarketError] = useState<string | null>(null);
   const [activeProductId, setActiveProductId] = useState<number | null>(null);
   const [productDetail, setProductDetail] = useState<ProductDto | null>(null);
+  const [productDraftSource, setProductDraftSource] = useState<ProductDto | null>(null);
   const [trustScore, setTrustScore] = useState<SellerTrustScoreDto | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favoriteProducts, setFavoriteProducts] = useState<ProductDto[]>([]);
@@ -608,23 +282,18 @@ export function YoremioMarketplace() {
 
   const productSorts = bootstrap?.productSorts?.length
     ? bootstrap.productSorts
-    : fallbackProductSorts;
+    : defaultProductSorts;
 
-  const visibleProducts = productsPage.items.length > 0 ? productsPage.items : demoProducts;
-  const visibleCategories = categories.length > 0 ? categories : demoCategories;
-  const visibleSellers =
-    featuredSellers.length > 0 ? featuredSellers : demoFeaturedSellers(visibleProducts);
-  const visibleFavoriteProducts =
-    favoriteProducts.length > 0 ? favoriteProducts : visibleProducts.slice(0, 8);
-  const visibleRecommendedProducts =
-    recommendedProducts.length > 0 ? recommendedProducts : visibleProducts.slice(0, 5);
-  const visibleBuyerDemands = buyerDemands.length > 0 ? buyerDemands : demoDemands;
-  const visibleSellerProducts =
-    sellerProducts.length > 0 ? sellerProducts : visibleProducts.slice(0, 6);
-  const visibleSellerDemands = sellerDemands.length > 0 ? sellerDemands : demoDemands;
-  const visibleConversations =
-    conversations.length > 0 ? conversations : demoConversations;
-  const visibleMessages = chatMessages.length > 0 ? chatMessages : demoMessages;
+  const visibleProducts = productsPage.items;
+  const visibleCategories = categories;
+  const visibleSellers = featuredSellers;
+  const visibleFavoriteProducts = favoriteProducts;
+  const visibleRecommendedProducts = recommendedProducts;
+  const visibleBuyerDemands = buyerDemands;
+  const visibleSellerProducts = sellerProducts;
+  const visibleSellerDemands = sellerDemands;
+  const visibleConversations = conversations;
+  const visibleMessages = chatMessages;
 
   const selectedProduct =
     productDetail ??
@@ -636,6 +305,10 @@ export function YoremioMarketplace() {
     categoryId === "all"
       ? undefined
       : visibleCategories.find((category) => category.id === categoryId);
+  const editingSellerProduct =
+    activeProductId === null
+      ? null
+      : visibleSellerProducts.find((product) => product.id === activeProductId) ?? null;
 
   const navigate = useCallback((nextScreen: Screen) => {
     setScreen(nextScreen);
@@ -670,8 +343,10 @@ export function YoremioMarketplace() {
   }, [navigate, showToast]);
 
   const handleAuthenticated = useCallback(
-    (user: AuthState) => {
+    (user: AuthState, options?: AuthCompleteOptions) => {
       setAuthUser(user);
+      if (options?.silent) return;
+
       showToast("Giriş başarılı.", "success");
       if (hasRole(user, "SATICI")) navigate("seller");
       else if (hasRole(user, "ADMIN")) navigate("admin");
@@ -779,7 +454,7 @@ export function YoremioMarketplace() {
           const nextCategories = await yoremioApi.categories();
           if (!ignore) setCategories(nextCategories);
         } catch {
-          if (!ignore) setCategories(demoCategories);
+          if (!ignore) setCategories([]);
         }
         setMarketError(apiErrorMessage(error));
       });
@@ -843,7 +518,7 @@ export function YoremioMarketplace() {
         setProductsPage(emptyProductsResult(page));
         setMarketState("error");
         setMarketError(apiErrorMessage(error));
-        setActiveProductId((current) => current ?? demoProducts[0].id);
+        setActiveProductId(null);
       });
 
     return () => {
@@ -859,7 +534,7 @@ export function YoremioMarketplace() {
     let ignore = false;
     setProductDetail(null);
 
-    if (activeProductId === null || activeProductId < 0) return;
+    if (activeProductId === null) return;
 
     yoremioApi
       .product(activeProductId)
@@ -877,7 +552,7 @@ export function YoremioMarketplace() {
 
   useEffect(() => {
     let ignore = false;
-    if (!selectedProduct?.saticiId || selectedProduct.id < 0) {
+    if (!selectedProduct?.saticiId) {
       setTrustScore(null);
       return;
     }
@@ -901,7 +576,13 @@ export function YoremioMarketplace() {
   }, [refreshRoleData]);
 
   useEffect(() => {
-    if (!authUser || !chatTargetId || chatTargetId.startsWith("demo")) {
+    if (!chatTargetId && conversations[0]) {
+      setChatTargetId(conversations[0].userId);
+    }
+  }, [chatTargetId, conversations]);
+
+  useEffect(() => {
+    if (!authUser || !chatTargetId) {
       setChatMessages([]);
       return;
     }
@@ -910,7 +591,24 @@ export function YoremioMarketplace() {
     yoremioApi
       .messages(authUser.token, chatTargetId)
       .then((pageResult) => {
-        if (!ignore) setChatMessages(pageResult.items);
+        if (ignore) return;
+        setChatMessages(pageResult.items);
+        yoremioApi
+          .markConversationRead(authUser.token, chatTargetId)
+          .then(() => {
+            if (!ignore) {
+              setConversations((current) =>
+                current.map((conversation) =>
+                  conversation.userId === chatTargetId
+                    ? { ...conversation, unreadCount: 0 }
+                    : conversation,
+                ),
+              );
+            }
+          })
+          .catch(() => {
+            // Read-state sync should never block the chat view.
+          });
       })
       .catch((error) => {
         if (!ignore) showToast(apiErrorMessage(error), "error");
@@ -924,7 +622,8 @@ export function YoremioMarketplace() {
   const selectProduct = useCallback(
     (product: ProductDto, nextScreen: Screen = "discover") => {
       setActiveProductId(product.id);
-      setProductDetail(product.id < 0 ? product : null);
+      setProductDetail(null);
+      setProductDraftSource(null);
       navigate(nextScreen);
     },
     [navigate],
@@ -944,7 +643,7 @@ export function YoremioMarketplace() {
 
   const toggleFavorite = useCallback(
     async (product: ProductDto) => {
-      if (!requireRole("ALICI") || product.id < 0 || !authUser) return;
+      if (!requireRole("ALICI") || !authUser) return;
 
       const isFavorite = favoriteIds.has(product.id);
       setActionStatus(`favorite-${product.id}`);
@@ -972,7 +671,7 @@ export function YoremioMarketplace() {
 
   const createDemand = useCallback(
     async (product: ProductDto, amount = 1) => {
-      if (!requireRole("ALICI") || product.id < 0 || !authUser) return;
+      if (!requireRole("ALICI") || !authUser) return;
       setActionStatus(`demand-${product.id}`);
       try {
         await yoremioApi.createDemand(
@@ -993,13 +692,31 @@ export function YoremioMarketplace() {
     [authUser, navigate, refreshRoleData, requireRole, showToast],
   );
 
+  const startNewProduct = useCallback(() => {
+    setActiveProductId(null);
+    setProductDetail(null);
+    setProductDraftSource(null);
+    navigate("seller-product");
+  }, [navigate]);
+
+  const duplicateProduct = useCallback(
+    (product: ProductDto) => {
+      setActiveProductId(null);
+      setProductDetail(null);
+      setProductDraftSource(product);
+      navigate("seller-product");
+      showToast("Urun kopyasi forma tasindi.", "info");
+    },
+    [navigate, showToast],
+  );
+
   const sendChatMessage = useCallback(
     async (receiverId: string, message: string) => {
       if (!authUser) {
         navigate("login");
         return;
       }
-      if (!receiverId || receiverId.startsWith("demo")) {
+      if (!receiverId) {
         showToast("Canlı mesaj için gerçek satıcı seçilmeli.", "info");
         return;
       }
@@ -1018,11 +735,22 @@ export function YoremioMarketplace() {
   );
 
   const handleProductSave = useCallback(
-    async (values: ProductFormValues, urunId?: number) => {
+    async (values: ProductSubmitValues, urunId?: number) => {
       if (!requireRole("SATICI") || !authUser) return;
       setActionStatus("product-save");
       try {
-        await yoremioApi.upsertProduct(authUser.token, values, urunId);
+        const savedProduct = await yoremioApi.upsertProduct(authUser.token, values, urunId);
+        if (
+          values.aktifMi !== undefined &&
+          savedProduct.aktifMi !== values.aktifMi
+        ) {
+          await yoremioApi.updateProductStatus(
+            authUser.token,
+            savedProduct.id,
+            values.aktifMi,
+          );
+        }
+        setProductDraftSource(null);
         showToast("Ürün kaydedildi.", "success");
         await refreshRoleData();
         navigate("seller");
@@ -1033,6 +761,83 @@ export function YoremioMarketplace() {
       }
     },
     [authUser, navigate, refreshRoleData, requireRole, showToast],
+  );
+
+  const handleProductDelete = useCallback(
+    async (product: ProductDto) => {
+      if (!requireRole("SATICI") || !authUser) return;
+      if (!window.confirm("Urunu silmek istiyor musun?")) return;
+
+      setActionStatus(`product-delete-${product.id}`);
+      try {
+        await yoremioApi.deleteProduct(authUser.token, product.id);
+        setSellerProducts((current) =>
+          current.filter((item) => item.id !== product.id),
+        );
+        if (activeProductId === product.id) {
+          setActiveProductId(null);
+          setProductDetail(null);
+        }
+        showToast("Urun silindi.", "success");
+        await refreshRoleData();
+      } catch (error) {
+        showToast(apiErrorMessage(error), "error");
+      } finally {
+        setActionStatus(null);
+      }
+    },
+    [activeProductId, authUser, refreshRoleData, requireRole, showToast],
+  );
+
+  const handleProductImageDelete = useCallback(
+    async (urunId: number, resimId: number) => {
+      if (!requireRole("SATICI") || !authUser) return;
+      setActionStatus(`media-delete-image-${resimId}`);
+      try {
+        await yoremioApi.deleteProductImage(authUser.token, urunId, resimId);
+        showToast("Gorsel silindi.", "success");
+        await refreshRoleData();
+      } catch (error) {
+        showToast(apiErrorMessage(error), "error");
+      } finally {
+        setActionStatus(null);
+      }
+    },
+    [authUser, refreshRoleData, requireRole, showToast],
+  );
+
+  const handleProductVideoDelete = useCallback(
+    async (urunId: number, videoId: number) => {
+      if (!requireRole("SATICI") || !authUser) return;
+      setActionStatus(`media-delete-video-${videoId}`);
+      try {
+        await yoremioApi.deleteProductVideo(authUser.token, urunId, videoId);
+        showToast("Video silindi.", "success");
+        await refreshRoleData();
+      } catch (error) {
+        showToast(apiErrorMessage(error), "error");
+      } finally {
+        setActionStatus(null);
+      }
+    },
+    [authUser, refreshRoleData, requireRole, showToast],
+  );
+
+  const acceptOffer = useCallback(
+    async (offerId: number) => {
+      if (!requireRole("ALICI") || !authUser) return;
+      setActionStatus(`offer-${offerId}`);
+      try {
+        await yoremioApi.acceptOffer(authUser.token, offerId);
+        showToast("Teklif kabul edildi.", "success");
+        await refreshRoleData();
+      } catch (error) {
+        showToast(apiErrorMessage(error), "error");
+      } finally {
+        setActionStatus(null);
+      }
+    },
+    [authUser, refreshRoleData, requireRole, showToast],
   );
 
   const handleCategorySave = useCallback(
@@ -1151,13 +956,22 @@ export function YoremioMarketplace() {
         onToggleFavorite={toggleFavorite}
         onCreateDemand={createDemand}
         onStartChat={(product) => {
+          if (!requireRole("ALICI")) return;
           setChatTargetId(product.saticiId);
           navigate("buyer");
         }}
       />
     );
   } else if (screen === "buyer") {
-    content = (
+    content = !hasRole(authUser, "ALICI") ? (
+      <AccessRequiredScreen
+        {...appProps}
+        title="Alici paneli"
+        description="Favoriler, talepler, teklifler ve mesajlar icin alici girisi gerekli."
+        actionLabel="Giris yap"
+        onAction={() => navigate("login")}
+      />
+    ) : (
       <BuyerDashboard
         {...appProps}
         products={visibleRecommendedProducts}
@@ -1171,10 +985,19 @@ export function YoremioMarketplace() {
         onSelectProduct={selectProduct}
         onChatTargetChange={setChatTargetId}
         onSendMessage={sendChatMessage}
+        onAcceptOffer={acceptOffer}
       />
     );
   } else if (screen === "seller") {
-    content = (
+    content = !hasRole(authUser, "SATICI") ? (
+      <AccessRequiredScreen
+        {...appProps}
+        title="Satici paneli"
+        description="Urun, talep ve magaza yonetimi icin satici girisi gerekli."
+        actionLabel="Giris yap"
+        onAction={() => navigate("login")}
+      />
+    ) : (
       <SellerDashboard
         {...appProps}
         profile={sellerProfile}
@@ -1182,20 +1005,43 @@ export function YoremioMarketplace() {
         demands={visibleSellerDemands}
         dashboard={sellerDashboard}
         onSelectProduct={selectProduct}
+        onNewProduct={startNewProduct}
+        onDuplicateProduct={duplicateProduct}
+        onDeleteProduct={handleProductDelete}
+        actionStatus={actionStatus}
       />
     );
   } else if (screen === "seller-product") {
-    content = (
-      <SellerProductScreen
+    content = !hasRole(authUser, "SATICI") ? (
+      <AccessRequiredScreen
         {...appProps}
-        categories={visibleCategories}
-        products={visibleSellerProducts}
+        title="Urun formu"
+        description="Urun eklemek veya duzenlemek icin satici girisi gerekli."
+        actionLabel="Giris yap"
+        onAction={() => navigate("login")}
+      />
+    ) : (
+        <SellerProductScreen
+          {...appProps}
+          categories={visibleCategories}
+          editingProduct={editingSellerProduct}
+        draftProduct={productDraftSource}
         actionStatus={actionStatus}
         onSave={handleProductSave}
+        onDeleteImage={handleProductImageDelete}
+        onDeleteVideo={handleProductVideoDelete}
       />
     );
   } else if (screen === "seller-profile") {
-    content = (
+    content = !hasRole(authUser, "SATICI") ? (
+      <AccessRequiredScreen
+        {...appProps}
+        title="Magaza profili"
+        description="Magaza profilini yonetmek icin satici girisi gerekli."
+        actionLabel="Giris yap"
+        onAction={() => navigate("login")}
+      />
+    ) : (
       <SellerProfileScreen
         {...appProps}
         profile={sellerProfile}
@@ -1206,7 +1052,15 @@ export function YoremioMarketplace() {
       />
     );
   } else if (screen === "admin") {
-    content = (
+    content = !hasRole(authUser, "ADMIN") ? (
+      <AccessRequiredScreen
+        {...appProps}
+        title="Admin paneli"
+        description="Kategori ve sistem ozeti icin admin yetkisi gerekli."
+        actionLabel="Giris yap"
+        onAction={() => navigate("login")}
+      />
+    ) : (
       <AdminDashboard
         {...appProps}
         categories={visibleCategories}
@@ -1220,13 +1074,18 @@ export function YoremioMarketplace() {
     content = (
       <ReviewsScreen
         {...appProps}
-        product={selectedProduct ?? visibleProducts[0]}
-        actionStatus={actionStatus}
+        product={selectedProduct ?? null}
         showToast={showToast}
       />
     );
   } else if (screen === "states") {
-    content = <GlobalStatesScreen {...appProps} />;
+    content = (
+      <GlobalStatesScreen
+        {...appProps}
+        showToast={showToast}
+        refreshRoleData={refreshRoleData}
+      />
+    );
   } else {
     content = (
       <HomeScreen
@@ -1336,17 +1195,25 @@ function HomeScreen({
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          {products.slice(0, 7).map((product) => (
-            <HomeProductCard
-              key={product.id}
-              product={product}
-              isFavorite={favoriteIds.has(product.id)}
-              onSelect={() => onSelectProduct(product, "discover")}
-              onToggleFavorite={() => onToggleFavorite(product)}
-            />
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {products.slice(0, 7).map((product) => (
+              <HomeProductCard
+                key={product.id}
+                product={product}
+                isFavorite={favoriteIds.has(product.id)}
+                onSelect={() => onSelectProduct(product, "discover")}
+                onToggleFavorite={() => onToggleFavorite(product)}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Inbox}
+            title="Urun yok"
+            description="API urun dondurmedigi icin burada urun gosterilmiyor."
+          />
+        )}
 
         <FeaturedSellerRow sellers={sellers} products={products} onSelectProduct={onSelectProduct} />
         <PromiseBar />
@@ -1414,14 +1281,14 @@ function PublicHeader({
           <IconButton
             label={accountLabel}
             icon={UserRound}
-            onClick={() => onNavigate(authUser ? "buyer" : "login")}
+            onClick={() => onNavigate(dashboardScreenFor(authUser))}
           />
-          <IconButton label="Favoriler" icon={Heart} onClick={() => onNavigate("buyer")} />
+          <IconButton label="Favoriler" icon={Heart} onClick={() => onNavigate(buyerScreenFor(authUser))} />
           <IconButton
             label="Bildirimler"
             icon={Bell}
             badge={notificationUnreadCount}
-            onClick={() => onNavigate("states")}
+            onClick={() => onNavigate(authUser ? "states" : "login")}
           />
           {authUser ? (
             <Button variant="ghost" size="icon" title="Çıkış yap" onClick={onLogout}>
@@ -1589,14 +1456,12 @@ function FeaturedSellerRow({
   products: ProductDto[];
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
 }) {
+  if (sellers.length === 0) return null;
+
   return (
     <section className="mt-8 space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-black text-brand-brown">Öne çıkan satıcılar</h2>
-        <Button variant="ghost" size="sm" type="button">
-          Tümünü gör
-          <ChevronRight aria-hidden />
-        </Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {sellers.slice(0, 4).map((seller) => {
@@ -1605,10 +1470,11 @@ function FeaturedSellerRow({
             <button
               key={seller.kullaniciId}
               type="button"
+              disabled={!product}
               onClick={() => {
                 if (product) onSelectProduct(product, "discover");
               }}
-              className="relative min-h-[142px] overflow-hidden rounded-lg border border-border bg-ink text-left text-white shadow-[0_8px_22px_rgba(16,24,40,0.1)]"
+              className="relative min-h-[142px] overflow-hidden rounded-lg border border-border bg-ink text-left text-white shadow-[0_8px_22px_rgba(16,24,40,0.1)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               <Image
                 src={sellerCoverImage(seller)}
@@ -1755,6 +1621,8 @@ function DiscoveryScreen({
   onCreateDemand: (product: ProductDto, amount?: number) => void;
   onStartChat: (product: ProductDto) => void;
 }) {
+  const [listMode, setListMode] = useState<ProductListMode>("grid");
+
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
   };
@@ -1784,13 +1652,13 @@ function DiscoveryScreen({
             </form>
           </div>
           <div className="flex items-center justify-end gap-2">
-            <HeaderTextButton icon={Heart} label="Favoriler" onClick={() => onNavigate("buyer")} />
-            <HeaderTextButton icon={MessageCircle} label="Mesajlar" onClick={() => onNavigate("buyer")} />
+            <HeaderTextButton icon={Heart} label="Favoriler" onClick={() => onNavigate(buyerScreenFor(authUser))} />
+            <HeaderTextButton icon={MessageCircle} label="Mesajlar" onClick={() => onNavigate(buyerScreenFor(authUser))} />
             <IconButton
               icon={Bell}
               label="Bildirimler"
               badge={notificationUnreadCount}
-              onClick={() => onNavigate("states")}
+              onClick={() => onNavigate(authUser ? "states" : "login")}
             />
             <AccountChip
               authUser={authUser}
@@ -1851,10 +1719,20 @@ function DiscoveryScreen({
                   </option>
                 ))}
               </select>
-              <Button variant="outline" size="icon" title="Grid">
+              <Button
+                variant={listMode === "grid" ? "secondary" : "outline"}
+                size="icon"
+                title="Grid"
+                onClick={() => setListMode("grid")}
+              >
                 <LayoutDashboard aria-hidden />
               </Button>
-              <Button variant="outline" size="icon" title="Liste">
+              <Button
+                variant={listMode === "list" ? "secondary" : "outline"}
+                size="icon"
+                title="Liste"
+                onClick={() => setListMode("list")}
+              >
                 <Menu aria-hidden />
               </Button>
             </div>
@@ -1873,8 +1751,19 @@ function DiscoveryScreen({
                 Ürünler yükleniyor
               </div>
             </div>
+          ) : products.length === 0 ? (
+            <EmptyState
+              icon={Inbox}
+              title="Urun bulunamadi"
+              description="Filtreleri degistir veya backend urun kaydi ekle."
+            />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div
+              className={cn(
+                "grid gap-4",
+                listMode === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1",
+              )}
+            >
               {products.map((product) => (
                 <DiscoveryProductCard
                   key={product.id}
@@ -2176,12 +2065,21 @@ function ProductDetailPanel({
   onReviews: () => void;
 }) {
   const gallery = product.resimler.length > 0 ? product.resimler : [{ id: 0, url: productImage(product) }];
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const activeGalleryImage = gallery[galleryIndex] ?? gallery[0];
+  const activeGallerySrc = activeGalleryImage.url.startsWith("/products/")
+    ? activeGalleryImage.url
+    : mediaUrl(activeGalleryImage.url) || productPlaceholderImage;
+
+  useEffect(() => {
+    setGalleryIndex(0);
+  }, [product.id]);
 
   return (
     <div className="sticky top-[92px] space-y-5">
       <div className="relative aspect-[1.44] overflow-hidden rounded-lg bg-muted">
         <Image
-          src={productImage(product)}
+          src={activeGallerySrc}
           alt={product.adi}
           fill
           sizes="(min-width: 1024px) 42vw, 100vw"
@@ -2198,18 +2096,44 @@ function ProductDetailPanel({
           <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
           Favori
         </button>
-        <button className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow" type="button">
+        <button
+          className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45"
+          type="button"
+          disabled={gallery.length <= 1}
+          onClick={() =>
+            setGalleryIndex((current) =>
+              current === 0 ? gallery.length - 1 : current - 1,
+            )
+          }
+        >
           <ChevronLeft aria-hidden />
         </button>
-        <button className="absolute right-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow" type="button">
+        <button
+          className="absolute right-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45"
+          type="button"
+          disabled={gallery.length <= 1}
+          onClick={() =>
+            setGalleryIndex((current) =>
+              current === gallery.length - 1 ? 0 : current + 1,
+            )
+          }
+        >
           <ChevronRight aria-hidden />
         </button>
       </div>
       <div className="scroll-shelf flex gap-3 overflow-x-auto">
-        {gallery.slice(0, 6).map((image) => (
-          <div key={image.id} className="relative size-16 shrink-0 overflow-hidden rounded-md border border-primary bg-muted">
+        {gallery.slice(0, 6).map((image, index) => (
+          <button
+            key={image.id}
+            type="button"
+            onClick={() => setGalleryIndex(index)}
+            className={cn(
+              "relative size-16 shrink-0 overflow-hidden rounded-md border bg-muted",
+              index === galleryIndex ? "border-primary" : "border-border",
+            )}
+          >
             <Image src={image.url.startsWith("/products/") ? image.url : mediaUrl(image.url)} alt="" fill sizes="64px" className="object-cover" />
-          </div>
+          </button>
         ))}
       </div>
 
@@ -2295,7 +2219,7 @@ function LoginScreen({
 }: {
   bootstrap: AppBootstrapDto | null;
   onNavigate: (screen: Screen) => void;
-  onAuthenticated: (user: AuthState) => void;
+  onAuthenticated: (user: AuthState, options?: AuthCompleteOptions) => void;
   showToast: (message: string, kind: ToastKind) => void;
 }) {
   const [email, setEmail] = useState("");
@@ -2311,7 +2235,7 @@ function LoginScreen({
       window.localStorage.setItem("yoremio-token", login.token);
       window.localStorage.setItem("yoremio-user", JSON.stringify(login));
 
-      let fullUser: AuthState = {
+      const fullUser: AuthState = {
         token: login.token,
         userId: login.userId,
         email: login.email,
@@ -2322,14 +2246,14 @@ function LoginScreen({
         phoneNumberConfirmed: false,
       };
 
-      try {
-        const me = await yoremioApi.me(login.token);
-        fullUser = { ...me, token: login.token };
-      } catch {
-        // Session bootstrap will retry /me on the next load.
-      }
-
       onAuthenticated(fullUser);
+
+      yoremioApi
+        .me(login.token)
+        .then((me) => onAuthenticated({ ...me, token: login.token }, { silent: true }))
+        .catch(() => {
+          // Session bootstrap will retry /me on the next load.
+        });
     } catch (error) {
       showToast(apiErrorMessage(error), "error");
     } finally {
@@ -2368,6 +2292,15 @@ function LoginScreen({
             onSubmit={handleSubmit}
             className="w-full max-w-[720px] rounded-lg border border-border bg-white px-7 py-9 shadow-[0_18px_50px_rgba(16,24,40,0.12)] sm:px-14"
           >
+            <Button
+              type="button"
+              variant="ghost"
+              className="mb-5 -ml-2"
+              onClick={() => onNavigate("home")}
+            >
+              <Home aria-hidden />
+              Ana sayfaya dön
+            </Button>
             <button type="button" onClick={() => onNavigate("home")} className="mx-auto block">
               <BrandLogo className="justify-center" />
             </button>
@@ -2495,6 +2428,7 @@ function BuyerRegisterScreen({
     <AuthLayout
       actionLabel="Giriş yap"
       onAction={() => onNavigate("login")}
+      onHome={() => onNavigate("home")}
       side={
         <BuyerPreview products={products} />
       }
@@ -2591,6 +2525,7 @@ function SellerRegisterScreen({
     <AuthLayout
       actionLabel="Giriş yap"
       onAction={() => onNavigate("login")}
+      onHome={() => onNavigate("home")}
       wide
       side={<SellerRegisterPreview products={products} />}
     >
@@ -2646,24 +2581,32 @@ function AuthLayout({
   side,
   actionLabel,
   onAction,
+  onHome,
   wide = false,
 }: {
   children: ReactNode;
   side: ReactNode;
   actionLabel: string;
   onAction: () => void;
+  onHome: () => void;
   wide?: boolean;
 }) {
   return (
     <main className="min-h-screen bg-white">
       <header className="flex min-h-[88px] items-center justify-between border-b border-border px-5 sm:px-8">
-        <button type="button" onClick={onAction}>
+        <button type="button" onClick={onHome}>
           <BrandLogo />
         </button>
-        <Button variant="outline" onClick={onAction}>
-          <UserRound aria-hidden />
-          {actionLabel}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onHome}>
+            <Home aria-hidden />
+            Ana sayfa
+          </Button>
+          <Button variant="outline" onClick={onAction}>
+            <UserRound aria-hidden />
+            {actionLabel}
+          </Button>
+        </div>
       </header>
       <div className={cn("grid min-h-[calc(100vh-89px)]", wide ? "lg:grid-cols-[42vw_1fr]" : "lg:grid-cols-[48vw_1fr]")}>
         <section className="relative flex items-center justify-center overflow-hidden p-5 sm:p-8">
@@ -2717,21 +2660,23 @@ function BuyerPreview({ products }: { products: ProductDto[] }) {
           </span>
         ))}
       </div>
-      <div className="mt-5 grid grid-cols-5 gap-3 rounded-lg border border-border bg-white p-3 shadow-[0_16px_34px_rgba(16,24,40,0.08)]">
-        {products.slice(0, 5).map((product) => (
-          <MiniProduct key={product.id} product={product} />
-        ))}
-      </div>
+      {products.length > 0 ? (
+        <div className="mt-5 grid grid-cols-5 gap-3 rounded-lg border border-border bg-white p-3 shadow-[0_16px_34px_rgba(16,24,40,0.08)]">
+          {products.slice(0, 5).map((product) => (
+            <MiniProduct key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-5 rounded-lg border border-dashed border-border bg-white p-5 text-sm font-semibold text-muted-foreground">
+          API ürün döndürmediği için kayıt önizlemesinde ürün gösterilmiyor.
+        </div>
+      )}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <PreviewPanel title="Talepler">
-          {demoDemands.map((demand) => (
-            <DemandLine key={demand.id} demand={demand} />
-          ))}
+          <p className="text-sm text-muted-foreground">Canlı talepler girişten sonra alıcı panelinde listelenir.</p>
         </PreviewPanel>
         <PreviewPanel title="Mesajlar">
-          {demoConversations.map((conversation) => (
-            <ConversationLine key={conversation.userId} conversation={conversation} />
-          ))}
+          <p className="text-sm text-muted-foreground">Canlı mesajlar gerçek konuşma oluşunca görünür.</p>
         </PreviewPanel>
       </div>
     </div>
@@ -2762,32 +2707,31 @@ function SellerRegisterPreview({ products }: { products: ProductDto[] }) {
           <div className="p-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-black">Ürünlerim</h3>
-              <Button size="sm">
+              <Button size="sm" type="button" disabled title="Kayıt sonrası ürün formu açılır">
                 <Plus aria-hidden />
                 Yeni ürün
               </Button>
             </div>
-            <div className="grid grid-cols-4 gap-3">
-              {products.slice(0, 4).map((product) => (
-                <MiniProduct key={product.id} product={product} />
-              ))}
-            </div>
+            {products.length > 0 ? (
+              <div className="grid grid-cols-4 gap-3">
+                {products.slice(0, 4).map((product) => (
+                  <MiniProduct key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
+                Kayıt sonrası ürünlerin burada görünür.
+              </div>
+            )}
             <div className="mt-5 grid gap-3 lg:grid-cols-3">
               <PreviewPanel title="Gelen talepler">
-                {demoDemands.map((demand) => <DemandLine key={demand.id} demand={demand} />)}
+                <p className="text-sm text-muted-foreground">Alıcı talepleri canlı veriden gelir.</p>
               </PreviewPanel>
               <PreviewPanel title="Teklifler">
-                {demoDemands.map((demand) => <DemandLine key={demand.id} demand={demand} />)}
+                <p className="text-sm text-muted-foreground">Teklifler talep oluşunca görünür.</p>
               </PreviewPanel>
               <PreviewPanel title="Satıcıya yaz">
-                <div className="space-y-2 text-sm">
-                  <div className="rounded-md border border-border bg-white p-3">
-                    Merhaba, ürün teslim tarihi nedir?
-                  </div>
-                  <div className="ml-auto rounded-md bg-secondary p-3 text-secondary-foreground">
-                    Yarın kargoya verebilirim.
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Mesajlar gerçek kullanıcılar arasında açılır.</p>
               </PreviewPanel>
             </div>
           </div>
@@ -2854,7 +2798,11 @@ function VerificationScreen({
         <button type="button" onClick={() => onNavigate("home")}>
           <BrandLogo />
         </button>
-        <Button variant="ghost">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => showToast("Destek akışı için backend endpointi henüz bağlı değil.", "info")}
+        >
           <CircleHelp aria-hidden />
           Yardıma ihtiyacın varsa
         </Button>
@@ -3021,6 +2969,7 @@ function BuyerDashboard({
   onSelectProduct,
   onChatTargetChange,
   onSendMessage,
+  onAcceptOffer,
 }: {
   authUser: AuthState | null;
   sellerProfile?: SellerProfileDto | null;
@@ -3038,8 +2987,9 @@ function BuyerDashboard({
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
   onChatTargetChange: (value: string) => void;
   onSendMessage: (receiverId: string, message: string) => void;
+  onAcceptOffer: (offerId: number) => void;
 }) {
-  const displayName = authUser ? accountName(authUser, sellerProfile) : "Ayşe Yılmaz";
+  const displayName = authUser ? accountName(authUser, sellerProfile) : "Misafir";
 
   return (
     <DashboardFrame
@@ -3062,36 +3012,40 @@ function BuyerDashboard({
       ]}
     >
       <section className="space-y-5">
-        <PanelHeader title="Favoriler" action="Tümünü gör" />
-        <div className="scroll-shelf flex gap-3 overflow-x-auto pb-1">
-          {favorites.slice(0, 8).map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => onSelectProduct(product, "discover")}
-              className="w-40 shrink-0 overflow-hidden rounded-lg border border-border bg-white text-left shadow-sm"
-            >
-              <div className="relative aspect-square">
-                <Image src={productImage(product)} alt={product.adi} fill sizes="160px" className="object-cover" />
-                <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-white text-red-600 shadow">
-                  <Heart className="size-4 fill-current" aria-hidden />
-                </span>
-              </div>
-              <div className="space-y-1 p-3">
-                <p className="line-clamp-1 text-sm font-bold">{product.adi}</p>
-                <p className="text-xs text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"}</p>
-                <p className="text-right font-black text-primary">{formatPrice(product.fiyat)}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+        <PanelHeader title="Favoriler" action="Tumunu gor" onAction={() => onNavigate("discover")} />
+        {favorites.length > 0 ? (
+          <div className="scroll-shelf flex gap-3 overflow-x-auto pb-1">
+            {favorites.slice(0, 8).map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => onSelectProduct(product, "discover")}
+                className="w-40 shrink-0 overflow-hidden rounded-lg border border-border bg-white text-left shadow-sm"
+              >
+                <div className="relative aspect-square">
+                  <Image src={productImage(product)} alt={product.adi} fill sizes="160px" className="object-cover" />
+                  <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-white text-red-600 shadow">
+                    <Heart className="size-4 fill-current" aria-hidden />
+                  </span>
+                </div>
+                <div className="space-y-1 p-3">
+                  <p className="line-clamp-1 text-sm font-bold">{product.adi}</p>
+                  <p className="text-xs text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"}</p>
+                  <p className="text-right font-black text-primary">{formatPrice(product.fiyat)}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={Heart} title="Favori yok" description="Beğendiğin ürünleri favoriye eklediğinde burada görünür." />
+        )}
 
         <div className="grid gap-4 xl:grid-cols-[1fr_1fr_1.35fr]">
-          <Panel title="Taleplerim" action="Tümünü gör">
+          <Panel title="Taleplerim">
             <DemandTable demands={demands} />
           </Panel>
-          <Panel title="Teklifler" action="Tümünü gör">
-            <OfferCards demands={demands} />
+          <Panel title="Teklifler">
+            <OfferCards demands={demands} actionStatus={actionStatus} onAcceptOffer={onAcceptOffer} />
           </Panel>
           <Panel title="Mesajlar" badge={dashboardSummary?.unreadMessages ?? conversations.reduce((sum, item) => sum + item.unreadCount, 0)}>
             <ChatPanel
@@ -3116,11 +3070,15 @@ function BuyerDashboard({
         </div>
 
         <Panel title="Önerilen ürünler">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {products.map((product) => (
-              <MiniProductButton key={product.id} product={product} onClick={() => onSelectProduct(product, "discover")} />
-            ))}
-          </div>
+          {products.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {products.map((product) => (
+                <MiniProductButton key={product.id} product={product} onClick={() => onSelectProduct(product, "discover")} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon={Package} title="Öneri yok" description="Backend önerilen ürün döndürdüğünde burada listelenir." />
+          )}
         </Panel>
       </section>
     </DashboardFrame>
@@ -3138,6 +3096,10 @@ function SellerDashboard({
   demands,
   dashboard,
   onSelectProduct,
+  onNewProduct,
+  onDuplicateProduct,
+  onDeleteProduct,
+  actionStatus,
 }: {
   authUser: AuthState | null;
   sellerProfile?: SellerProfileDto | null;
@@ -3149,17 +3111,22 @@ function SellerDashboard({
   demands: DemandDto[];
   dashboard: SellerDashboardDto | null;
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
+  onNewProduct: () => void;
+  onDuplicateProduct: (product: ProductDto) => void;
+  onDeleteProduct: (product: ProductDto) => void;
+  actionStatus: string | null;
 }) {
   const totalProducts = dashboard?.totalProducts ?? products.length;
   const activeProducts = dashboard?.activeProducts ?? products.filter((product) => product.aktifMi !== false).length;
   const openDemands = dashboard?.openDemands ?? demands.filter((demand) => demand.durum === "ACIK").length;
   const pendingOffers = dashboard?.pendingOffers ?? demands.reduce((sum, demand) => sum + demand.teklifler.filter((offer) => offer.durum === "BEKLEMEDE").length, 0);
+  const agreedDemands = dashboard?.agreedDemands ?? demands.filter((demand) => demand.durum === "ANLASILDI").length;
 
   return (
     <DashboardFrame
       variant="dark"
       title="Satıcı Paneli"
-      subtitle={`Mağaza: ${profile?.magazaAdi ?? "Ahmetin Bahçesi"}`}
+      subtitle={`Mağaza: ${profile?.magazaAdi ?? "Profil bekleniyor"}`}
       authUser={authUser}
       sellerProfile={sellerProfile}
       notificationUnreadCount={notificationUnreadCount}
@@ -3180,7 +3147,7 @@ function SellerDashboard({
         <div className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard icon={Package} label="Toplam ürün" value={String(totalProducts)} helper={`${activeProducts} aktif`} />
-            <MetricCard icon={ClipboardList} label="Anlaşılan talep" value={String(dashboard?.agreedDemands ?? 8)} helper="Bu ay" />
+            <MetricCard icon={ClipboardList} label="Anlaşılan talep" value={String(agreedDemands)} helper="Bu ay" />
             <MetricCard icon={Inbox} label="Gelen talepler" value={String(openDemands)} helper="Bekleyen" tone="amber" />
             <MetricCard icon={Tag} label="Teklifler" value={String(pendingOffers)} helper="Bekleyen" tone="lime" />
           </div>
@@ -3188,14 +3155,24 @@ function SellerDashboard({
           <Panel
             title="Ürünlerim"
             action="Yeni ürün"
-            onAction={() => onNavigate("seller-product")}
+            onAction={onNewProduct}
           >
-            <SellerProductTable products={products} onSelectProduct={onSelectProduct} />
+            {products.length > 0 ? (
+              <SellerProductTable
+                products={products}
+                actionStatus={actionStatus}
+                onSelectProduct={onSelectProduct}
+                onDuplicateProduct={onDuplicateProduct}
+                onDeleteProduct={onDeleteProduct}
+              />
+            ) : (
+              <EmptyState icon={PackagePlus} title="Ürün yok" description="İlk ürünü eklemek için Yeni ürün aksiyonunu kullan." />
+            )}
           </Panel>
 
           <Panel title="Medya yükle">
             <div className="grid gap-3 md:grid-cols-[120px_repeat(4,1fr)_220px]">
-              <button type="button" onClick={() => onNavigate("seller-product")} className="grid min-h-28 place-items-center rounded-lg border border-dashed border-input bg-white text-center text-sm font-bold text-muted-foreground">
+              <button type="button" onClick={onNewProduct} className="grid min-h-28 place-items-center rounded-lg border border-dashed border-input bg-white text-center text-sm font-bold text-muted-foreground">
                 <UploadCloud className="mb-2 size-6 text-primary" aria-hidden />
                 Görsel ekle
               </button>
@@ -3214,12 +3191,16 @@ function SellerDashboard({
 
         <aside className="space-y-5">
           <SellerProfileCard profile={profile} dashboard={dashboard} onNavigate={onNavigate} />
-          <Panel title="Gelen talepler" action="Tümünü gör">
-            <div className="space-y-3">
-              {demands.slice(0, 4).map((demand) => (
-                <DemandMediaLine key={demand.id} demand={demand} />
-              ))}
-            </div>
+          <Panel title="Gelen talepler">
+            {demands.length > 0 ? (
+              <div className="space-y-3">
+                {demands.slice(0, 4).map((demand) => (
+                  <DemandMediaLine key={demand.id} demand={demand} />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={Inbox} title="Talep yok" description="Alıcı talepleri geldiğinde burada görünecek." />
+            )}
           </Panel>
         </aside>
       </div>
@@ -3234,9 +3215,12 @@ function SellerProductScreen({
   onNavigate,
   onLogout,
   categories,
-  products,
+  editingProduct,
+  draftProduct,
   actionStatus,
   onSave,
+  onDeleteImage,
+  onDeleteVideo,
 }: {
   authUser: AuthState | null;
   sellerProfile?: SellerProfileDto | null;
@@ -3244,37 +3228,70 @@ function SellerProductScreen({
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
   categories: CategoryDto[];
-  products: ProductDto[];
+  editingProduct: ProductDto | null;
+  draftProduct: ProductDto | null;
   actionStatus: string | null;
-  onSave: (values: ProductFormValues, urunId?: number) => void;
+  onSave: (values: ProductSubmitValues, urunId?: number) => void;
+  onDeleteImage: (urunId: number, resimId: number) => void;
+  onDeleteVideo: (urunId: number, videoId: number) => void;
 }) {
-  const first = products[0] ?? demoProducts[0];
-  const [adi, setAdi] = useState(first.adi);
-  const [aciklama, setAciklama] = useState(first.aciklama ?? "");
-  const [fiyat, setFiyat] = useState(String(first.fiyat));
-  const [stok, setStok] = useState(String(first.stokMiktari));
-  const [kategoriId, setKategoriId] = useState(first.kategoriId);
-  const [active, setActive] = useState(first.aktifMi !== false);
+  const sourceProduct = editingProduct ?? draftProduct;
+  const [adi, setAdi] = useState(sourceProduct?.adi ?? "");
+  const [aciklama, setAciklama] = useState(sourceProduct?.aciklama ?? "");
+  const [fiyat, setFiyat] = useState(sourceProduct ? String(sourceProduct.fiyat) : "");
+  const [stok, setStok] = useState(sourceProduct ? String(sourceProduct.stokMiktari) : "");
+  const [kategoriId, setKategoriId] = useState(sourceProduct?.kategoriId ?? categories[0]?.id ?? 0);
+  const [active, setActive] = useState(sourceProduct?.aktifMi !== false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
+
+  useEffect(() => {
+    setAdi(sourceProduct?.adi ?? "");
+    setAciklama(sourceProduct?.aciklama ?? "");
+    setFiyat(sourceProduct ? String(sourceProduct.fiyat) : "");
+    setStok(sourceProduct ? String(sourceProduct.stokMiktari) : "");
+    setKategoriId(sourceProduct?.kategoriId ?? categories[0]?.id ?? 0);
+    setActive(sourceProduct?.aktifMi !== false);
+    setImageFiles([]);
+    setVideoFiles([]);
+  }, [categories, sourceProduct]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!kategoriId) return;
     onSave({
       adi,
       aciklama,
       fiyat: Number(fiyat),
       stokMiktari: Number(stok),
       kategoriId,
-    });
+      aktifMi: active,
+      resimler: imageFiles,
+      videolar: videoFiles,
+    }, editingProduct?.id);
   };
 
   const previewProduct: ProductDto = {
-    ...first,
+    id: sourceProduct?.id ?? 0,
     adi,
     aciklama,
-    fiyat: Number(fiyat) || first.fiyat,
-    stokMiktari: Number(stok) || first.stokMiktari,
+    fiyat: Number(fiyat) || 0,
+    stokMiktari: Number(stok) || 0,
     kategoriId,
-    kategoriAdi: categories.find((category) => category.id === kategoriId)?.adi ?? first.kategoriAdi,
+    kategoriAdi: categories.find((category) => category.id === kategoriId)?.adi ?? sourceProduct?.kategoriAdi,
+    saticiId: authUser?.userId ?? sourceProduct?.saticiId ?? "",
+    saticiMagazaAdi: sellerProfile?.magazaAdi ?? sourceProduct?.saticiMagazaAdi,
+    saticiSehir: sellerProfile?.sehir ?? sourceProduct?.saticiSehir,
+    saticiIlce: sellerProfile?.ilce ?? sourceProduct?.saticiIlce,
+    saticiDogrulanmis: sellerProfile?.dogrulanmisSatici ?? sourceProduct?.saticiDogrulanmis ?? false,
+    ortalamaPuan: sourceProduct?.ortalamaPuan ?? 0,
+    toplamPuan: sourceProduct?.toplamPuan ?? 0,
+    toplamYorum: sourceProduct?.toplamYorum ?? 0,
+    toplamFavori: sourceProduct?.toplamFavori ?? 0,
+    yorumlar: sourceProduct?.yorumlar ?? [],
+    puanlar: sourceProduct?.puanlar ?? [],
+    resimler: sourceProduct?.resimler ?? [],
+    videolar: sourceProduct?.videolar ?? [],
     aktifMi: active,
   };
 
@@ -3317,7 +3334,8 @@ function SellerProductScreen({
                 </Field>
               </div>
               <Field label="Kategori *" htmlFor="product-category">
-                <select id="product-category" value={kategoriId} onChange={(event) => setKategoriId(Number(event.target.value))} className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none">
+                <select id="product-category" value={kategoriId} onChange={(event) => setKategoriId(Number(event.target.value))} className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none" disabled={categories.length === 0}>
+                  {categories.length === 0 ? <option value={0}>Kategori yok</option> : null}
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.adi}
@@ -3340,10 +3358,27 @@ function SellerProductScreen({
               </div>
             </div>
             <div className="space-y-6 p-5">
-              <MediaGrid title="Resimler" icon={ImagePlus} products={products} />
-              <MediaGrid title="Videolar" icon={Video} products={products.slice(0, 1)} video />
+              <MediaGrid
+                title="Resimler"
+                icon={ImagePlus}
+                product={sourceProduct}
+                files={imageFiles}
+                onFilesChange={setImageFiles}
+                onDelete={onDeleteImage}
+                actionStatus={actionStatus}
+              />
+              <MediaGrid
+                title="Videolar"
+                icon={Video}
+                product={sourceProduct}
+                files={videoFiles}
+                onFilesChange={setVideoFiles}
+                onDelete={onDeleteVideo}
+                actionStatus={actionStatus}
+                video
+              />
               <div className="flex gap-3 border-t border-border pt-5">
-                <Button disabled={actionStatus === "product-save"} className="min-w-40">
+                <Button disabled={actionStatus === "product-save" || !kategoriId} className="min-w-40">
                   {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
                   Kaydet
                 </Button>
@@ -3394,12 +3429,34 @@ function SellerProfileScreen({
   showToast: (message: string, kind: ToastKind) => void;
   refreshRoleData: () => Promise<void>;
 }) {
-  const [magazaAdi, setMagazaAdi] = useState(profile?.magazaAdi ?? "Yeşil Vadi Çiftliği");
-  const [adres, setAdres] = useState(profile?.adres ?? "Yeşil Vadi Mah. Tarım Sok. No: 12");
-  const [sehir, setSehir] = useState(profile?.sehir ?? "Bursa");
-  const [ilce, setIlce] = useState(profile?.ilce ?? "Yenişehir");
-  const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber ?? "0532 123 45 67");
+  const [magazaAdi, setMagazaAdi] = useState(profile?.magazaAdi ?? "");
+  const [adres, setAdres] = useState(profile?.adres ?? "");
+  const [sehir, setSehir] = useState(profile?.sehir ?? "");
+  const [ilce, setIlce] = useState(profile?.ilce ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber ?? "");
   const [status, setStatus] = useState<"idle" | "loading">("idle");
+
+  useEffect(() => {
+    setMagazaAdi(profile?.magazaAdi ?? "");
+    setAdres(profile?.adres ?? "");
+    setSehir(profile?.sehir ?? "");
+    setIlce(profile?.ilce ?? "");
+    setPhoneNumber(profile?.phoneNumber ?? "");
+  }, [profile]);
+
+  const profileFieldValues = [
+    profile?.magazaAdi,
+    profile?.adres,
+    profile?.sehir,
+    profile?.ilce,
+    profile?.phoneNumber,
+    profile?.email,
+    profile?.vergiNo,
+  ];
+  const completedProfileFields = profileFieldValues.filter((value) => Boolean(String(value ?? "").trim())).length;
+  const profileCompletion = profileFieldValues.length > 0
+    ? Math.round((completedProfileFields / profileFieldValues.length) * 100)
+    : 0;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -3440,7 +3497,6 @@ function SellerProfileScreen({
         ["Ürünlerim", Package, "seller"],
         ["Gelen talepler", ClipboardList, "seller"],
         ["Teklifler", Tag, "seller"],
-        ["Mesajlar", MessageCircle, "buyer"],
         ["Profil", UserRound, "seller-profile"],
         ["Ayarlar", Settings, "seller-profile"],
       ]}
@@ -3453,7 +3509,7 @@ function SellerProfileScreen({
               <Input value={magazaAdi} onChange={(event) => setMagazaAdi(event.target.value)} />
             </ProfileRow>
             <ProfileRow label="Vergi no">
-              <Input value={profile?.vergiNo ?? "1234567890"} disabled />
+              <Input value={profile?.vergiNo ?? ""} disabled />
             </ProfileRow>
             <ProfileRow label="Adres">
               <textarea value={adres} onChange={(event) => setAdres(event.target.value)} className="min-h-28 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20" />
@@ -3468,10 +3524,12 @@ function SellerProfileScreen({
               <Input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} />
             </ProfileRow>
             <ProfileRow label="E-posta">
-              <Input value={profile?.email ?? authUser?.email ?? "info@yesilvadi.com"} disabled />
+              <Input value={profile?.email ?? authUser?.email ?? ""} disabled />
             </ProfileRow>
             <ProfileRow label="Durum">
-              <Badge variant={profile?.aktifMi === false ? "outline" : "green"}>{profile?.aktifMi === false ? "Pasif" : "Aktif"}</Badge>
+              <Badge variant={profile?.aktifMi ? "green" : "outline"}>
+                {profile ? (profile.aktifMi ? "Aktif" : "Pasif") : "Profil bekleniyor"}
+              </Badge>
             </ProfileRow>
             <Button disabled={status === "loading"}>
               {status === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : null}
@@ -3489,27 +3547,34 @@ function SellerProfileScreen({
                 <h2 className="text-xl font-black">
                   {profile?.dogrulanmisSatici ? "Doğrulanmış satıcı" : "Doğrulama bekliyor"}
                 </h2>
-                <p className="mt-1 text-muted-foreground">Hesap durumu: <Badge variant="green">Aktif</Badge></p>
+                <p className="mt-1 text-muted-foreground">
+                  Hesap durumu:{" "}
+                  <Badge variant={profile?.aktifMi ? "green" : "outline"}>
+                    {profile ? (profile.aktifMi ? "Aktif" : "Pasif") : "Profil bekleniyor"}
+                  </Badge>
+                </p>
               </div>
             </div>
           </Card>
           <Card className="p-6">
             <h2 className="text-xl font-black">Güven skoru</h2>
             <div className="mt-5 grid gap-6 sm:grid-cols-[160px_1fr]">
-              <TrustDial large score={dashboard?.trustScore ?? 92} />
+              <TrustDial large score={dashboard?.trustScore ?? 0} />
               <div className="space-y-5">
-                <ProgressLine label="Profil tamamlama" value={85} />
-                <p className="text-sm font-semibold text-muted-foreground">Tamamlanan alanlar 11 / 13</p>
+                <ProgressLine label="Profil tamamlama" value={profileCompletion} />
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Tamamlanan alanlar {completedProfileFields} / {profileFieldValues.length}
+                </p>
               </div>
             </div>
           </Card>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <MiniMetric icon={Package} label="Ürün sayısı" value={String(dashboard?.totalProducts ?? 48)} />
-            <MiniMetric icon={Check} label="Aktif ürün" value={String(dashboard?.activeProducts ?? 41)} />
-            <MiniMetric icon={AlertCircle} label="Stokta yok" value={String(dashboard?.outOfStockProducts ?? 3)} tone="red" />
-            <MiniMetric icon={Heart} label="Favori" value={String(dashboard?.totalFavorites ?? 138)} tone="red" />
-            <MiniMetric icon={MessageCircle} label="Yorum" value={String(dashboard?.totalReviews ?? 27)} />
-            <MiniMetric icon={Star} label="Puan" value={(dashboard?.averageRating ?? 4.7).toFixed(1)} tone="amber" />
+            <MiniMetric icon={Package} label="Ürün sayısı" value={String(dashboard?.totalProducts ?? 0)} />
+            <MiniMetric icon={Check} label="Aktif ürün" value={String(dashboard?.activeProducts ?? 0)} />
+            <MiniMetric icon={AlertCircle} label="Stokta yok" value={String(dashboard?.outOfStockProducts ?? 0)} tone="red" />
+            <MiniMetric icon={Heart} label="Favori" value={String(dashboard?.totalFavorites ?? 0)} tone="red" />
+            <MiniMetric icon={MessageCircle} label="Yorum" value={String(dashboard?.totalReviews ?? 0)} />
+            <MiniMetric icon={Star} label="Puan" value={(dashboard?.averageRating ?? 0).toFixed(1)} tone="amber" />
           </div>
         </div>
       </div>
@@ -3540,6 +3605,8 @@ function AdminDashboard({
   onCategorySave: (values: Omit<CategoryDto, "id">, id?: number) => void;
   onCategoryDelete: (id: number) => void;
 }) {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | "new">("new");
+
   return (
     <DashboardFrame
       variant="dark"
@@ -3560,27 +3627,33 @@ function AdminDashboard({
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <div className="space-y-5">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <MetricCard icon={Users} label="Toplam kullanıcı" value={String(dashboard?.totalUsers ?? "12.458")} />
-            <MetricCard icon={Store} label="Satıcı" value={String(dashboard?.totalSellers ?? "2.146")} />
-            <MetricCard icon={UserRound} label="Alıcı" value={String(dashboard?.totalBuyers ?? "10.312")} />
-            <MetricCard icon={Package} label="Ürün" value={String(dashboard?.totalProducts ?? "8.765")} />
-            <MetricCard icon={ClipboardList} label="Talep" value={String(dashboard?.totalDemands ?? "1.243")} tone="amber" />
-            <MetricCard icon={Star} label="Yorum" value={String(dashboard?.totalReviews ?? "2.876")} tone="amber" />
+            <MetricCard icon={Users} label="Toplam kullanıcı" value={String(dashboard?.totalUsers ?? 0)} />
+            <MetricCard icon={Store} label="Satıcı" value={String(dashboard?.totalSellers ?? 0)} />
+            <MetricCard icon={UserRound} label="Alıcı" value={String(dashboard?.totalBuyers ?? 0)} />
+            <MetricCard icon={Package} label="Ürün" value={String(dashboard?.totalProducts ?? 0)} />
+            <MetricCard icon={ClipboardList} label="Talep" value={String(dashboard?.totalDemands ?? 0)} tone="amber" />
+            <MetricCard icon={Star} label="Yorum" value={String(dashboard?.totalReviews ?? 0)} tone="amber" />
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
-            <StatStrip label="Toplam ürün" value={String(dashboard?.totalProducts ?? "8.765")} />
-            <StatStrip label="Aktif ürün" value={String(dashboard?.activeProducts ?? "6.892")} tone="green" />
-            <StatStrip label="Pasif ürün" value={String(dashboard?.inactiveProducts ?? "1.873")} tone="red" />
-            <StatStrip label="Toplam talep" value={String(dashboard?.totalDemands ?? "1.243")} />
-            <StatStrip label="Açık talep" value={String(dashboard?.openDemands ?? "476")} tone="amber" />
-            <StatStrip label="Anlaşılan talep" value={String(dashboard?.agreedDemands ?? "767")} tone="green" />
+            <StatStrip label="Toplam ürün" value={String(dashboard?.totalProducts ?? 0)} />
+            <StatStrip label="Aktif ürün" value={String(dashboard?.activeProducts ?? 0)} tone="green" />
+            <StatStrip label="Pasif ürün" value={String(dashboard?.inactiveProducts ?? 0)} tone="red" />
+            <StatStrip label="Toplam talep" value={String(dashboard?.totalDemands ?? 0)} />
+            <StatStrip label="Açık talep" value={String(dashboard?.openDemands ?? 0)} tone="amber" />
+            <StatStrip label="Anlaşılan talep" value={String(dashboard?.agreedDemands ?? 0)} tone="green" />
           </div>
-          <Panel title="Kategoriler" action="Yeni kategori">
-            <CategoryTable categories={categories} onDelete={onCategoryDelete} />
+          <Panel title="Kategoriler" action="Yeni kategori" onAction={() => setSelectedCategoryId("new")}>
+            <CategoryTable
+              categories={categories}
+              onEdit={setSelectedCategoryId}
+              onDelete={onCategoryDelete}
+            />
           </Panel>
         </div>
         <CategoryEditor
           categories={categories}
+          selectedId={selectedCategoryId}
+          onSelectedIdChange={setSelectedCategoryId}
           actionStatus={actionStatus}
           onSave={onCategorySave}
         />
@@ -3598,7 +3671,6 @@ function ReviewsScreen({
   onNavigate,
   onLogout,
   product,
-  actionStatus,
   showToast,
 }: {
   authUser: AuthState | null;
@@ -3608,30 +3680,119 @@ function ReviewsScreen({
   setQuery: (value: string) => void;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
-  product: ProductDto;
-  actionStatus: string | null;
+  product: ProductDto | null;
   showToast: (message: string, kind: ToastKind) => void;
 }) {
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(0);
-  const reviews = product.yorumlar.length
-    ? product.yorumlar.map((comment) => ({
-        name: comment.kullaniciAdi ?? "Yöremio kullanıcısı",
-        date: shortDate(comment.tarih),
-        rating: Math.round(product.ortalamaPuan),
-        text: comment.icerik,
-        helpful: 0,
-      }))
-    : demoReviews;
+  const [tab, setTab] = useState<ReviewTab>("comments");
+  const [comments, setComments] = useState<CommentDto[]>([]);
+  const [ratings, setRatings] = useState<RatingDto[]>([]);
+  const [reviewStatus, setReviewStatus] = useState<"idle" | "loading">("idle");
 
-  const submitReview = () => {
-    if (!authUser) {
+  useEffect(() => {
+    if (!product) {
+      setComments([]);
+      setRatings([]);
+      return;
+    }
+
+    let ignore = false;
+    setComments(product.yorumlar ?? []);
+    setRatings(product.puanlar ?? []);
+
+    Promise.all([
+      yoremioApi.comments(product.id),
+      yoremioApi.productRatings(product.id),
+    ])
+      .then(([nextComments, nextRatings]) => {
+        if (ignore) return;
+        setComments(nextComments);
+        setRatings(nextRatings);
+      })
+      .catch(() => {
+        if (!ignore) {
+          setComments(product.yorumlar ?? []);
+          setRatings(product.puanlar ?? []);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [product]);
+
+  const reviews: ReviewItem[] = comments.map((comment) => ({
+    name: comment.kullaniciAdi ?? "Yöremio kullanıcısı",
+    date: shortDate(comment.tarih),
+    rating: Math.round(product?.ortalamaPuan ?? 0),
+    text: comment.icerik,
+    helpful: 0,
+  }));
+
+  const submitReview = async () => {
+    if (!authUser || !product) {
       showToast("Yorum için alıcı girişi gerekli.", "info");
       onNavigate("login");
       return;
     }
-    showToast("Yorum akışı anlaşılmış talep sonrası aktiftir.", "info");
+    if (!reviewText.trim() && rating === 0) {
+      showToast("Yorum veya puan gir.", "info");
+      return;
+    }
+
+    setReviewStatus("loading");
+    try {
+      if (rating > 0) await yoremioApi.rateProduct(authUser.token, product.id, rating);
+      if (reviewText.trim()) {
+        await yoremioApi.addComment(authUser.token, product.id, reviewText.trim());
+        setReviewText("");
+      }
+      setRating(0);
+      const [nextComments, nextRatings] = await Promise.all([
+        yoremioApi.comments(product.id),
+        yoremioApi.productRatings(product.id),
+      ]);
+      setComments(nextComments);
+      setRatings(nextRatings);
+      showToast("Yorum kaydedildi.", "success");
+    } catch (error) {
+      showToast(apiErrorMessage(error), "error");
+    } finally {
+      setReviewStatus("idle");
+    }
   };
+
+  if (!product) {
+    return (
+      <main className="min-h-screen bg-white">
+        <PublicHeader
+          authUser={authUser}
+          sellerProfile={sellerProfile}
+          notificationUnreadCount={notificationUnreadCount}
+          query={query}
+          setQuery={setQuery}
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+        />
+        <section className="mx-auto max-w-3xl px-4 py-10">
+          <EmptyState
+            icon={Star}
+            title="Ürün seçilmedi"
+            description="Yorum ve puanları görmek için önce keşif ekranından gerçek bir ürün seç."
+          />
+          <Button className="mx-auto mt-5 flex" onClick={() => onNavigate("discover")}>
+            Ürünlere git
+          </Button>
+        </section>
+      </main>
+    );
+  }
+
+  const reviewGalleryImages = (product.resimler ?? [])
+    .map((image) => mediaUrl(image.url) || productPlaceholderImage)
+    .slice(0, 3);
+  const displayGalleryImages = reviewGalleryImages.length > 0 ? reviewGalleryImages : [productImage(product)];
 
   return (
     <main className="min-h-screen bg-white">
@@ -3646,11 +3807,11 @@ function ReviewsScreen({
       />
       <section className="mx-auto max-w-[1520px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-[480px_1fr_430px]">
-          <div className="grid grid-cols-[72px_1fr] gap-3">
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="relative aspect-square overflow-hidden rounded-md border border-border">
-                  <Image src={productImage(product)} alt="" fill sizes="72px" className="object-cover" />
+            <div className="grid grid-cols-[72px_1fr] gap-3">
+              <div className="space-y-3">
+              {displayGalleryImages.map((image, index) => (
+                <div key={`${image}-${index}`} className="relative aspect-square overflow-hidden rounded-md border border-border">
+                  <Image src={image} alt="" fill sizes="72px" className="object-cover" />
                 </div>
               ))}
             </div>
@@ -3660,56 +3821,62 @@ function ReviewsScreen({
           </div>
           <div className="space-y-4">
             <h1 className="text-3xl font-black">{product.adi}</h1>
-            <p className="text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"} · Soğuk saklama</p>
+            <p className="text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"}</p>
             <div className="flex items-center gap-3">
               <div className="relative size-12 overflow-hidden rounded-full">
                 <Image src={productImage(product)} alt="" fill sizes="48px" className="object-cover" />
               </div>
               <div>
                 <p className="font-black">{sellerName(product)}</p>
-                <Badge variant="green">
-                  <ShieldCheck className="size-3.5" aria-hidden />
-                  Doğrulanmış satıcı
-                </Badge>
+                {product.saticiDogrulanmis ? (
+                  <Badge variant="green">
+                    <ShieldCheck className="size-3.5" aria-hidden />
+                    Doğrulanmış satıcı
+                  </Badge>
+                ) : null}
               </div>
             </div>
-            <button type="button" className="flex items-center gap-3 font-bold">
+            <div className="flex items-center gap-3 font-bold">
               <Stars value={product.ortalamaPuan} />
               {product.ortalamaPuan.toFixed(1)} ({product.toplamYorum})
-            </button>
+            </div>
             <p className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="size-4" aria-hidden />
               {productLocation(product)}
             </p>
           </div>
           <Card className="overflow-hidden border-amber-200 bg-amber-50/55 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="flex items-center gap-2 text-xl font-black text-primary">
-                  <Check aria-hidden />
-                  Talep anlaşıldı
-                </h2>
-                <p className="mt-4 text-sm leading-7">
-                  Talep: #T-1254<br />
-                  Ürün: {product.adi}<br />
-                  Miktar: 2 kg<br />
-                  Anlaşma tarihi: 12 Mayıs 2026
-                </p>
-              </div>
-              <div className="relative size-28 shrink-0 overflow-hidden rounded-md">
-                <Image src={productImage(product)} alt="" fill sizes="112px" className="object-cover" />
-              </div>
-            </div>
+            <ShieldCheck className="size-8 text-primary" aria-hidden />
+            <h2 className="mt-4 text-xl font-black text-primary">Yorum yetkisi backend tarafından doğrulanır</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              Puan ve yorum gönderimi canlı API&apos;ye yapılır. Kullanıcının bu ürün için yorum hakkı yoksa backend hata mesajı döndürür.
+            </p>
           </Card>
         </div>
 
         <div className="mt-6 border-b border-border">
           <div className="flex gap-8 text-base font-bold">
-            <button className="border-b-2 border-primary px-5 py-4 text-primary" type="button">
+            <button
+              className={cn("px-5 py-4", tab === "comments" && "border-b-2 border-primary text-primary")}
+              type="button"
+              onClick={() => setTab("comments")}
+            >
               Yorumlar
             </button>
-            <button className="px-5 py-4" type="button">Puanlar</button>
-            <button className="px-5 py-4" type="button">Açıklama</button>
+            <button
+              className={cn("px-5 py-4", tab === "ratings" && "border-b-2 border-primary text-primary")}
+              type="button"
+              onClick={() => setTab("ratings")}
+            >
+              Puanlar
+            </button>
+            <button
+              className={cn("px-5 py-4", tab === "description" && "border-b-2 border-primary text-primary")}
+              type="button"
+              onClick={() => setTab("description")}
+            >
+              Açıklama
+            </button>
           </div>
         </div>
 
@@ -3721,20 +3888,36 @@ function ReviewsScreen({
                 <p className="mt-1 text-5xl font-black">{product.ortalamaPuan.toFixed(1)}</p>
                 <Stars className="mt-2 justify-center" value={product.ortalamaPuan} />
               </div>
-              <RatingBreakdown />
+              <RatingBreakdown ratings={ratings} />
               <div className="grid place-items-center border-t border-border pt-4 text-center lg:border-l lg:border-t-0 lg:pt-0">
                 <div>
                   <p className="text-sm text-muted-foreground">Toplam yorum</p>
-                  <p className="text-4xl font-black">{product.toplamYorum || 128}</p>
+                  <p className="text-4xl font-black">{comments.length}</p>
                   <MessageCircle className="mx-auto mt-2 size-8 text-muted-foreground" aria-hidden />
                 </div>
               </div>
             </Card>
-            <div className="space-y-3">
-              {reviews.map((review) => (
-                <ReviewCard key={`${review.name}-${review.date}`} review={review} product={product} />
-              ))}
-            </div>
+            {tab === "comments" ? (
+              <div className="space-y-3">
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <ReviewCard key={`${review.name}-${review.date}-${review.text}`} review={review} product={product} />
+                  ))
+                ) : (
+                  <EmptyState icon={MessageCircle} title="Yorum yok" description="Bu ürün için canlı yorum bulunamadı." />
+                )}
+              </div>
+            ) : null}
+            {tab === "ratings" ? (
+              <Card className="p-5">
+                <RatingBreakdown ratings={ratings} />
+              </Card>
+            ) : null}
+            {tab === "description" ? (
+              <Card className="p-5 text-sm leading-7 text-muted-foreground">
+                {product.aciklama || "Ürün açıklaması bulunmuyor."}
+              </Card>
+            ) : null}
           </div>
 
           <Card className="p-5">
@@ -3762,7 +3945,8 @@ function ReviewsScreen({
                 className="min-h-28 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
               />
             </Field>
-            <Button className="mt-4 w-full" disabled={actionStatus === "review"} onClick={submitReview}>
+            <Button className="mt-4 w-full" disabled={reviewStatus === "loading"} onClick={submitReview}>
+              {reviewStatus === "loading" ? <Loader2 className="animate-spin" aria-hidden /> : null}
               Gönder
             </Button>
           </Card>
@@ -3780,6 +3964,8 @@ function GlobalStatesScreen({
   setQuery,
   onNavigate,
   onLogout,
+  showToast,
+  refreshRoleData,
 }: {
   authUser: AuthState | null;
   sellerProfile?: SellerProfileDto | null;
@@ -3788,7 +3974,59 @@ function GlobalStatesScreen({
   setQuery: (value: string) => void;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
+  showToast: (message: string, kind: ToastKind) => void;
+  refreshRoleData: () => Promise<void>;
 }) {
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading">("idle");
+  const [mutatingId, setMutatingId] = useState<number | "all" | null>(null);
+
+  const loadNotifications = useCallback(async () => {
+    if (!authUser) return;
+    setStatus("loading");
+    try {
+      const pageResult = await yoremioApi.notifications(authUser.token, onlyUnread);
+      setNotifications(pageResult.items);
+    } catch (error) {
+      showToast(apiErrorMessage(error), "error");
+    } finally {
+      setStatus("idle");
+    }
+  }, [authUser, onlyUnread, showToast]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  const markRead = async (id: number) => {
+    if (!authUser) return;
+    setMutatingId(id);
+    try {
+      await yoremioApi.markNotificationRead(authUser.token, id);
+      await loadNotifications();
+      await refreshRoleData();
+    } catch (error) {
+      showToast(apiErrorMessage(error), "error");
+    } finally {
+      setMutatingId(null);
+    }
+  };
+
+  const markAllRead = async () => {
+    if (!authUser) return;
+    setMutatingId("all");
+    try {
+      await yoremioApi.markAllNotificationsRead(authUser.token);
+      await loadNotifications();
+      await refreshRoleData();
+    } catch (error) {
+      showToast(apiErrorMessage(error), "error");
+    } finally {
+      setMutatingId(null);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#fbfcfa]">
       <PublicHeader
@@ -3800,44 +4038,135 @@ function GlobalStatesScreen({
         onNavigate={onNavigate}
         onLogout={onLogout}
       />
-      <section className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-        <h1 className="text-2xl font-black">Boş durum</h1>
-        <div className="mt-4 grid gap-5 lg:grid-cols-2">
-          <StateCard
-            image="/products/photo-yayla-bali.jpg"
-            title="Favori ürün yok"
-            text="Hoşuna giden ürünleri favorilere ekleyebilirsin."
-            action="Ürünlere git"
-            onAction={() => onNavigate("discover")}
-          />
-          <StateCard
-            image="/hero-market-1600.jpg"
-            title="İlk ürününü ekle"
-            text="Satıcı profilini tamamla ve ilk ürününü alıcılarla buluştur."
-            action="Ürün ekle"
-            onAction={() => onNavigate("seller-product")}
-          />
+      <section className="mx-auto max-w-[1100px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-black">Bildirimler</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Okunmamış bildirim: {notificationUnreadCount}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={onlyUnread ? "secondary" : "outline"}
+              onClick={() => setOnlyUnread((current) => !current)}
+            >
+              {onlyUnread ? "Tüm bildirimler" : "Sadece okunmamış"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!authUser || mutatingId === "all"}
+              onClick={markAllRead}
+            >
+              {mutatingId === "all" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
+              Tümünü okundu yap
+            </Button>
+          </div>
         </div>
-        <h2 className="mt-6 text-2xl font-black">Hata durumu</h2>
-        <div className="mt-4 grid gap-5 lg:grid-cols-3">
-          <ErrorState icon={LockKeyhole} title="Yetkin yok" text="Bu sayfaya erişim için yetkin bulunmuyor." traceId="9f8a7b6c-3d21-4e2a-a1d7-7b8e9c0f1234" />
-          <ErrorState icon={RefreshCw} title="Çok fazla istek" text="Kısa süre içinde çok fazla istek gönderdin." traceId="b2c3d4e5-f678-4a1b-b2c3-6d7e8f9a0b12" tone="amber" />
-          <Card className="p-5">
-            <h3 className="text-lg font-black">Form - Doğrulama hatası</h3>
-            <div className="mt-4 space-y-4">
-              <InvalidField label="E-posta" value="ornekaposta" message="Geçerli bir e-posta adresi giriniz." />
-              <InvalidField label="Telefon" value="53212345" message="Telefon numarası en az 10 haneli olmalıdır." />
-              <InvalidField label="Satıcı adı" value="" message="Satıcı adı boş geçilemez." />
-              <div className="rounded-md border border-dashed border-input bg-muted p-3 font-mono text-sm">
-                Doğrulama hatası<br />
-                traceId: 3e7f2a1d-9b4c-4d8e-9a1b-c2d3e4f5a6b7
-              </div>
-            </div>
-          </Card>
-        </div>
-        <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950">
-          <p className="font-black">Boş durumlar kullanıcıya yol gösterir; hatalar ise traceId ile destek akışına bağlanır.</p>
-        </div>
+
+        {!authUser ? (
+          <div className="mt-6">
+            <EmptyState icon={LockKeyhole} title="Giriş gerekli" description="Bildirimleri görmek için oturum açmalısın." />
+            <Button className="mx-auto mt-5 flex" onClick={() => onNavigate("login")}>
+              Giriş yap
+            </Button>
+          </div>
+        ) : status === "loading" ? (
+          <div className="mt-6 grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-white">
+            <Loader2 className="size-7 animate-spin text-primary" aria-hidden />
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="mt-6">
+            <EmptyState icon={Bell} title="Bildirim yok" description="Canlı bildirim geldiğinde burada listelenir." />
+          </div>
+        ) : (
+          <div className="mt-6 space-y-3">
+            {notifications.map((notification) => (
+              <Card key={notification.id} className={cn("p-4", !notification.okunduMu && "border-primary/35 bg-secondary/40")}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <Badge variant={notification.okunduMu ? "outline" : "green"}>{notification.tur}</Badge>
+                    <h2 className="mt-3 text-lg font-black">{notification.baslik}</h2>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{notification.mesaj}</p>
+                    <p className="mt-2 text-xs font-semibold text-muted-foreground">{shortDate(notification.olusturmaTarihi)}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={notification.okunduMu || mutatingId === notification.id}
+                    onClick={() => markRead(notification.id)}
+                  >
+                    {mutatingId === notification.id ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
+                    Okundu
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function AccessRequiredScreen({
+  authUser,
+  sellerProfile,
+  notificationUnreadCount,
+  query,
+  setQuery,
+  onNavigate,
+  onLogout,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  authUser: AuthState | null;
+  sellerProfile?: SellerProfileDto | null;
+  notificationUnreadCount: number;
+  query: string;
+  setQuery: (value: string) => void;
+  onNavigate: (screen: Screen) => void;
+  onLogout: () => void;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  const primaryLabel = authUser ? "Pazara dön" : actionLabel;
+  const primaryAction = authUser ? () => onNavigate("discover") : onAction;
+
+  return (
+    <main className="min-h-screen bg-[#fbfcfa]">
+      <PublicHeader
+        authUser={authUser}
+        sellerProfile={sellerProfile}
+        notificationUnreadCount={notificationUnreadCount}
+        query={query}
+        setQuery={setQuery}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      />
+      <section className="mx-auto flex min-h-[calc(100vh-88px)] max-w-3xl items-center px-4 py-10 sm:px-6">
+        <Card className="w-full p-8 text-center">
+          <span className="mx-auto grid size-14 place-items-center rounded-full bg-secondary text-primary">
+            <LockKeyhole aria-hidden />
+          </span>
+          <h1 className="mt-5 text-3xl font-black">{title}</h1>
+          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{description}</p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button type="button" onClick={primaryAction}>
+              {primaryLabel}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => onNavigate("home")}>
+              Ana sayfa
+            </Button>
+          </div>
+        </Card>
       </section>
     </main>
   );
@@ -3899,11 +4228,6 @@ function DashboardFrame({
               >
                 <Icon className="size-5" aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{label}</span>
-                {label.includes("talep") || label.includes("Teklif") || label.includes("Mesaj") ? (
-                  <span className={cn("rounded-full px-2 py-0.5 text-xs", dark ? "bg-white/16" : "bg-secondary text-primary")}>
-                    {label.includes("Mesaj") ? 2 : label.includes("Teklif") ? 5 : 12}
-                  </span>
-                ) : null}
               </button>
             ))}
           </nav>
@@ -3913,8 +4237,8 @@ function DashboardFrame({
               onClick={() => onNavigate("states")}
               className={cn("flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-bold", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
-              <CircleHelp className="size-4" aria-hidden />
-              Yardım
+              <Bell className="size-4" aria-hidden />
+              Bildirimler
             </button>
             <button
               type="button"
@@ -3929,17 +4253,13 @@ function DashboardFrame({
         <section className="min-w-0">
           <header className="flex min-h-[78px] items-center justify-between gap-4 border-b border-border bg-white px-4 sm:px-6">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Menu aria-hidden />
-              </Button>
               <div>
                 <h1 className="text-2xl font-black tracking-normal">{title}</h1>
                 <p className="text-sm text-muted-foreground">{subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <IconButton icon={Bell} label="Bildirimler" badge={notificationUnreadCount || 3} onClick={() => onNavigate("states")} />
-              <IconButton icon={MessageCircle} label="Mesajlar" badge={2} onClick={() => onNavigate("buyer")} />
+              <IconButton icon={Bell} label="Bildirimler" badge={notificationUnreadCount} onClick={() => onNavigate("states")} />
               <AccountChip
                 authUser={authUser}
                 sellerProfile={sellerProfile}
@@ -4053,7 +4373,7 @@ function Panel({
           {title}
           {badge ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">{badge}</span> : null}
         </h2>
-        {action ? (
+        {action && onAction ? (
           <button type="button" onClick={onAction} className="text-sm font-bold text-primary">
             {action}
           </button>
@@ -4064,11 +4384,23 @@ function Panel({
   );
 }
 
-function PanelHeader({ title, action }: { title: string; action?: string }) {
+function PanelHeader({
+  title,
+  action,
+  onAction,
+}: {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+}) {
   return (
     <div className="flex items-center justify-between">
       <h2 className="text-xl font-black text-primary">{title}</h2>
-      {action ? <button className="text-sm font-bold text-primary" type="button">{action}</button> : null}
+      {action && onAction ? (
+        <button className="text-sm font-bold text-primary" type="button" onClick={onAction}>
+          {action}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -4109,10 +4441,16 @@ function MetricCard({
 
 function SellerProductTable({
   products,
+  actionStatus,
   onSelectProduct,
+  onDuplicateProduct,
+  onDeleteProduct,
 }: {
   products: ProductDto[];
+  actionStatus: string | null;
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
+  onDuplicateProduct: (product: ProductDto) => void;
+  onDeleteProduct: (product: ProductDto) => void;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -4123,12 +4461,11 @@ function SellerProductTable({
             <th className="px-3 py-3">Fiyat</th>
             <th className="px-3 py-3">Stok</th>
             <th className="px-3 py-3">Durum</th>
-            <th className="px-3 py-3">Görüntülenme</th>
             <th className="px-3 py-3">İşlemler</th>
           </tr>
         </thead>
         <tbody>
-          {products.map((product, index) => (
+          {products.map((product) => (
             <tr key={product.id} className="border-t border-border">
               <td className="px-3 py-3">
                 <div className="flex items-center gap-3">
@@ -4150,17 +4487,27 @@ function SellerProductTable({
                   {product.aktifMi === false ? "Pasif" : "Aktif"}
                 </Badge>
               </td>
-              <td className="px-3 py-3">{(1245 + index * 263).toLocaleString("tr-TR")}</td>
               <td className="px-3 py-3">
                 <div className="flex gap-2">
                   <Button variant="outline" size="icon" title="Düzenle" onClick={() => onSelectProduct(product, "seller-product")}>
                     <Edit3 aria-hidden />
                   </Button>
-                  <Button variant="outline" size="icon" title="Kopyala">
+                  <Button variant="outline" size="icon" title="Kopyala" onClick={() => onDuplicateProduct(product)}>
                     <Package aria-hidden />
                   </Button>
-                  <Button variant="outline" size="icon" title="Sil" className="text-red-600">
-                    <Trash2 aria-hidden />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="Sil"
+                    className="text-red-600"
+                    disabled={actionStatus === `product-delete-${product.id}`}
+                    onClick={() => onDeleteProduct(product)}
+                  >
+                    {actionStatus === `product-delete-${product.id}` ? (
+                      <Loader2 className="animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 aria-hidden />
+                    )}
                   </Button>
                 </div>
               </td>
@@ -4181,7 +4528,29 @@ function SellerProfileCard({
   dashboard: SellerDashboardDto | null;
   onNavigate: (screen: Screen) => void;
 }) {
-  const score = dashboard?.trustScore ?? 72;
+  const score = dashboard?.trustScore ?? 0;
+  const checklist = [
+    {
+      label: "Doğrulama",
+      value: profile?.dogrulanmisSatici ? "Tamamlandı" : "Bekliyor",
+      done: Boolean(profile?.dogrulanmisSatici),
+    },
+    {
+      label: "Mağaza bilgileri",
+      value: profile?.magazaAdi ? "Tamamlandı" : "Eksik",
+      done: Boolean(profile?.magazaAdi),
+    },
+    {
+      label: "İletişim bilgileri",
+      value: profile?.phoneNumber ? "Tamamlandı" : "Eksik",
+      done: Boolean(profile?.phoneNumber),
+    },
+    {
+      label: "Ürün yükleme",
+      value: `${dashboard?.totalProducts ?? 0} ürün`,
+      done: Boolean((dashboard?.totalProducts ?? 0) > 0),
+    },
+  ];
 
   return (
     <Panel title="Profil">
@@ -4198,13 +4567,13 @@ function SellerProfileCard({
         </div>
       </div>
       <div className="mt-5 space-y-3 border-t border-border pt-5">
-        {["Doğrulama", "Mağaza bilgileri", "İletişim bilgileri", "Ürün yükleme"].map((item, index) => (
-          <div key={item} className="flex items-center justify-between text-sm">
+        {checklist.map((item) => (
+          <div key={item.label} className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <Check className={cn("size-4", index < 3 ? "text-primary" : "text-amber-600")} aria-hidden />
-              {item}
+              <Check className={cn("size-4", item.done ? "text-primary" : "text-amber-600")} aria-hidden />
+              {item.label}
             </span>
-            <span className="font-semibold text-muted-foreground">{index < 3 ? "Tamamlandı" : "6 / 10"}</span>
+            <span className="font-semibold text-muted-foreground">{item.value}</span>
           </div>
         ))}
       </div>
@@ -4213,6 +4582,10 @@ function SellerProfileCard({
 }
 
 function DemandTable({ demands }: { demands: DemandDto[] }) {
+  if (demands.length === 0) {
+    return <EmptyState icon={ClipboardList} title="Talep yok" description="Oluşturduğun talepler burada görünür." />;
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[440px] text-sm">
@@ -4243,11 +4616,26 @@ function DemandTable({ demands }: { demands: DemandDto[] }) {
   );
 }
 
-function OfferCards({ demands }: { demands: DemandDto[] }) {
+function OfferCards({
+  demands,
+  actionStatus,
+  onAcceptOffer,
+}: {
+  demands: DemandDto[];
+  actionStatus: string | null;
+  onAcceptOffer: (offerId: number) => void;
+}) {
+  const demandsWithOffers = demands.filter((demand) => demand.teklifler.length > 0);
+
+  if (demandsWithOffers.length === 0) {
+    return <EmptyState icon={Tag} title="Teklif yok" description="Satıcı teklifleri geldiğinde burada görünür." />;
+  }
+
   return (
     <div className="space-y-3">
-      {demands.slice(0, 3).map((demand) => {
+      {demandsWithOffers.slice(0, 3).map((demand) => {
         const offer = demand.teklifler[0];
+        const canAccept = Boolean(offer?.id && offer.durum === "BEKLEMEDE");
         return (
           <div key={demand.id} className="rounded-lg border border-border bg-white p-3">
             <div className="flex items-center gap-3">
@@ -4263,7 +4651,16 @@ function OfferCards({ demands }: { demands: DemandDto[] }) {
             <p className="mt-2 text-sm text-muted-foreground">Teklif Tutarı</p>
             <div className="mt-1 flex items-center justify-between">
               <p className="text-2xl font-black text-primary">{formatPrice((offer?.birimFiyat ?? demand.urunFiyat ?? 0) * demand.miktar)}</p>
-              <Button size="sm">Kabul et</Button>
+              <Button
+                size="sm"
+                disabled={!canAccept || actionStatus === `offer-${offer?.id}`}
+                onClick={() => {
+                  if (offer?.id) onAcceptOffer(offer.id);
+                }}
+              >
+                {actionStatus === `offer-${offer?.id}` ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {offer?.durum === "KABUL" ? "Kabul edildi" : "Kabul et"}
+              </Button>
             </div>
           </div>
         );
@@ -4291,21 +4688,19 @@ function ChatPanel({
   const activeConversation = conversations.find((conversation) => conversation.userId === targetId) ?? conversations[0];
   const currentTarget = targetId || activeConversation?.userId || "";
 
+  if (conversations.length === 0) {
+    return <EmptyState icon={MessageCircle} title="Mesaj yok" description="Gerçek bir konuşma başladığında mesajlar burada görünür." />;
+  }
+
   return (
     <div className="grid min-h-[560px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
-          <button type="button" className="grid size-9 place-items-center rounded-full hover:bg-muted">
-            <ChevronLeft aria-hidden />
-          </button>
           <div>
             <p className="font-black">{activeConversation?.userName ?? "Satıcı"}</p>
             <Badge variant="green">Doğrulanmış Satıcı</Badge>
           </div>
         </div>
-        <Button variant="ghost" size="icon">
-          <Menu aria-hidden />
-        </Button>
       </div>
       <div className="space-y-3 overflow-y-auto bg-[#fbfcfa] p-4">
         <div className="mb-3 flex flex-wrap gap-2">
@@ -4323,12 +4718,18 @@ function ChatPanel({
             </button>
           ))}
         </div>
-        {messages.map((message) => (
-          <ChatBubble key={message.id} mine={message.isMine}>
-            {message.message}
-            <span className="mt-1 block text-[11px] opacity-70">{shortDate(message.sentAt)}</span>
-          </ChatBubble>
-        ))}
+        {messages.length > 0 ? (
+          messages.map((message) => (
+            <ChatBubble key={message.id} mine={message.isMine}>
+              {message.message}
+              <span className="mt-1 block text-[11px] opacity-70">{shortDate(message.sentAt)}</span>
+            </ChatBubble>
+          ))
+        ) : (
+          <p className="rounded-md border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
+            Bu konuşmada henüz mesaj yok.
+          </p>
+        )}
       </div>
       <form
         className="grid gap-2 border-t border-border p-3 sm:grid-cols-[1fr_auto]"
@@ -4377,14 +4778,24 @@ function AcceptedOffer({ demands, onNavigate }: { demands: DemandDto[]; onNaviga
 function MediaGrid({
   title,
   icon: Icon,
-  products,
+  product,
+  files,
+  onFilesChange,
+  onDelete,
+  actionStatus,
   video = false,
 }: {
   title: string;
   icon: LucideIcon;
-  products: ProductDto[];
+  product: ProductDto | null;
+  files: File[];
+  onFilesChange: (files: File[]) => void;
+  onDelete: (urunId: number, mediaId: number) => void;
+  actionStatus: string | null;
   video?: boolean;
 }) {
+  const mediaItems = product ? (video ? product.videolar : product.resimler) : [];
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -4394,29 +4805,60 @@ function MediaGrid({
             {video ? "En fazla 3 video yükleyebilirsiniz." : "En fazla 10 görsel yükleyebilirsiniz."}
           </p>
         </div>
-        <Button type="button" variant="outline">
+        <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55">
           <UploadCloud aria-hidden />
           Medya yükle
-        </Button>
+          <input
+            type="file"
+            className="sr-only"
+            accept={video ? "video/*" : "image/*"}
+            multiple
+            onChange={(event) => onFilesChange(Array.from(event.target.files ?? []))}
+          />
+        </label>
       </div>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-        {products.slice(0, video ? 1 : 10).map((product) => (
-          <div key={product.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-            <Image src={productImage(product)} alt="" fill sizes="120px" className="object-cover" />
+        {mediaItems.slice(0, video ? 3 : 10).map((item) => (
+          <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
             {video ? (
-              <span className="absolute inset-0 grid place-items-center bg-black/20 text-white">
+              <span className="absolute inset-0 grid place-items-center bg-black/70 text-white">
                 <Video className="size-8" aria-hidden />
               </span>
-            ) : null}
-            <button type="button" className="absolute right-1 top-1 grid size-7 place-items-center rounded-md bg-white text-red-600 shadow">
-              <Trash2 className="size-4" aria-hidden />
+            ) : (
+              <Image src={item.url.startsWith("/products/") ? item.url : mediaUrl(item.url)} alt="" fill sizes="120px" className="object-cover" />
+            )}
+            <button
+              type="button"
+              className="absolute right-1 top-1 grid size-7 place-items-center rounded-md bg-white text-red-600 shadow disabled:opacity-50"
+              disabled={!product || actionStatus === `${video ? "media-delete-video" : "media-delete-image"}-${item.id}`}
+              onClick={() => {
+                if (product) onDelete(product.id, item.id);
+              }}
+            >
+              {actionStatus === `${video ? "media-delete-video" : "media-delete-image"}-${item.id}` ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="size-4" aria-hidden />
+              )}
             </button>
           </div>
         ))}
-        <button type="button" className="grid aspect-square place-items-center rounded-lg border border-dashed border-input text-sm font-bold text-muted-foreground">
+        {files.map((file) => (
+          <div key={`${file.name}-${file.lastModified}`} className="grid aspect-square place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary p-2 text-center text-xs font-bold text-primary">
+            <span className="line-clamp-3">{file.name}</span>
+          </div>
+        ))}
+        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input text-sm font-bold text-muted-foreground">
           <Icon className="mb-2 size-7 text-muted-foreground" aria-hidden />
           {video ? "Video ekle" : "Görsel ekle"}
-        </button>
+          <input
+            type="file"
+            className="sr-only"
+            accept={video ? "video/*" : "image/*"}
+            multiple
+            onChange={(event) => onFilesChange(Array.from(event.target.files ?? []))}
+          />
+        </label>
       </div>
     </div>
   );
@@ -4424,14 +4866,17 @@ function MediaGrid({
 
 function CategoryEditor({
   categories,
+  selectedId,
+  onSelectedIdChange,
   actionStatus,
   onSave,
 }: {
   categories: CategoryDto[];
+  selectedId: number | "new";
+  onSelectedIdChange: (id: number | "new") => void;
   actionStatus: string | null;
   onSave: (values: Omit<CategoryDto, "id">, id?: number) => void;
 }) {
-  const [selectedId, setSelectedId] = useState<number | "new">("new");
   const selected = categories.find((category) => category.id === selectedId);
   const [adi, setAdi] = useState("");
   const [aciklama, setAciklama] = useState("");
@@ -4444,8 +4889,8 @@ function CategoryEditor({
   return (
     <Card className="p-5">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-2xl font-black">Yeni kategori</h2>
-        <Button variant="ghost" size="icon">
+        <h2 className="text-2xl font-black">{selected ? "Kategori düzenle" : "Yeni kategori"}</h2>
+        <Button variant="ghost" size="icon" type="button" onClick={() => onSelectedIdChange("new")}>
           <X aria-hidden />
         </Button>
       </div>
@@ -4454,11 +4899,12 @@ function CategoryEditor({
         onSubmit={(event) => {
           event.preventDefault();
           onSave({ adi, aciklama }, selectedId === "new" ? undefined : selectedId);
+          onSelectedIdChange("new");
         }}
       >
         <select
           value={selectedId}
-          onChange={(event) => setSelectedId(event.target.value === "new" ? "new" : Number(event.target.value))}
+          onChange={(event) => onSelectedIdChange(event.target.value === "new" ? "new" : Number(event.target.value))}
           className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none"
         >
           <option value="new">Yeni kategori</option>
@@ -4481,7 +4927,7 @@ function CategoryEditor({
           />
         </Field>
         <div className="grid grid-cols-2 gap-3 pt-4">
-          <Button type="button" variant="outline" onClick={() => setSelectedId("new")}>
+          <Button type="button" variant="outline" onClick={() => onSelectedIdChange("new")}>
             İptal
           </Button>
           <Button disabled={actionStatus === "category-save"}>
@@ -4496,11 +4942,17 @@ function CategoryEditor({
 
 function CategoryTable({
   categories,
+  onEdit,
   onDelete,
 }: {
   categories: CategoryDto[];
+  onEdit: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  if (categories.length === 0) {
+    return <EmptyState icon={Package} title="Kategori yok" description="Kategori eklediğinde burada listelenir." />;
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] text-left text-sm">
@@ -4520,7 +4972,7 @@ function CategoryTable({
               <td className="px-3 py-3 text-muted-foreground">{category.aciklama ?? "-"}</td>
               <td className="px-3 py-3">
                 <div className="flex gap-3">
-                  <Button variant="outline" size="sm" type="button">
+                  <Button variant="outline" size="sm" type="button" onClick={() => onEdit(category.id)}>
                     <PenLine aria-hidden />
                     Düzenle
                   </Button>
@@ -4539,24 +4991,23 @@ function CategoryTable({
   );
 }
 
-function RatingBreakdown() {
-  const rows = [
-    [5, 104, 86],
-    [4, 16, 28],
-    [3, 6, 12],
-    [2, 1, 3],
-    [1, 1, 2],
-  ];
+function RatingBreakdown({ ratings }: { ratings: RatingDto[] }) {
+  const rows = [5, 4, 3, 2, 1].map((rating) => {
+    const count = ratings.filter((item) => Math.round(item.puanDegeri) === rating).length;
+    return { rating, count };
+  });
+  const maxCount = Math.max(1, ...rows.map((row) => row.count));
+
   return (
     <div className="space-y-2">
-      {rows.map(([rating, count, width]) => (
+      {rows.map(({ rating, count }) => (
         <div key={rating} className="grid grid-cols-[32px_1fr_44px] items-center gap-3 text-sm">
           <span className="flex items-center gap-1 font-bold">
             {rating}
             <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
           </span>
           <span className="h-2 overflow-hidden rounded-full bg-muted">
-            <span className="block h-full rounded-full bg-amber-400" style={{ width: `${width}%` }} />
+            <span className="block h-full rounded-full bg-amber-400" style={{ width: `${(count / maxCount) * 100}%` }} />
           </span>
           <span className="text-right text-muted-foreground">{count}</span>
         </div>
@@ -4569,7 +5020,7 @@ function ReviewCard({
   review,
   product,
 }: {
-  review: (typeof demoReviews)[number];
+  review: ReviewItem;
   product: ProductDto;
 }) {
   return (
@@ -4603,76 +5054,6 @@ function ReviewCard({
   );
 }
 
-function StateCard({
-  image,
-  title,
-  text,
-  action,
-  onAction,
-}: {
-  image: string;
-  title: string;
-  text: string;
-  action: string;
-  onAction: () => void;
-}) {
-  return (
-    <Card className="grid min-h-[360px] place-items-center p-8 text-center">
-      <div>
-        <div className="relative mx-auto size-44 overflow-hidden rounded-lg">
-          <Image src={image} alt="" fill sizes="176px" className="object-cover" />
-        </div>
-        <h2 className="mt-6 text-2xl font-black">{title}</h2>
-        <p className="mt-2 text-muted-foreground">{text}</p>
-        <Button className="mt-6" onClick={onAction}>{action}</Button>
-      </div>
-    </Card>
-  );
-}
-
-function ErrorState({
-  icon: Icon,
-  title,
-  text,
-  traceId,
-  tone = "red",
-}: {
-  icon: LucideIcon;
-  title: string;
-  text: string;
-  traceId: string;
-  tone?: "red" | "amber";
-}) {
-  return (
-    <Card className="grid min-h-[340px] place-items-center p-7 text-center">
-      <div>
-        <span className={cn("mx-auto grid size-20 place-items-center rounded-full", tone === "red" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600")}>
-          <Icon className="size-10" aria-hidden />
-        </span>
-        <h2 className="mt-5 text-2xl font-black">{title}</h2>
-        <p className="mt-2 text-muted-foreground">{text}</p>
-        <Button className="mt-6">Tekrar dene</Button>
-        <p className="mt-6 rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs">
-          traceId: {traceId}
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function InvalidField({ label, value, message }: { label: string; value: string; message: string }) {
-  return (
-    <label className="block text-sm font-bold">
-      {label}
-      <input value={value} readOnly className="mt-2 h-10 w-full rounded-md border border-red-500 bg-red-50 px-3 text-sm outline-none" />
-      <span className="mt-1 flex items-center gap-1 text-xs text-red-600">
-        <AlertCircle className="size-3.5" aria-hidden />
-        {message}
-      </span>
-    </label>
-  );
-}
-
 function MiniProduct({ product }: { product: ProductDto }) {
   return (
     <div className="min-w-0">
@@ -4703,21 +5084,6 @@ function PreviewPanel({ title, children }: { title: string; children: ReactNode 
   );
 }
 
-function DemandLine({ demand }: { demand: DemandDto }) {
-  return (
-    <div className="grid grid-cols-[42px_1fr_auto] items-center gap-3 text-sm">
-      <div className="relative size-10 overflow-hidden rounded-md">
-        <Image src={demandImage(demand)} alt="" fill sizes="40px" className="object-cover" />
-      </div>
-      <span>
-        <span className="block font-bold">{demand.urunAdi}</span>
-        <span className="text-xs text-muted-foreground">{demand.miktar} kg</span>
-      </span>
-      <Badge variant={demand.durum === "ANLASILDI" ? "green" : "gold"}>{demand.durum === "ACIK" ? "Yeni" : demand.durum}</Badge>
-    </div>
-  );
-}
-
 function DemandMediaLine({ demand }: { demand: DemandDto }) {
   return (
     <div className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
@@ -4730,25 +5096,6 @@ function DemandMediaLine({ demand }: { demand: DemandDto }) {
         <p className="text-xs text-muted-foreground">{shortDate(demand.olusturmaTarihi)}</p>
       </div>
       <Badge variant={demand.durum === "ACIK" ? "gold" : "outline"}>{demand.durum === "ACIK" ? "Yeni" : demand.durum}</Badge>
-    </div>
-  );
-}
-
-function ConversationLine({ conversation }: { conversation: ChatConversationDto }) {
-  return (
-    <div className="grid grid-cols-[42px_1fr_auto] items-center gap-3 text-sm">
-      <span className="grid size-10 place-items-center rounded-full bg-secondary font-black text-primary">
-        {(conversation.userName ?? "YK").slice(0, 2).toUpperCase()}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate font-bold">{conversation.userName ?? conversation.email}</span>
-        <span className="block truncate text-xs text-muted-foreground">{conversation.lastMessage}</span>
-      </span>
-      {conversation.unreadCount > 0 ? (
-        <span className="grid size-6 place-items-center rounded-full bg-primary text-xs font-black text-white">
-          {conversation.unreadCount}
-        </span>
-      ) : null}
     </div>
   );
 }

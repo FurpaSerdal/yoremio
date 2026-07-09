@@ -44,11 +44,6 @@ function sellerName(product: ProductDto) {
   return product.saticiMagazaAdi ?? "Yöremio satıcısı";
 }
 
-function productLocation(product: ProductDto) {
-  const parts = [product.saticiSehir, product.saticiIlce].filter(Boolean);
-  return parts.length > 0 ? parts.join(" / ") : "Konum belirtilmedi";
-}
-
 function sellerCoverImage(seller: FeaturedSellerDto) {
   const image = seller.kapakResimUrl?.trim();
   if (!image) return productPlaceholderImage;
@@ -258,17 +253,7 @@ export function FeaturedSellerStrip({
   products: ProductDto[];
   onSelectProduct: (id: number) => void;
 }) {
-  const fallbackSellers = Array.from(
-    products
-      .reduce((map, product) => {
-        if (!map.has(product.saticiId)) {
-          map.set(product.saticiId, product);
-        }
-        return map;
-      }, new Map<string, ProductDto>())
-      .values(),
-  ).slice(0, 4);
-  const visibleSellers = sellers.length > 0 ? sellers.slice(0, 4) : fallbackSellers;
+  const visibleSellers = sellers.slice(0, 4);
 
   if (visibleSellers.length === 0) return null;
 
@@ -281,36 +266,27 @@ export function FeaturedSellerStrip({
             Doğrulama, konum, puan ve favori sinyallerine göre.
           </p>
         </div>
-        <Button variant="ghost" size="sm" type="button">
-          Tümünü gör
-          <ArrowRight aria-hidden />
-        </Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {visibleSellers.map((seller) => {
-          const isApiSeller = "kullaniciId" in seller;
-          const cardKey = isApiSeller ? seller.kullaniciId : seller.saticiId;
-          const title = isApiSeller ? seller.magazaAdi : sellerName(seller);
-          const image = isApiSeller ? sellerCoverImage(seller) : productImage(seller);
-          const location = isApiSeller ? featuredSellerLocation(seller) : productLocation(seller);
-          const verified = isApiSeller
-            ? seller.dogrulanmisSatici
-            : seller.saticiDogrulanmis;
+          const productId = products.find((product) => product.saticiId === seller.kullaniciId)?.id;
+          const title = seller.magazaAdi;
+          const image = sellerCoverImage(seller);
+          const location = featuredSellerLocation(seller);
+          const verified = seller.dogrulanmisSatici;
           const rating = seller.ortalamaPuan;
           const favoriteCount = seller.toplamFavori;
-          const reviewCount = isApiSeller ? seller.toplamYorum : seller.toplamYorum;
-          const productId = isApiSeller
-            ? products.find((product) => product.saticiId === seller.kullaniciId)?.id
-            : seller.id;
+          const reviewCount = seller.toplamYorum;
 
           return (
             <button
-              key={cardKey}
+              key={seller.kullaniciId}
               type="button"
+              disabled={!productId}
               onClick={() => {
                 if (productId) onSelectProduct(productId);
               }}
-              className="group relative min-h-[148px] overflow-hidden rounded-[22px] border border-border bg-ink text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition hover:-translate-y-0.5 hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
+              className="group relative min-h-[148px] overflow-hidden rounded-[22px] border border-border bg-ink text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition hover:-translate-y-0.5 hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
             >
               <Image
                 src={image}

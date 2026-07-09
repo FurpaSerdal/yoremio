@@ -308,6 +308,17 @@ export type NotificationsPageDto = Paginated<NotificationDto> & {
   okunmamisSayisi: number;
 };
 
+type UnreadNotificationCountResponse =
+  | number
+  | {
+      okunmamisSayisi?: number;
+    };
+
+function normalizeUnreadNotificationCount(value: UnreadNotificationCountResponse) {
+  if (typeof value === "number") return value;
+  return value.okunmamisSayisi ?? 0;
+}
+
 export type RegisterBuyerValues = {
   email: string;
   password: string;
@@ -727,10 +738,12 @@ export const yoremioApi = {
       `/api/Bildirim?${queryString({ sadeceOkunmamis, page, pageSize })}`,
       { token },
     ),
-  unreadNotificationCount: (token: string) =>
-    request<number>("/api/Bildirim/okunmamis-sayisi", {
-      token,
-    }),
+  unreadNotificationCount: async (token: string) =>
+    normalizeUnreadNotificationCount(
+      await request<UnreadNotificationCountResponse>("/api/Bildirim/okunmamis-sayisi", {
+        token,
+      }),
+    ),
   markNotificationRead: (token: string, bildirimId: number) =>
     request<null>(`/api/Bildirim/${bildirimId}/okundu`, {
       method: "POST",
