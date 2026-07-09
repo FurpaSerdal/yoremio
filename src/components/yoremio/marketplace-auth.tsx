@@ -1,14 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import {
   Check,
   CircleDollarSign,
   ClipboardList,
+  Eye,
+  EyeOff,
   Heart,
   ImagePlus,
   Loader2,
+  LockKeyhole,
   MessageCircle,
   PackagePlus,
   RefreshCw,
@@ -203,13 +206,13 @@ export function AuthDialog({
         aria-labelledby="auth-title"
       >
         <div className="min-h-0 overflow-y-auto">
-          <div className="flex items-start justify-between gap-3 border-b border-border bg-white px-5 py-5 sm:px-7">
+          <div className="flex items-start justify-between gap-3 border-b border-border bg-white px-4 py-4 sm:px-7 sm:py-5">
             <div className="max-w-xl">
               <BrandLogo compact />
-              <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground sm:mt-3">
                 Güvenli oturum
               </p>
-              <h2 id="auth-title" className="mt-1 text-3xl font-black text-brand-brown">
+              <h2 id="auth-title" className="mt-1 text-2xl font-black text-brand-brown sm:text-3xl">
                 {modeTitle}
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -221,7 +224,7 @@ export function AuthDialog({
             </Button>
           </div>
 
-          <form className="mx-auto max-w-[560px] space-y-4 p-5 sm:p-7" onSubmit={handleSubmit}>
+          <form className="mx-auto max-w-[560px] space-y-4 p-4 sm:p-7" onSubmit={handleSubmit}>
             <AuthModeTabs
               mode={mode}
               role={role}
@@ -368,14 +371,14 @@ function AuthModeTabs({
   ];
 
   return (
-    <div className="grid rounded-md border border-border bg-muted/60 p-1 sm:grid-cols-4">
+    <div className="grid grid-cols-2 rounded-md border border-border bg-muted/60 p-1 sm:grid-cols-4">
       {tabs.map((tab) => (
         <button
           key={tab.label}
           type="button"
           onClick={tab.onClick}
           className={cn(
-            "h-9 rounded-sm px-3 text-sm font-black transition-colors",
+            "h-9 rounded-sm px-2 text-xs font-black transition-colors sm:px-3 sm:text-sm",
             tab.active
               ? "bg-white text-primary shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -402,7 +405,7 @@ function AccountFields({
   onPasswordChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3 min-[640px]:grid-cols-2">
       <Field label="E-posta" htmlFor="login-email">
         <Input
           id="login-email"
@@ -415,9 +418,8 @@ function AccountFields({
         />
       </Field>
       <Field label="Şifre" htmlFor="login-password">
-        <Input
+        <PasswordInput
           id="login-password"
-          type="password"
           value={password}
           onChange={(event) => onPasswordChange(event.target.value)}
           autoComplete={mode === "login" ? "current-password" : "new-password"}
@@ -426,6 +428,33 @@ function AccountFields({
         />
       </Field>
     </div>
+  );
+}
+
+function PasswordInput({ className, disabled, ...props }: ComponentProps<"input">) {
+  const [visible, setVisible] = useState(false);
+  const Icon = visible ? EyeOff : Eye;
+
+  return (
+    <span className="relative block">
+      <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <Input
+        {...props}
+        disabled={disabled}
+        type={visible ? "text" : "password"}
+        className={cn("pl-10 pr-12", className)}
+      />
+      <button
+        type="button"
+        className="absolute right-1.5 top-1/2 z-20 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setVisible((current) => !current)}
+        disabled={disabled}
+        aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        title={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+      >
+        <Icon className="size-4" aria-hidden />
+      </button>
+    </span>
   );
 }
 
@@ -503,7 +532,7 @@ function SellerRegisterFields({
   onIlceChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3 min-[640px]:grid-cols-2">
       <Field label="Telefon" htmlFor="seller-phone">
         <Input id="seller-phone" value={phoneNumber} onChange={(event) => onPhoneNumberChange(event.target.value)} required />
       </Field>

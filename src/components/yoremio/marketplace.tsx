@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useState,
+  type ComponentProps,
   type FormEvent,
   type ReactNode,
 } from "react";
@@ -22,6 +23,7 @@ import {
   ClipboardList,
   Edit3,
   Eye,
+  EyeOff,
   Filter,
   Heart,
   Home,
@@ -2454,17 +2456,15 @@ function LoginScreen({
                 </InputIcon>
               </Field>
               <Field label="Şifre" htmlFor="login-password">
-                <InputIcon icon={LockKeyhole} rightIcon={Eye}>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="••••••••"
-                    className="h-14 px-14"
-                    required
-                  />
-                </InputIcon>
+                <PasswordInput
+                  id="login-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  className="h-14 pl-14"
+                  autoComplete="current-password"
+                  required
+                />
               </Field>
               <label className="flex items-center gap-3 text-sm font-semibold">
                 <input
@@ -2576,14 +2576,10 @@ function BuyerRegisterScreen({
             </InputIcon>
           </Field>
           <Field label="Şifre" htmlFor="buyer-password">
-            <InputIcon icon={LockKeyhole} rightIcon={Eye}>
-              <Input id="buyer-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifrenizi girin" className="h-14 px-14" minLength={6} required />
-            </InputIcon>
+            <PasswordInput id="buyer-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifrenizi girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} required />
           </Field>
           <Field label="Şifre tekrar" htmlFor="buyer-confirm">
-            <InputIcon icon={LockKeyhole} rightIcon={Eye}>
-              <Input id="buyer-confirm" type="password" value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Şifrenizi tekrar girin" className="h-14 px-14" minLength={6} required />
-            </InputIcon>
+            <PasswordInput id="buyer-confirm" value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Şifrenizi tekrar girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} required />
           </Field>
           <label className="flex items-center gap-3 text-sm font-semibold">
             <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} className="size-5 accent-primary" />
@@ -2673,9 +2669,7 @@ function SellerRegisterScreen({
         <InputIcon icon={Phone}>
           <Input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="+90 5XX XXX XX XX" className="h-12 pl-12" required />
         </InputIcon>
-        <InputIcon icon={LockKeyhole} rightIcon={Eye}>
-          <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="En az 8 karakter" className="h-12 px-12" minLength={8} required />
-        </InputIcon>
+        <PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} placeholder="En az 8 karakter" className="h-12 pl-12" autoComplete="new-password" minLength={8} required />
         <InputIcon icon={Store}>
           <Input value={magazaAdi} onChange={(event) => setMagazaAdi(event.target.value)} placeholder="Mağaza adınızı girin" className="h-12 pl-12" required />
         </InputIcon>
@@ -5581,6 +5575,32 @@ function InputIcon({
         <RightIcon className="pointer-events-none absolute right-4 top-1/2 z-10 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
       ) : null}
     </span>
+  );
+}
+
+function PasswordInput({ className, disabled, ...props }: ComponentProps<"input">) {
+  const [visible, setVisible] = useState(false);
+  const Icon = visible ? EyeOff : Eye;
+
+  return (
+    <InputIcon icon={LockKeyhole}>
+      <Input
+        {...props}
+        disabled={disabled}
+        type={visible ? "text" : "password"}
+        className={cn("pr-12", className)}
+      />
+      <button
+        type="button"
+        className="absolute right-3 top-1/2 z-20 grid size-9 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setVisible((current) => !current)}
+        disabled={disabled}
+        aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        title={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+      >
+        <Icon className="size-5" aria-hidden />
+      </button>
+    </InputIcon>
   );
 }
 
