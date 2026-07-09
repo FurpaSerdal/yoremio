@@ -33,11 +33,15 @@ const categoryImages = [
   "/products/photo-amasya-elmasi.jpg",
 ];
 
+function mediaImageSrc(path?: string | null) {
+  const image = path?.trim();
+  if (!image) return productPlaceholderImage;
+  if (image.startsWith("/products/")) return image;
+  return mediaUrl(image) || productPlaceholderImage;
+}
+
 function productImage(product: ProductDto) {
-  const firstImage = product.resimler?.[0]?.url?.trim();
-  if (!firstImage) return productPlaceholderImage;
-  if (firstImage.startsWith("/products/")) return firstImage;
-  return mediaUrl(firstImage) || productPlaceholderImage;
+  return mediaImageSrc(product.resimler?.[0]?.url);
 }
 
 function sellerName(product: ProductDto) {
@@ -45,10 +49,7 @@ function sellerName(product: ProductDto) {
 }
 
 function sellerCoverImage(seller: FeaturedSellerDto) {
-  const image = seller.kapakResimUrl?.trim();
-  if (!image) return productPlaceholderImage;
-  if (image.startsWith("/products/")) return image;
-  return mediaUrl(image) || productPlaceholderImage;
+  return mediaImageSrc(seller.kapakResimUrl);
 }
 
 function featuredSellerLocation(seller: FeaturedSellerDto) {

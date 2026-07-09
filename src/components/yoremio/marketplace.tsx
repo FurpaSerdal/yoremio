@@ -93,6 +93,10 @@ import { cn, formatPrice, formatShortDate } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
 const productPlaceholderImage = "/products/product-placeholder.svg";
+const sessionKeys = {
+  token: "yoremio-token",
+  user: "yoremio-user",
+} as const;
 
 type Screen =
   | "home"
@@ -179,25 +183,47 @@ function emptyProductsResult(page = 1): Paginated<ProductDto> {
   };
 }
 
+function readStoredSessionToken() {
+  return (
+    window.localStorage.getItem(sessionKeys.token) ??
+    window.sessionStorage.getItem(sessionKeys.token)
+  );
+}
+
+function storeSession(login: LoginResponse, persistent: boolean) {
+  const primary = persistent ? window.localStorage : window.sessionStorage;
+  const secondary = persistent ? window.sessionStorage : window.localStorage;
+
+  primary.setItem(sessionKeys.token, login.token);
+  primary.setItem(sessionKeys.user, JSON.stringify(login));
+  secondary.removeItem(sessionKeys.token);
+  secondary.removeItem(sessionKeys.user);
+}
+
+function clearStoredSession() {
+  [window.localStorage, window.sessionStorage].forEach((storage) => {
+    storage.removeItem(sessionKeys.token);
+    storage.removeItem(sessionKeys.user);
+  });
+}
+
+function mediaImageSrc(path?: string | null) {
+  const image = path?.trim();
+  if (!image) return productPlaceholderImage;
+  if (image.startsWith("/products/")) return image;
+  return mediaUrl(image) || productPlaceholderImage;
+}
+
 function productImage(product: ProductDto) {
-  const firstImage = product.resimler?.[0]?.url?.trim();
-  if (!firstImage) return productPlaceholderImage;
-  if (firstImage.startsWith("/products/")) return firstImage;
-  return mediaUrl(firstImage) || productPlaceholderImage;
+  return mediaImageSrc(product.resimler?.[0]?.url);
 }
 
 function demandImage(demand: DemandDto) {
-  const image = demand.urunResimUrl?.trim();
-  if (!image) return productPlaceholderImage;
-  if (image.startsWith("/products/")) return image;
-  return mediaUrl(image) || productPlaceholderImage;
+  return mediaImageSrc(demand.urunResimUrl);
 }
 
 function sellerCoverImage(seller: FeaturedSellerDto) {
-  const image = seller.kapakResimUrl?.trim();
-  if (!image) return productPlaceholderImage;
-  if (image.startsWith("/products/")) return image;
-  return mediaUrl(image) || productPlaceholderImage;
+  return mediaImageSrc(seller.kapakResimUrl);
 }
 
 function sellerName(product: ProductDto) {
@@ -225,7 +251,8 @@ function dashboardScreenFor(authUser: AuthState | null): Screen {
 }
 
 function buyerScreenFor(authUser: AuthState | null): Screen {
-  return hasRole(authUser, "ALICI") ? "buyer" : "login";
+  if (hasRole(authUser, "ALICI")) return "buyer";
+  return authUser ? dashboardScreenFor(authUser) : "login";
 }
 
 function shortDate(value?: string | null) {
@@ -322,8 +349,7 @@ export function YoremioMarketplace() {
   }, []);
 
   const clearSession = useCallback(() => {
-    window.localStorage.removeItem("yoremio-token");
-    window.localStorage.removeItem("yoremio-user");
+    clearStoredSession();
     setAuthUser(null);
     setFavoriteIds(new Set());
     setFavoriteProducts([]);
@@ -412,7 +438,7 @@ export function YoremioMarketplace() {
   }, [authUser, clearSession, showToast]);
 
   useEffect(() => {
-    const token = window.localStorage.getItem("yoremio-token");
+    const token = readStoredSessionToken();
     if (!token) return;
 
     let ignore = false;
@@ -424,8 +450,7 @@ export function YoremioMarketplace() {
       })
       .catch(() => {
         if (!ignore) {
-          window.localStorage.removeItem("yoremio-token");
-          window.localStorage.removeItem("yoremio-user");
+          clearStoredSession();
         }
       });
 
@@ -1129,6 +1154,7 @@ export function YoremioMarketplace() {
         selectedCategory={selectedCategory}
         marketError={marketError}
         favoriteIds={favoriteIds}
+        actionStatus={actionStatus}
         onCategoryChange={setCategoryId}
         onSelectProduct={selectProduct}
         onSelectProductId={selectProductById}
@@ -1160,6 +1186,7 @@ function HomeScreen({
   selectedCategory,
   marketError,
   favoriteIds,
+  actionStatus,
   onCategoryChange,
   onSelectProduct,
   onSelectProductId,
@@ -1179,6 +1206,7 @@ function HomeScreen({
   selectedCategory?: CategoryDto;
   marketError: string | null;
   favoriteIds: Set<number>;
+  actionStatus: string | null;
   onCategoryChange: (value: number | "all") => void;
   onSelectProduct: (product: ProductDto, screen?: Screen) => void;
   onSelectProductId: (productId: number, screen?: Screen) => void;
@@ -1237,6 +1265,7 @@ function HomeScreen({
                 key={product.id}
                 product={product}
                 isFavorite={favoriteIds.has(product.id)}
+                favoritePending={actionStatus === `favorite-${product.id}`}
                 onSelect={() => onSelectProduct(product, "discover")}
                 onToggleFavorite={() => onToggleFavorite(product)}
               />
@@ -1427,11 +1456,13 @@ function CategoryPill({
 function HomeProductCard({
   product,
   isFavorite,
+  favoritePending,
   onSelect,
   onToggleFavorite,
 }: {
   product: ProductDto;
   isFavorite: boolean;
+  favoritePending: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
 }) {
@@ -1459,10 +1490,16 @@ function HomeProductCard({
           <button
             type="button"
             onClick={onToggleFavorite}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground shadow-sm"
-            title="Favori"
+            disabled={favoritePending}
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground shadow-sm disabled:cursor-wait disabled:opacity-75"
+            title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
+            aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
           >
-            <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
+            {favoritePending ? (
+              <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+            ) : (
+              <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
+            )}
           </button>
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold">
@@ -1807,6 +1844,7 @@ function DiscoveryScreen({
                   product={product}
                   active={selectedProduct?.id === product.id}
                   isFavorite={favoriteIds.has(product.id)}
+                  favoritePending={actionStatus === `favorite-${product.id}`}
                   onSelect={() => onSelectProduct(product, "discover")}
                   onToggleFavorite={() => onToggleFavorite(product)}
                 />
@@ -1873,6 +1911,14 @@ function DiscoveryFilters({
   onStockChange: (value: boolean) => void;
   onClear: () => void;
 }) {
+  const hasActiveFilters =
+    categoryId !== "all" ||
+    Boolean(cityFilter.trim()) ||
+    Boolean(minPrice) ||
+    Boolean(maxPrice) ||
+    Boolean(minRating) ||
+    inStockOnly;
+
   return (
     <aside className="border-r border-border bg-white p-4 sm:p-5">
       <div className="flex items-center justify-between border-b border-border pb-4">
@@ -1926,6 +1972,7 @@ function DiscoveryFilters({
         <button
           type="button"
           onClick={() => onStockChange(!inStockOnly)}
+          aria-pressed={inStockOnly}
           className="flex w-full items-center justify-between rounded-md border border-border bg-white px-3 py-2 text-sm font-bold"
         >
           Sadece stokta olanlar
@@ -1969,7 +2016,7 @@ function DiscoveryFilters({
         ))}
       </FilterGroup>
 
-      <Button className="mt-5 w-full" onClick={onClear}>
+      <Button type="button" variant="outline" className="mt-5 w-full" disabled={!hasActiveFilters} onClick={onClear}>
         Filtreleri temizle
       </Button>
     </aside>
@@ -2001,6 +2048,7 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-semibold transition",
         active ? "bg-secondary text-primary" : "hover:bg-muted",
@@ -2021,12 +2069,14 @@ function DiscoveryProductCard({
   product,
   active,
   isFavorite,
+  favoritePending,
   onSelect,
   onToggleFavorite,
 }: {
   product: ProductDto;
   active: boolean;
   isFavorite: boolean;
+  favoritePending: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
 }) {
@@ -2060,10 +2110,16 @@ function DiscoveryProductCard({
           <button
             type="button"
             onClick={onToggleFavorite}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white shadow-sm"
-            title="Favori"
+            disabled={favoritePending}
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white shadow-sm disabled:cursor-wait disabled:opacity-75"
+            title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
+            aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
           >
-            <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
+            {favoritePending ? (
+              <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+            ) : (
+              <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
+            )}
           </button>
         </div>
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -2104,9 +2160,8 @@ function ProductDetailPanel({
   const gallery = product.resimler.length > 0 ? product.resimler : [{ id: 0, url: productImage(product) }];
   const [galleryIndex, setGalleryIndex] = useState(0);
   const activeGalleryImage = gallery[galleryIndex] ?? gallery[0];
-  const activeGallerySrc = activeGalleryImage.url.startsWith("/products/")
-    ? activeGalleryImage.url
-    : mediaUrl(activeGalleryImage.url) || productPlaceholderImage;
+  const activeGallerySrc = mediaImageSrc(activeGalleryImage.url);
+  const favoritePending = actionStatus === `favorite-${product.id}`;
 
   useEffect(() => {
     setGalleryIndex(0);
@@ -2128,10 +2183,17 @@ function ProductDetailPanel({
         <button
           type="button"
           onClick={onToggleFavorite}
-          className="absolute right-4 top-4 inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-black shadow-md"
+          disabled={favoritePending}
+          className="absolute right-4 top-4 inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-sm font-black shadow-md disabled:cursor-wait disabled:opacity-80"
+          title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
+          aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
         >
-          <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
-          Favori
+          {favoritePending ? (
+            <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+          ) : (
+            <Heart className={cn("size-4", isFavorite && "fill-red-600 text-red-600")} aria-hidden />
+          )}
+          {isFavorite ? "Favoride" : "Favori"}
         </button>
         <button
           className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white shadow disabled:opacity-45"
@@ -2169,7 +2231,7 @@ function ProductDetailPanel({
               index === galleryIndex ? "border-primary" : "border-border",
             )}
           >
-            <Image src={image.url.startsWith("/products/") ? image.url : mediaUrl(image.url)} alt="" fill sizes="64px" className="object-cover" />
+            <Image src={mediaImageSrc(image.url)} alt="" fill sizes="64px" className="object-cover" />
           </button>
         ))}
       </div>
@@ -2269,8 +2331,7 @@ function LoginScreen({
     setStatus("loading");
     try {
       const login = await yoremioApi.login(email.trim(), password);
-      window.localStorage.setItem("yoremio-token", login.token);
-      window.localStorage.setItem("yoremio-user", JSON.stringify(login));
+      storeSession(login, remember);
 
       const fullUser: AuthState = {
         token: login.token,
@@ -3860,7 +3921,7 @@ function ReviewsScreen({
   }
 
   const reviewGalleryImages = (product.resimler ?? [])
-    .map((image) => mediaUrl(image.url) || productPlaceholderImage)
+    .map((image) => mediaImageSrc(image.url))
     .slice(0, 3);
   const displayGalleryImages = reviewGalleryImages.length > 0 ? reviewGalleryImages : [productImage(product)];
 
@@ -4385,21 +4446,21 @@ function DashboardFrame({
       <div className={cn("grid min-h-screen", dark ? "lg:grid-cols-[260px_1fr]" : "lg:grid-cols-[288px_1fr]")}>
         <aside
           className={cn(
-            "flex min-h-screen flex-col border-r border-border px-4 py-5",
+            "flex min-h-0 flex-col border-b border-border px-4 py-4 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5",
             dark ? "bg-[linear-gradient(165deg,#006b35,#00382b)] text-white" : "bg-white text-foreground",
           )}
         >
-          <button type="button" onClick={() => onNavigate("home")} className="mb-8">
+          <button type="button" onClick={() => onNavigate("home")} className="mb-4 self-start lg:mb-8">
             <BrandLogo inverse={dark} />
           </button>
-          <nav className="space-y-2">
+          <nav className="scroll-shelf flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
             {navItems.map(([label, Icon, screen], index) => (
               <button
                 key={`${label}-${index}`}
                 type="button"
                 onClick={() => onNavigate(screen)}
                 className={cn(
-                  "flex h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base font-bold transition",
+                  "flex h-11 w-max min-w-max shrink-0 items-center gap-3 rounded-lg px-3 text-left text-sm font-bold transition lg:h-12 lg:w-full lg:min-w-0 lg:text-base",
                   index === 0
                     ? dark
                       ? "bg-white/14 text-white"
@@ -4414,11 +4475,11 @@ function DashboardFrame({
               </button>
             ))}
           </nav>
-          <div className="mt-auto space-y-2 border-t border-current/15 pt-5">
+          <div className="mt-4 flex gap-2 border-t border-current/15 pt-4 lg:mt-auto lg:block lg:space-y-2 lg:pt-5">
             <button
               type="button"
               onClick={() => onNavigate("states")}
-              className={cn("flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-bold", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              className={cn("flex h-11 min-w-max items-center gap-3 rounded-md px-3 text-left text-sm font-bold lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <Bell className="size-4" aria-hidden />
               Bildirimler
@@ -4426,7 +4487,7 @@ function DashboardFrame({
             <button
               type="button"
               onClick={authUser ? onLogout : () => onNavigate("login")}
-              className={cn("flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-bold", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              className={cn("flex h-11 min-w-max items-center gap-3 rounded-md px-3 text-left text-sm font-bold lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <LogOut className="size-4" aria-hidden />
               {authUser ? "Çıkış yap" : "Giriş yap"}
@@ -4484,7 +4545,13 @@ function AccountChip({
         <span className="block text-sm font-black">{accountName(authUser, sellerProfile)}</span>
         <span className="text-xs text-muted-foreground">{rolesOf(authUser).join(", ")}</span>
       </span>
-      <button type="button" onClick={onLogout} className="grid size-11 place-items-center rounded-full bg-primary text-sm font-black text-white">
+      <button
+        type="button"
+        onClick={onLogout}
+        title="Çıkış yap"
+        aria-label="Çıkış yap"
+        className="grid size-11 place-items-center rounded-full bg-primary text-sm font-black text-white"
+      >
         {accountName(authUser, sellerProfile).slice(0, 2).toUpperCase()}
       </button>
     </div>
@@ -4501,7 +4568,7 @@ function HeaderTextButton({
   onClick: () => void;
 }) {
   return (
-    <button type="button" onClick={onClick} className="hidden items-center gap-2 text-sm font-bold lg:flex">
+    <button type="button" onClick={onClick} aria-label={label} className="hidden items-center gap-2 text-sm font-bold lg:flex">
       <Icon className="size-5" aria-hidden />
       {label}
     </button>
@@ -4524,6 +4591,7 @@ function IconButton({
       type="button"
       onClick={onClick}
       title={label}
+      aria-label={label}
       className="relative grid size-11 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted"
     >
       <Icon className="size-6" aria-hidden />
@@ -4887,8 +4955,9 @@ function ChatPanel({
   const [draft, setDraft] = useState("");
   const activeConversation = conversations.find((conversation) => conversation.userId === targetId) ?? conversations[0];
   const currentTarget = targetId || activeConversation?.userId || "";
+  const canSend = Boolean(currentTarget && draft.trim() && actionStatus !== "chat-send");
 
-  if (conversations.length === 0) {
+  if (conversations.length === 0 && !currentTarget) {
     return <EmptyState icon={MessageCircle} title="Mesaj yok" description="Gerçek bir konuşma başladığında mesajlar burada görünür." />;
   }
 
@@ -4897,27 +4966,29 @@ function ChatPanel({
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <div>
-            <p className="font-black">{activeConversation?.userName ?? "Satıcı"}</p>
-            <Badge variant="green">Doğrulanmış Satıcı</Badge>
+            <p className="font-black">{activeConversation?.userName ?? "Yeni görüşme"}</p>
+            <Badge variant="green">{activeConversation ? "Doğrulanmış Satıcı" : "Mesaj yazmaya hazır"}</Badge>
           </div>
         </div>
       </div>
       <div className="space-y-3 overflow-y-auto bg-[#fbfcfa] p-4">
-        <div className="mb-3 flex flex-wrap gap-2">
-          {conversations.map((conversation) => (
-            <button
-              key={conversation.userId}
-              type="button"
-              onClick={() => onTargetChange(conversation.userId)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-bold",
-                currentTarget === conversation.userId ? "border-primary bg-secondary text-primary" : "border-border bg-white",
-              )}
-            >
-              {conversation.userName ?? conversation.email ?? "Kullanıcı"}
-            </button>
-          ))}
-        </div>
+        {conversations.length > 0 ? (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {conversations.map((conversation) => (
+              <button
+                key={conversation.userId}
+                type="button"
+                onClick={() => onTargetChange(conversation.userId)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-bold",
+                  currentTarget === conversation.userId ? "border-primary bg-secondary text-primary" : "border-border bg-white",
+                )}
+              >
+                {conversation.userName ?? conversation.email ?? "Kullanıcı"}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {messages.length > 0 ? (
           messages.map((message) => (
             <ChatBubble key={message.id} mine={message.isMine}>
@@ -4940,8 +5011,13 @@ function ChatPanel({
           setDraft("");
         }}
       >
-        <Input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Satıcıya yaz" />
-        <Button disabled={actionStatus === "chat-send" || !currentTarget}>
+        <Input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={currentTarget ? "Mesajını yaz" : "Satıcıya yaz"}
+          disabled={!currentTarget || actionStatus === "chat-send"}
+        />
+        <Button disabled={!canSend} aria-label="Mesaj gönder" title="Mesaj gönder">
           {actionStatus === "chat-send" ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}
         </Button>
       </form>
@@ -5025,7 +5101,7 @@ function MediaGrid({
                 <Video className="size-8" aria-hidden />
               </span>
             ) : (
-              <Image src={item.url.startsWith("/products/") ? item.url : mediaUrl(item.url)} alt="" fill sizes="120px" className="object-cover" />
+              <Image src={mediaImageSrc(item.url)} alt="" fill sizes="120px" className="object-cover" />
             )}
             <button
               type="button"

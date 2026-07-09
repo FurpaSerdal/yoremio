@@ -39,6 +39,10 @@ import { formatShortDate } from "@/lib/utils";
 
 type AuthState = SessionUser & Pick<LoginResponse, "token">;
 type PageState = "loading" | "ready" | "guest" | "error";
+const sessionKeys = {
+  token: "yoremio-token",
+  user: "yoremio-user",
+} as const;
 
 function roleLabel(role?: AuthState["role"]) {
   if (role === "ADMIN") return "Admin";
@@ -67,6 +71,20 @@ function apiErrorMessage(error: unknown) {
     : "Beklenmeyen bir hata oluştu.";
 }
 
+function readStoredSessionToken() {
+  return (
+    window.localStorage.getItem(sessionKeys.token) ??
+    window.sessionStorage.getItem(sessionKeys.token)
+  );
+}
+
+function clearStoredSession() {
+  [window.localStorage, window.sessionStorage].forEach((storage) => {
+    storage.removeItem(sessionKeys.token);
+    storage.removeItem(sessionKeys.user);
+  });
+}
+
 export function YoremioProfilePage() {
   const [state, setState] = useState<PageState>("loading");
   const [authUser, setAuthUser] = useState<AuthState | null>(null);
@@ -88,7 +106,7 @@ export function YoremioProfilePage() {
 
   useEffect(() => {
     let ignore = false;
-    const token = window.localStorage.getItem("yoremio-token");
+    const token = readStoredSessionToken();
 
     if (!token) {
       setState("guest");
@@ -141,8 +159,7 @@ export function YoremioProfilePage() {
       } catch (caught) {
         if (ignore) return;
         if (caught instanceof ApiClientError && caught.status === 401) {
-          window.localStorage.removeItem("yoremio-token");
-          window.localStorage.removeItem("yoremio-user");
+          clearStoredSession();
           setState("guest");
           return;
         }
@@ -160,8 +177,7 @@ export function YoremioProfilePage() {
   }, []);
 
   const logout = () => {
-    window.localStorage.removeItem("yoremio-token");
-    window.localStorage.removeItem("yoremio-user");
+    clearStoredSession();
     window.location.href = "/";
   };
 
