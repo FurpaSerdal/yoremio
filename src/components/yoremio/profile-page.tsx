@@ -442,7 +442,7 @@ function ProfileShell({
           {onLogout ? (
             <Button variant="outline" onClick={onLogout} className="bg-white/90">
               <LogOut aria-hidden />
-              Çıkış yap
+              <span className="hidden min-[420px]:inline">Çıkış yap</span>
             </Button>
           ) : null}
         </div>

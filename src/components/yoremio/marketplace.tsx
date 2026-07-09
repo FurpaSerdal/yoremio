@@ -3499,14 +3499,14 @@ function SellerProductScreen({
     >
       <div className="space-y-4 pb-24 lg:pb-0">
         <div className="grid gap-2 min-[380px]:grid-cols-3 xl:hidden">
-          <ProductUploadStep icon={Edit3} label="Bilgi" active done={detailsReady} />
-          <ProductUploadStep icon={ImagePlus} label="Medya" done={mediaReady} />
-          <ProductUploadStep icon={Check} label={active ? "Aktif" : "Pasif"} done />
+          <ProductUploadStep icon={Edit3} label="Bilgi" active done={detailsReady} targetId="product-basic" />
+          <ProductUploadStep icon={ImagePlus} label="Medya" done={mediaReady} targetId="product-media" />
+          <ProductUploadStep icon={Check} label={active ? "Aktif" : "Pasif"} done targetId="product-status" />
         </div>
 
         <form id={formId} onSubmit={handleSubmit} className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-5">
           <div className="space-y-4">
-            <ProductFormSection icon={Edit3} title="Temel bilgiler">
+            <ProductFormSection id="product-basic" icon={Edit3} title="Temel bilgiler">
               <Field label="Ürün adı *" htmlFor="product-name">
                 <Input id="product-name" value={adi} onChange={(event) => setAdi(event.target.value)} maxLength={50} className="h-12" required />
               </Field>
@@ -3530,7 +3530,7 @@ function SellerProductScreen({
               </div>
             </ProductFormSection>
 
-            <ProductFormSection icon={Settings} title="Satış durumu">
+            <ProductFormSection id="product-status" icon={Settings} title="Satış durumu">
               <Field label="Kategori *" htmlFor="product-category">
                 <select id="product-category" value={kategoriId} onChange={(event) => setKategoriId(Number(event.target.value))} className="h-12 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none" disabled={categories.length === 0}>
                   {categories.length === 0 ? <option value={0}>Kategori yok</option> : null}
@@ -3570,7 +3570,7 @@ function SellerProductScreen({
               </div>
             </ProductFormSection>
 
-            <ProductFormSection icon={UploadCloud} title="Medya">
+            <ProductFormSection id="product-media" icon={UploadCloud} title="Medya">
               <MediaGrid
                 title="Resimler"
                 icon={ImagePlus}
@@ -3607,7 +3607,7 @@ function SellerProductScreen({
           </aside>
         </form>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 p-3 shadow-[0_-12px_30px_rgba(16,24,40,0.12)] backdrop-blur xl:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-12px_30px_rgba(16,24,40,0.12)] backdrop-blur xl:hidden">
           <div className="mx-auto grid max-w-[640px] grid-cols-[1fr_auto] gap-2">
             <Button form={formId} type="submit" disabled={actionStatus === "product-save" || !kategoriId} className="h-12">
               {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
@@ -3628,16 +3628,22 @@ function ProductUploadStep({
   label,
   active,
   done,
+  targetId,
 }: {
   icon: LucideIcon;
   label: string;
   active?: boolean;
   done?: boolean;
+  targetId: string;
 }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => {
+        document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }}
       className={cn(
-        "flex min-h-12 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-black shadow-sm",
+        "flex min-h-12 items-center gap-2 rounded-lg border bg-white px-3 text-left text-sm font-black shadow-sm transition hover:border-primary/40",
         active ? "border-primary/35 text-primary" : "border-border text-muted-foreground",
       )}
     >
@@ -3645,21 +3651,23 @@ function ProductUploadStep({
         {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
       </span>
       <span className="truncate">{label}</span>
-    </div>
+    </button>
   );
 }
 
 function ProductFormSection({
+  id,
   icon: Icon,
   title,
   children,
 }: {
+  id: string;
   icon: LucideIcon;
   title: string;
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-lg border border-border bg-white p-4 shadow-sm sm:p-5">
+    <section id={id} className="scroll-mt-28 min-w-0 rounded-lg border border-border bg-white p-4 shadow-sm sm:p-5">
       <div className="flex items-center gap-3 border-b border-border pb-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-primary">
           <Icon className="size-5" aria-hidden />
@@ -4150,15 +4158,15 @@ function ReviewsScreen({
       />
       <section className="mx-auto max-w-[1520px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[480px_1fr_430px] lg:gap-6">
-            <div className="grid grid-cols-[56px_1fr] gap-2 sm:grid-cols-[72px_1fr] sm:gap-3">
-              <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-[72px_1fr] sm:gap-3">
+            <div className="scroll-shelf order-2 flex gap-2 overflow-x-auto pb-1 sm:order-none sm:block sm:space-y-3 sm:overflow-visible sm:pb-0">
               {displayGalleryImages.map((image, index) => (
-                <div key={`${image}-${index}`} className="relative aspect-square overflow-hidden rounded-md border border-border">
+                <div key={`${image}-${index}`} className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border sm:size-auto sm:aspect-square">
                   <Image src={image} alt="" fill sizes="72px" className="object-cover" />
                 </div>
               ))}
             </div>
-            <div className="relative aspect-[1.35] overflow-hidden rounded-lg bg-muted">
+            <div className="relative order-1 aspect-[1.18] overflow-hidden rounded-lg bg-muted sm:order-none sm:aspect-[1.35]">
               <Image src={productImage(product)} alt={product.adi} fill sizes="430px" className="object-cover" />
             </div>
           </div>
@@ -4179,7 +4187,7 @@ function ReviewsScreen({
                 ) : null}
               </div>
             </div>
-            <div className="flex items-center gap-3 font-bold">
+            <div className="flex flex-wrap items-center gap-2 font-bold sm:gap-3">
               <Stars value={product.ortalamaPuan} />
               {product.ortalamaPuan.toFixed(1)} ({product.toplamYorum})
             </div>
