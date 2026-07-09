@@ -1502,7 +1502,7 @@ function HomeProductCard({
             type="button"
             onClick={onToggleFavorite}
             disabled={favoritePending}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground shadow-sm disabled:cursor-wait disabled:opacity-75"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white text-foreground shadow-sm disabled:cursor-wait disabled:opacity-75"
             title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
             aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
           >
@@ -2158,7 +2158,7 @@ function DiscoveryProductCard({
             type="button"
             onClick={onToggleFavorite}
             disabled={favoritePending}
-            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-white shadow-sm disabled:cursor-wait disabled:opacity-75"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-white shadow-sm disabled:cursor-wait disabled:opacity-75"
             title={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
             aria-label={isFavorite ? "Favoriden çıkar" : "Favoriye ekle"}
           >
@@ -2747,11 +2747,11 @@ function AuthLayout({
           <BrandLogo compact className="max-w-[145px] sm:max-w-none" />
         </button>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" className="h-9 px-3 text-xs sm:h-10 sm:text-sm" onClick={onHome}>
+          <Button variant="ghost" className="h-10 px-3 text-xs sm:text-sm" onClick={onHome}>
             <Home aria-hidden />
             <span className="hidden min-[390px]:inline">Ana sayfa</span>
           </Button>
-          <Button variant="outline" className="h-9 px-3 text-xs sm:h-10 sm:text-sm" onClick={onAction}>
+          <Button variant="outline" className="h-10 px-3 text-xs sm:text-sm" onClick={onAction}>
             <UserRound aria-hidden />
             {actionLabel}
           </Button>
@@ -2947,7 +2947,7 @@ function VerificationScreen({
         <Button
           type="button"
           variant="ghost"
-          className="h-9 px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
+          className="h-10 px-2 text-xs sm:px-4 sm:text-sm"
           onClick={() => onNavigate("states")}
         >
           <CircleHelp aria-hidden />
@@ -3041,12 +3041,12 @@ function VerificationColumn({
   const digits = code.padEnd(6, "-").slice(0, 6).split("");
 
   return (
-    <div className="border-b border-border p-6 md:border-b-0 md:border-r md:last:border-r-0">
+    <div className="border-b border-border p-4 sm:p-6 md:border-b-0 md:border-r md:last:border-r-0">
       <div className="text-center">
-        <span className="mx-auto grid size-16 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-primary">
-          <Icon className="size-8" aria-hidden />
+        <span className="mx-auto grid size-14 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-primary sm:size-16">
+          <Icon className="size-7 sm:size-8" aria-hidden />
         </span>
-        <h2 className="mt-5 text-2xl font-black">{title}</h2>
+        <h2 className="mt-4 text-xl font-black sm:mt-5 sm:text-2xl">{title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="mt-7 space-y-4">
@@ -3062,9 +3062,9 @@ function VerificationColumn({
             maxLength={6}
             className="sr-only"
           />
-          <label className="grid grid-cols-6 gap-2" htmlFor={`${title}-code`}>
+          <label className="grid grid-cols-6 gap-1.5 sm:gap-2" htmlFor={`${title}-code`}>
             {digits.map((digit, index) => (
-              <span key={index} className="grid h-12 place-items-center rounded-md border border-input bg-white text-xl font-black">
+              <span key={index} className="grid h-11 place-items-center rounded-md border border-input bg-white text-lg font-black sm:h-12 sm:text-xl">
                 {digit}
               </span>
             ))}
@@ -3469,6 +3469,14 @@ function SellerProductScreen({
     videolar: sourceProduct?.videolar ?? [],
     aktifMi: active,
   };
+  const formId = "seller-product-form";
+  const detailsReady = Boolean(adi.trim() && aciklama.trim() && fiyat && stok && kategoriId);
+  const mediaReady = Boolean(
+    imageFiles.length > 0 ||
+    videoFiles.length > 0 ||
+    (sourceProduct?.resimler.length ?? 0) > 0 ||
+    (sourceProduct?.videolar.length ?? 0) > 0,
+  );
 
   return (
     <DashboardFrame
@@ -3489,27 +3497,42 @@ function SellerProductScreen({
         ["Mağazam", Store, "seller-profile"],
       ]}
     >
-      <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
-        <Card className="overflow-hidden">
-          <form onSubmit={handleSubmit} className="grid lg:grid-cols-[0.75fr_1fr]">
-            <div className="space-y-4 border-b border-border p-4 sm:space-y-5 sm:p-5 lg:border-b-0 lg:border-r">
-              <h2 className="text-xl font-black sm:text-2xl">Ürün formu</h2>
+      <div className="space-y-4 pb-24 lg:pb-0">
+        <div className="grid gap-2 min-[380px]:grid-cols-3 xl:hidden">
+          <ProductUploadStep icon={Edit3} label="Bilgi" active done={detailsReady} />
+          <ProductUploadStep icon={ImagePlus} label="Medya" done={mediaReady} />
+          <ProductUploadStep icon={Check} label={active ? "Aktif" : "Pasif"} done />
+        </div>
+
+        <form id={formId} onSubmit={handleSubmit} className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-5">
+          <div className="space-y-4">
+            <ProductFormSection icon={Edit3} title="Temel bilgiler">
               <Field label="Ürün adı *" htmlFor="product-name">
-                <Input id="product-name" value={adi} onChange={(event) => setAdi(event.target.value)} maxLength={50} required />
+                <Input id="product-name" value={adi} onChange={(event) => setAdi(event.target.value)} maxLength={50} className="h-12" required />
               </Field>
               <Field label="Açıklama *" htmlFor="product-desc">
-                <textarea id="product-desc" value={aciklama} onChange={(event) => setAciklama(event.target.value)} maxLength={1000} className="min-h-36 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20" required />
+                <textarea
+                  id="product-desc"
+                  value={aciklama}
+                  onChange={(event) => setAciklama(event.target.value)}
+                  maxLength={1000}
+                  className="min-h-32 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20 sm:min-h-36"
+                  required
+                />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 min-[420px]:grid-cols-2">
                 <Field label="Fiyat *" htmlFor="product-price">
-                  <Input id="product-price" type="number" value={fiyat} onChange={(event) => setFiyat(event.target.value)} min={1} required />
+                  <Input id="product-price" type="number" inputMode="decimal" value={fiyat} onChange={(event) => setFiyat(event.target.value)} min={1} className="h-12" required />
                 </Field>
                 <Field label="Stok *" htmlFor="product-stock">
-                  <Input id="product-stock" type="number" value={stok} onChange={(event) => setStok(event.target.value)} min={0} required />
+                  <Input id="product-stock" type="number" inputMode="numeric" value={stok} onChange={(event) => setStok(event.target.value)} min={0} className="h-12" required />
                 </Field>
               </div>
+            </ProductFormSection>
+
+            <ProductFormSection icon={Settings} title="Satış durumu">
               <Field label="Kategori *" htmlFor="product-category">
-                <select id="product-category" value={kategoriId} onChange={(event) => setKategoriId(Number(event.target.value))} className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none" disabled={categories.length === 0}>
+                <select id="product-category" value={kategoriId} onChange={(event) => setKategoriId(Number(event.target.value))} className="h-12 w-full rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none" disabled={categories.length === 0}>
                   {categories.length === 0 ? <option value={0}>Kategori yok</option> : null}
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
@@ -3519,20 +3542,35 @@ function SellerProductScreen({
                 </select>
               </Field>
               <div>
-                <p className="mb-3 text-sm font-black">Durum *</p>
-                <div className="flex gap-5">
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input type="radio" checked={active} onChange={() => setActive(true)} className="accent-primary" />
+                <p className="mb-2 text-sm font-semibold">Yayın durumu</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setActive(true)}
+                    className={cn(
+                      "h-12 rounded-md border px-3 text-sm font-black transition",
+                      active ? "border-primary bg-secondary text-primary" : "border-input bg-white text-muted-foreground",
+                    )}
+                  >
                     Aktif
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input type="radio" checked={!active} onChange={() => setActive(false)} className="accent-primary" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={!active}
+                    onClick={() => setActive(false)}
+                    className={cn(
+                      "h-12 rounded-md border px-3 text-sm font-black transition",
+                      !active ? "border-primary bg-secondary text-primary" : "border-input bg-white text-muted-foreground",
+                    )}
+                  >
                     Pasif
-                  </label>
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="space-y-5 p-4 sm:space-y-6 sm:p-5">
+            </ProductFormSection>
+
+            <ProductFormSection icon={UploadCloud} title="Medya">
               <MediaGrid
                 title="Resimler"
                 icon={ImagePlus}
@@ -3552,33 +3590,112 @@ function SellerProductScreen({
                 actionStatus={actionStatus}
                 video
               />
-              <div className="grid gap-3 border-t border-border pt-5 sm:flex">
-                <Button disabled={actionStatus === "product-save" || !kategoriId} className="w-full sm:min-w-40 sm:w-auto">
-                  {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
-                  Kaydet
-                </Button>
-                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onNavigate("seller")}>
-                  Vazgeç
-                </Button>
-              </div>
+            </ProductFormSection>
+          </div>
+
+          <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+            <ProductPreviewCard product={previewProduct} active={active} />
+            <div className="hidden gap-3 rounded-lg border border-border bg-white p-3 shadow-sm xl:grid">
+              <Button type="submit" disabled={actionStatus === "product-save" || !kategoriId} className="w-full">
+                {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
+                Kaydet
+              </Button>
+              <Button type="button" variant="outline" className="w-full" onClick={() => onNavigate("seller")}>
+                Vazgeç
+              </Button>
             </div>
-          </form>
-        </Card>
-        <Card className="p-4 sm:p-5">
-          <h2 className="text-xl font-black sm:text-2xl">Önizleme</h2>
-          <div className="relative mt-5 aspect-[1.1] overflow-hidden rounded-lg bg-muted">
-            <Image src={productImage(previewProduct)} alt={previewProduct.adi} fill sizes="380px" className="object-cover" />
+          </aside>
+        </form>
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 p-3 shadow-[0_-12px_30px_rgba(16,24,40,0.12)] backdrop-blur xl:hidden">
+          <div className="mx-auto grid max-w-[640px] grid-cols-[1fr_auto] gap-2">
+            <Button form={formId} type="submit" disabled={actionStatus === "product-save" || !kategoriId} className="h-12">
+              {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
+              Kaydet
+            </Button>
+            <Button type="button" variant="outline" className="h-12 px-4" onClick={() => onNavigate("seller")}>
+              Vazgeç
+            </Button>
           </div>
-          <h3 className="mt-5 line-clamp-2 text-xl font-black sm:text-2xl">{previewProduct.adi}</h3>
-          <p className="mt-2 break-words text-2xl font-black text-primary sm:text-3xl">{formatPrice(previewProduct.fiyat)}</p>
-          <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-            <span>{previewProduct.kategoriAdi}</span>
-            <Badge variant={active ? "green" : "outline"}>{active ? "Aktif" : "Pasif"}</Badge>
-          </div>
-          <p className="mt-5 text-sm leading-7 text-muted-foreground">{previewProduct.aciklama}</p>
-        </Card>
+        </div>
       </div>
     </DashboardFrame>
+  );
+}
+
+function ProductUploadStep({
+  icon: Icon,
+  label,
+  active,
+  done,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active?: boolean;
+  done?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-12 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-black shadow-sm",
+        active ? "border-primary/35 text-primary" : "border-border text-muted-foreground",
+      )}
+    >
+      <span className={cn("grid size-8 shrink-0 place-items-center rounded-full", done ? "bg-secondary text-primary" : "bg-muted text-muted-foreground")}>
+        {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
+      </span>
+      <span className="truncate">{label}</span>
+    </div>
+  );
+}
+
+function ProductFormSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="min-w-0 rounded-lg border border-border bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-3 border-b border-border pb-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+          <Icon className="size-5" aria-hidden />
+        </span>
+        <h2 className="min-w-0 truncate text-lg font-black sm:text-xl">{title}</h2>
+      </div>
+      <div className="mt-4 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function ProductPreviewCard({ product, active }: { product: ProductDto; active: boolean }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="relative aspect-[1.2] bg-muted">
+        <Image src={productImage(product)} alt={product.adi} fill sizes="(min-width: 1280px) 380px, 100vw" className="object-cover" />
+      </div>
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase text-muted-foreground">Önizleme</p>
+            <h2 className="mt-2 line-clamp-2 text-xl font-black sm:text-2xl">{product.adi || "Ürün adı"}</h2>
+          </div>
+          <Badge className="shrink-0" variant={active ? "green" : "outline"}>{active ? "Aktif" : "Pasif"}</Badge>
+        </div>
+        <p className="mt-3 break-words text-2xl font-black text-primary sm:text-3xl">{formatPrice(product.fiyat)}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span className="min-w-0 truncate">{product.kategoriAdi ?? "Kategori"}</span>
+          <span aria-hidden>•</span>
+          <span>{product.stokMiktari} stok</span>
+        </div>
+        {product.aciklama ? (
+          <p className="mt-4 line-clamp-4 text-sm leading-7 text-muted-foreground">{product.aciklama}</p>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 
@@ -4493,7 +4610,7 @@ function AccessRequiredScreen({
         onLogout={onLogout}
       />
       <section className="mx-auto flex min-h-[calc(100vh-88px)] max-w-3xl items-center px-4 py-10 sm:px-6">
-        <Card className="w-full p-8 text-center">
+        <Card className="w-full p-5 text-center sm:p-8">
           <span className="mx-auto grid size-14 place-items-center rounded-full bg-secondary text-primary">
             <LockKeyhole aria-hidden />
           </span>
@@ -4543,21 +4660,22 @@ function DashboardFrame({
       <div className={cn("grid min-h-screen overflow-hidden", dark ? "lg:grid-cols-[260px_1fr]" : "lg:grid-cols-[288px_1fr]")}>
         <aside
           className={cn(
-            "flex min-h-0 flex-col border-b border-border px-3 py-3 sm:px-4 sm:py-4 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5",
+            "flex min-h-0 flex-col border-b border-border px-2 py-2 sm:px-4 sm:py-4 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5",
             dark ? "bg-[linear-gradient(165deg,#006b35,#00382b)] text-white" : "bg-white text-foreground",
           )}
         >
-          <button type="button" onClick={() => onNavigate("home")} className="mb-4 self-start lg:mb-8">
-            <BrandLogo inverse={dark} compact className="max-w-[150px] sm:max-w-none" />
+          <button type="button" onClick={() => onNavigate("home")} className="mb-2 min-w-0 self-start px-1 lg:mb-8 lg:px-0">
+            <BrandLogo inverse={dark} compact className="max-w-[136px] sm:max-w-[150px] lg:max-w-none" />
           </button>
           <nav className="scroll-shelf flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
             {navItems.map(([label, Icon, screen], index) => (
               <button
                 key={`${label}-${index}`}
                 type="button"
+                title={label}
                 onClick={() => onNavigate(screen)}
                 className={cn(
-                  "flex h-11 w-max min-w-max shrink-0 items-center gap-3 rounded-lg px-3 text-left text-sm font-bold transition lg:h-12 lg:w-full lg:min-w-0 lg:text-base",
+                  "flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-lg px-3 text-left text-sm font-bold transition min-[420px]:w-max min-[420px]:min-w-max min-[420px]:justify-start min-[420px]:gap-3 lg:h-12 lg:w-full lg:min-w-0 lg:justify-start lg:text-base",
                   index === 0
                     ? dark
                       ? "bg-white/14 text-white"
@@ -4568,26 +4686,28 @@ function DashboardFrame({
                 )}
               >
                 <Icon className="size-5" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{label}</span>
+                <span className="hidden min-w-0 flex-1 truncate min-[420px]:block lg:block">{label}</span>
               </button>
             ))}
           </nav>
-          <div className="mt-3 flex gap-2 overflow-x-auto border-t border-current/15 pt-3 lg:mt-auto lg:block lg:space-y-2 lg:overflow-visible lg:pt-5">
+          <div className="mt-2 flex gap-2 overflow-x-auto border-t border-current/15 pt-2 lg:mt-auto lg:block lg:space-y-2 lg:overflow-visible lg:pt-5">
             <button
               type="button"
               onClick={() => onNavigate("states")}
-              className={cn("flex h-10 min-w-max shrink-0 items-center gap-2 rounded-md px-3 text-left text-sm font-bold lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              title="Bildirimler"
+              className={cn("flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-left text-sm font-bold min-[420px]:min-w-max min-[420px]:justify-start lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <Bell className="size-4" aria-hidden />
-              Bildirimler
+              <span className="hidden min-[420px]:inline lg:inline">Bildirimler</span>
             </button>
             <button
               type="button"
               onClick={authUser ? onLogout : () => onNavigate("login")}
-              className={cn("flex h-10 min-w-max shrink-0 items-center gap-2 rounded-md px-3 text-left text-sm font-bold lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              title={authUser ? "Çıkış yap" : "Giriş yap"}
+              className={cn("flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-left text-sm font-bold min-[420px]:min-w-max min-[420px]:justify-start lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <LogOut className="size-4" aria-hidden />
-              {authUser ? "Çıkış yap" : "Giriş yap"}
+              <span className="hidden min-[420px]:inline lg:inline">{authUser ? "Çıkış yap" : "Giriş yap"}</span>
             </button>
           </div>
         </aside>
@@ -5270,8 +5390,10 @@ function MediaGrid({
 }) {
   const mediaItems = product ? (video ? product.videolar : product.resimler) : [];
   const accept = video ? "video/*" : "image/*";
+  const limit = video ? 3 : 10;
+  const remainingSlots = Math.max(0, limit - mediaItems.length - files.length);
   const addFiles = (fileList: FileList | null) => {
-    const selectedFiles = Array.from(fileList ?? []);
+    const selectedFiles = Array.from(fileList ?? []).slice(0, remainingSlots);
     if (selectedFiles.length === 0) return;
     onFilesChange([...files, ...selectedFiles]);
   };
@@ -5279,9 +5401,12 @@ function MediaGrid({
     addFiles(event.currentTarget.files);
     event.currentTarget.value = "";
   };
+  const removePendingFile = (index: number) => {
+    onFilesChange(files.filter((_, fileIndex) => fileIndex !== index));
+  };
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-black">{title}</h3>
@@ -5289,7 +5414,7 @@ function MediaGrid({
             {video ? "En fazla 3 video yükleyebilirsiniz." : "En fazla 10 görsel yükleyebilirsiniz."}
           </p>
         </div>
-        <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55 sm:w-auto">
+        <label className={cn("hidden h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55 sm:inline-flex", remainingSlots === 0 && "pointer-events-none opacity-50")}>
           <UploadCloud aria-hidden />
           Galeriden seç
           <input
@@ -5297,10 +5422,11 @@ function MediaGrid({
             className="sr-only"
             accept={accept}
             multiple
+            disabled={remainingSlots === 0}
             onChange={handleFileInputChange}
           />
         </label>
-        <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary/40 bg-secondary px-4 text-sm font-bold text-primary transition hover:border-primary/70 sm:w-auto">
+        <label className={cn("hidden h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-primary/40 bg-secondary px-4 text-sm font-bold text-primary transition hover:border-primary/70 sm:inline-flex", remainingSlots === 0 && "pointer-events-none opacity-50")}>
           <Camera aria-hidden />
           {video ? "Video çek" : "Fotoğraf çek"}
           <input
@@ -5308,12 +5434,37 @@ function MediaGrid({
             className="sr-only"
             accept={accept}
             capture="environment"
+            disabled={remainingSlots === 0}
             onChange={handleFileInputChange}
           />
         </label>
       </div>
-      <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-5">
-        {mediaItems.slice(0, video ? 3 : 10).map((item) => (
+      <div className="grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:grid-cols-4 xl:grid-cols-5">
+        <label className={cn("grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input bg-white p-2 text-center text-sm font-bold text-muted-foreground transition hover:border-primary/55 hover:bg-secondary/55", remainingSlots === 0 && "pointer-events-none opacity-50")}>
+          <Icon className="mb-2 size-7 text-muted-foreground" aria-hidden />
+          {video ? "Video seç" : "Görsel seç"}
+          <input
+            type="file"
+            className="sr-only"
+            accept={accept}
+            multiple
+            disabled={remainingSlots === 0}
+            onChange={handleFileInputChange}
+          />
+        </label>
+        <label className={cn("grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary/60 p-2 text-center text-sm font-bold text-primary transition hover:border-primary", remainingSlots === 0 && "pointer-events-none opacity-50")}>
+          <Camera className="mb-2 size-7" aria-hidden />
+          {video ? "Video çek" : "Kamera"}
+          <input
+            type="file"
+            className="sr-only"
+            accept={accept}
+            capture="environment"
+            disabled={remainingSlots === 0}
+            onChange={handleFileInputChange}
+          />
+        </label>
+        {mediaItems.slice(0, limit).map((item) => (
           <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
             {video ? (
               <span className="absolute inset-0 grid place-items-center bg-black/70 text-white">
@@ -5338,33 +5489,20 @@ function MediaGrid({
             </button>
           </div>
         ))}
-        {files.map((file) => (
-          <div key={`${file.name}-${file.lastModified}`} className="grid aspect-square place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary p-2 text-center text-xs font-bold text-primary">
-            <span className="line-clamp-3">{file.name}</span>
+        {files.map((file, index) => (
+          <div key={`${file.name}-${file.lastModified}-${index}`} className="relative grid aspect-square place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary p-2 text-center text-xs font-bold text-primary">
+            <button
+              type="button"
+              className="absolute right-1 top-1 grid size-7 place-items-center rounded-md bg-white text-red-600 shadow"
+              title="Dosyayı kaldır"
+              aria-label="Dosyayı kaldır"
+              onClick={() => removePendingFile(index)}
+            >
+              <X className="size-4" aria-hidden />
+            </button>
+            <span className="line-clamp-3 px-1">{file.name}</span>
           </div>
         ))}
-        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input p-2 text-center text-sm font-bold text-muted-foreground">
-          <Icon className="mb-2 size-7 text-muted-foreground" aria-hidden />
-          {video ? "Video seç" : "Görsel seç"}
-          <input
-            type="file"
-            className="sr-only"
-            accept={accept}
-            multiple
-            onChange={handleFileInputChange}
-          />
-        </label>
-        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-primary/40 bg-secondary/60 p-2 text-center text-sm font-bold text-primary transition hover:border-primary">
-          <Camera className="mb-2 size-7" aria-hidden />
-          {video ? "Video çek" : "Kamera"}
-          <input
-            type="file"
-            className="sr-only"
-            accept={accept}
-            capture="environment"
-            onChange={handleFileInputChange}
-          />
-        </label>
       </div>
     </div>
   );
@@ -5395,7 +5533,7 @@ function CategoryEditor({
   return (
     <Card className="p-4 sm:p-5">
       <div className="mb-5 flex items-start justify-between gap-3">
-        <h2 className="text-2xl font-black">{selected ? "Kategori düzenle" : "Yeni kategori"}</h2>
+        <h2 className="text-xl font-black sm:text-2xl">{selected ? "Kategori düzenle" : "Yeni kategori"}</h2>
         <Button variant="ghost" size="icon" type="button" onClick={() => onSelectedIdChange("new")}>
           <X aria-hidden />
         </Button>
@@ -5680,8 +5818,8 @@ function ProgressLine({ label, value }: { label: string; value: number }) {
 
 function ProfileRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid gap-3 md:grid-cols-[160px_1fr] md:items-center">
-      <span className="font-bold">{label}</span>
+    <div className="grid gap-2 rounded-lg border border-border/70 bg-white/70 p-3 md:grid-cols-[160px_1fr] md:items-center md:border-0 md:bg-transparent md:p-0">
+      <span className="text-sm font-black md:text-base">{label}</span>
       {children}
     </div>
   );
@@ -5853,7 +5991,7 @@ function StatusBox({
   return (
     <div
       className={cn(
-        "rounded-lg border p-5",
+        "rounded-lg border p-4 sm:p-5",
         kind === "warning"
           ? "border-amber-200 bg-amber-50 text-amber-950"
           : "border-emerald-200 bg-emerald-50 text-emerald-950",

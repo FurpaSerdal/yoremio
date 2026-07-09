@@ -225,7 +225,7 @@ export function YoremioProfilePage() {
     return (
       <ProfileShell>
         <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center px-4 text-center">
-          <Card className="p-6">
+          <Card className="p-5 sm:p-6">
             <UserRound className="mx-auto size-9 text-primary" aria-hidden />
             <h1 className="mt-4 text-2xl font-black text-brand-brown">
               Profil için giriş gerekli
@@ -233,7 +233,7 @@ export function YoremioProfilePage() {
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Profil, mağaza bilgileri ve kullanıcı paneli güvenli oturumla açılır.
             </p>
-            <Button className="mt-5" asChild>
+            <Button className="mt-5 w-full min-[420px]:w-auto" asChild>
               <Link href="/">Ana sayfaya dön</Link>
             </Button>
           </Card>
@@ -246,7 +246,7 @@ export function YoremioProfilePage() {
     return (
       <ProfileShell>
         <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center px-4 text-center">
-          <Card className="p-6">
+          <Card className="p-5 sm:p-6">
             <ShieldCheck className="mx-auto size-9 text-primary" aria-hidden />
             <h1 className="mt-4 text-2xl font-black text-brand-brown">
               Profil yüklenemedi
@@ -254,7 +254,7 @@ export function YoremioProfilePage() {
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {error ?? "Profil verileri şu anda alınamadı."}
             </p>
-            <Button className="mt-5" asChild>
+            <Button className="mt-5 w-full min-[420px]:w-auto" asChild>
               <Link href="/">Ana sayfaya dön</Link>
             </Button>
           </Card>
@@ -277,7 +277,7 @@ export function YoremioProfilePage() {
                   </Badge>
                   <Badge variant="outline">Canlı oturum yönetimi</Badge>
                 </div>
-                <h1 className="mt-3 break-words text-3xl font-black tracking-normal text-brand-brown sm:text-5xl">
+                <h1 className="mt-3 break-words text-2xl font-black tracking-normal text-brand-brown sm:text-5xl">
                   {name}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
@@ -300,7 +300,7 @@ export function YoremioProfilePage() {
                   }
                 />
                 <ProfilePill label="Chat" value={String(conversations.length)} />
-                <Button variant="outline" asChild className="bg-white/85">
+                <Button variant="outline" asChild className="w-full bg-white/85 sm:w-auto">
                   <Link href="/">
                     <ArrowLeft aria-hidden />
                     Pazara dön
