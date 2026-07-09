@@ -73,8 +73,8 @@ export function PublicHomeHero({
   onSelectCategory: (value: number | "all") => void;
 }) {
   return (
-    <section className="relative border-b border-border bg-white pb-8">
-      <div className="relative min-h-[310px] overflow-hidden sm:min-h-[360px] lg:min-h-[390px]">
+    <section className="relative border-b border-border bg-[linear-gradient(180deg,#ffffff_0%,#fbfbf8_100%)] pb-8">
+      <div className="relative min-h-[310px] overflow-hidden sm:min-h-[360px] lg:min-h-[400px]">
         <Image
           src="/hero-market-1600.jpg"
           alt=""
@@ -83,15 +83,20 @@ export function PublicHomeHero({
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06),rgba(0,0,0,0.24)_48%,rgba(0,0,0,0.14))]" />
-        <div className="absolute inset-0 flex items-center justify-center px-4 pb-10 text-center">
-          <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
-            Yerel ürünler
-          </h1>
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(9,18,11,0.08)_42%,rgba(7,12,9,0.18)_100%)]" />
+        <div className="absolute inset-0 flex items-center justify-center px-4 pb-12 text-center">
+          <div className="max-w-4xl">
+            <p className="mb-4 text-sm font-black uppercase tracking-[0.28em] text-white/84 sm:text-base">
+              Yöremio pazarı
+            </p>
+            <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
+              Yerel ürünler
+            </h1>
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10 mx-auto -mt-16 max-w-[820px] px-4 sm:-mt-[72px] lg:max-w-[860px]">
+      <div className="relative z-10 mx-auto -mt-16 max-w-[920px] px-4 sm:-mt-[72px] lg:max-w-[980px]">
         <CategoryShelf
           categories={categories}
           activeId={activeId}
@@ -106,7 +111,7 @@ export function PublicHomeHero({
 
 export function HomePromiseBar() {
   return (
-    <div className="grid gap-3 rounded-lg border border-border bg-white p-3 shadow-[0_6px_18px_rgba(16,24,40,0.06)] sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 rounded-[20px] border border-border/70 bg-white px-3 py-3 shadow-[0_10px_24px_rgba(16,24,40,0.06)] sm:grid-cols-2 lg:grid-cols-4">
       <HeroPromise icon={Leaf} title="Yerel üreticiden" text="Taze ve doğal ürünleri keşfet." />
       <HeroPromise icon={ShieldCheck} title="Güvenli alışveriş" text="Doğrulanmış satıcı sinyalleri." />
       <HeroPromise icon={MessageCircle} title="Satıcıyla konuş" text="Talep, teklif ve chat akışı." />
@@ -125,8 +130,8 @@ function HeroPromise({
   text: string;
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-center gap-4 rounded-md bg-white p-2">
-      <span className="grid size-12 shrink-0 place-items-center rounded-full border border-border bg-white text-primary shadow-sm">
+    <div className="flex min-w-0 items-center justify-center gap-4 rounded-[18px] bg-white p-3">
+      <span className="grid size-12 shrink-0 place-items-center rounded-full border border-emerald-100 bg-emerald-50 text-primary shadow-[0_4px_12px_rgba(16,24,40,0.05)]">
         <Icon className="size-6" aria-hidden />
       </span>
       <span className="min-w-0">
@@ -155,7 +160,7 @@ export function CategoryShelf({
       className={cn(
         "px-3 py-3",
         elevated
-          ? "rounded-lg border border-border bg-white/96 shadow-[0_14px_34px_rgba(16,24,18,0.14)]"
+          ? "rounded-[24px] border border-border bg-white/96 shadow-[0_16px_36px_rgba(16,24,18,0.12)]"
           : "y-card",
       )}
     >
@@ -221,7 +226,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-[112px] shrink-0 snap-start flex-col items-center gap-2 rounded-lg border p-2.5 text-center outline-none transition-colors",
+        "group flex w-[116px] shrink-0 snap-start flex-col items-center gap-2 rounded-[18px] border p-2.5 text-center outline-none transition-colors",
         active
           ? "border-primary/25 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
@@ -305,7 +310,7 @@ export function FeaturedSellerStrip({
               onClick={() => {
                 if (productId) onSelectProduct(productId);
               }}
-              className="group relative min-h-[132px] overflow-hidden rounded-lg border border-border bg-ink text-left shadow-[0_6px_18px_rgba(16,24,40,0.08)] outline-none transition hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
+              className="group relative min-h-[148px] overflow-hidden rounded-[22px] border border-border bg-ink text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition hover:-translate-y-0.5 hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Image
                 src={image}
@@ -314,8 +319,8 @@ export function FeaturedSellerStrip({
                 sizes="(min-width: 1280px) 320px, 50vw"
                 className="object-cover opacity-72 transition group-hover:scale-[1.03]"
               />
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,24,18,0.76),rgba(20,24,18,0.34))]" />
-              <div className="relative flex h-full min-h-[132px] flex-col justify-end p-4 text-white">
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(14,20,16,0.78),rgba(14,20,16,0.28))]" />
+              <div className="relative flex h-full min-h-[148px] flex-col justify-end p-4 text-white">
                 <div className="flex items-center gap-3">
                   <span className="grid size-12 shrink-0 place-items-center rounded-full border border-white/45 bg-white/18 text-sm font-black">
                     {title.slice(0, 2).toUpperCase()}
@@ -375,7 +380,7 @@ export function ProductCard({
       }}
       tabIndex={0}
       className={cn(
-        "group min-w-0 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-[0_6px_16px_rgba(16,24,40,0.08)] outline-none transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(16,24,40,0.12)] focus-visible:ring-2 focus-visible:ring-ring",
+        "group min-w-0 cursor-pointer overflow-hidden rounded-[20px] border bg-white text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(16,24,40,0.12)] focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-primary ring-2 ring-primary/[0.14]"
           : "border-border hover:border-primary/[0.35]",

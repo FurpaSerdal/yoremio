@@ -57,7 +57,10 @@
 
 body {
   min-height: 100vh;
-  background: #f8faf8;
+  background:
+    radial-gradient(circle at top left, rgba(10, 106, 68, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(231, 163, 33, 0.08), transparent 22%),
+    linear-gradient(180deg, #fcfcfa 0%, #f7f8f4 100%);
   color: var(--foreground);
   font-family: var(--font-sans);
   text-rendering: optimizeLegibility;
