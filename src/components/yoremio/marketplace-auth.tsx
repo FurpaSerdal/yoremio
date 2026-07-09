@@ -34,7 +34,7 @@ import {
   type SessionUser,
   type UserRole,
 } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, digitsOnly, limitText, phoneInput } from "@/lib/utils";
 
 type AuthState = SessionUser & Pick<LoginResponse, "token">;
 type AuthMode = "login" | "buyer" | "seller" | "verify";
@@ -130,15 +130,25 @@ export function AuthDialog({
       }
 
       if (mode === "seller") {
+        if (digitsOnly(vergiNo).length !== 11) {
+          setError("Vergi/TC numarası 11 hane olmalı.");
+          setStatus("idle");
+          return;
+        }
+        if (digitsOnly(phoneNumber).length < 10) {
+          setError("Telefon numarası en az 10 hane olmalı.");
+          setStatus("idle");
+          return;
+        }
         await yoremioApi.registerSeller({
           email: email.trim(),
           password,
-          phoneNumber,
-          magazaAdi,
-          vergiNo,
-          adres,
-          sehir,
-          ilce,
+          phoneNumber: phoneInput(phoneNumber).trim(),
+          magazaAdi: magazaAdi.trim(),
+          vergiNo: digitsOnly(vergiNo, 11),
+          adres: adres.trim(),
+          sehir: sehir.trim(),
+          ilce: ilce.trim(),
         });
         setMessage(
           "Satıcı kaydı oluşturuldu. Email doğrulaması tamamlanınca giriş yapabilirsin.",
@@ -411,9 +421,10 @@ function AccountFields({
           id="login-email"
           type="email"
           value={email}
-          onChange={(event) => onEmailChange(event.target.value)}
+          onChange={(event) => onEmailChange(limitText(event.target.value, 254))}
           autoComplete="email"
           placeholder="ornek@mail.com"
+          maxLength={254}
           required
         />
       </Field>
@@ -421,9 +432,10 @@ function AccountFields({
         <PasswordInput
           id="login-password"
           value={password}
-          onChange={(event) => onPasswordChange(event.target.value)}
+          onChange={(event) => onPasswordChange(limitText(event.target.value, 72))}
           autoComplete={mode === "login" ? "current-password" : "new-password"}
           placeholder="En az 8 karakter"
+          maxLength={72}
           required
         />
       </Field>
@@ -484,9 +496,10 @@ function VerificationFields({
           id="verify-email"
           type="email"
           value={email}
-          onChange={(event) => onEmailChange(event.target.value)}
+          onChange={(event) => onEmailChange(limitText(event.target.value, 254))}
           autoComplete="email"
           placeholder="ornek@mail.com"
+          maxLength={254}
           required
         />
       </Field>
@@ -494,9 +507,10 @@ function VerificationFields({
         <Input
           id="verify-code"
           value={verifyCode}
-          onChange={(event) => onCodeChange(event.target.value)}
+          onChange={(event) => onCodeChange(digitsOnly(event.target.value, 6))}
           placeholder="123456"
           inputMode="numeric"
+          maxLength={6}
           required
         />
       </Field>
@@ -534,22 +548,22 @@ function SellerRegisterFields({
   return (
     <div className="grid gap-3 min-[640px]:grid-cols-2">
       <Field label="Telefon" htmlFor="seller-phone">
-        <Input id="seller-phone" value={phoneNumber} onChange={(event) => onPhoneNumberChange(event.target.value)} required />
+        <Input id="seller-phone" type="tel" value={phoneNumber} onChange={(event) => onPhoneNumberChange(phoneInput(event.target.value))} maxLength={18} autoComplete="tel" required />
       </Field>
       <Field label="Mağaza adı" htmlFor="seller-store">
-        <Input id="seller-store" value={magazaAdi} onChange={(event) => onMagazaAdiChange(event.target.value)} required />
+        <Input id="seller-store" value={magazaAdi} onChange={(event) => onMagazaAdiChange(limitText(event.target.value, 80))} maxLength={80} required />
       </Field>
       <Field label="Vergi no" htmlFor="seller-tax">
-        <Input id="seller-tax" value={vergiNo} onChange={(event) => onVergiNoChange(event.target.value)} required />
+        <Input id="seller-tax" value={vergiNo} onChange={(event) => onVergiNoChange(digitsOnly(event.target.value, 11))} inputMode="numeric" maxLength={11} pattern="\d{11}" required />
       </Field>
       <Field label="Adres" htmlFor="seller-address">
-        <Input id="seller-address" value={adres} onChange={(event) => onAdresChange(event.target.value)} />
+        <Input id="seller-address" value={adres} onChange={(event) => onAdresChange(limitText(event.target.value, 250))} maxLength={250} />
       </Field>
       <Field label="Şehir" htmlFor="seller-city">
-        <Input id="seller-city" value={sehir} onChange={(event) => onSehirChange(event.target.value)} />
+        <Input id="seller-city" value={sehir} onChange={(event) => onSehirChange(limitText(event.target.value, 50))} maxLength={50} />
       </Field>
       <Field label="İlçe" htmlFor="seller-district">
-        <Input id="seller-district" value={ilce} onChange={(event) => onIlceChange(event.target.value)} />
+        <Input id="seller-district" value={ilce} onChange={(event) => onIlceChange(limitText(event.target.value, 50))} maxLength={50} />
       </Field>
     </div>
   );

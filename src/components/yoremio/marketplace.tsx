@@ -91,7 +91,7 @@ import {
   type SessionUser,
   type UserRole,
 } from "@/lib/api";
-import { cn, formatPrice, formatShortDate } from "@/lib/utils";
+import { cn, digitsOnly, formatPrice, formatShortDate, limitText, phoneInput } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
 const productPlaceholderImage = "/products/product-placeholder.svg";
@@ -2336,7 +2336,7 @@ function ProductDetailPanel({
 
 function MiniTrust({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
       <span className="grid size-10 shrink-0 place-items-center rounded-full border border-emerald-100 bg-emerald-50 text-primary">
         <Icon className="size-5" aria-hidden />
       </span>
@@ -2448,9 +2448,11 @@ function LoginScreen({
                     id="login-email"
                     type="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => setEmail(limitText(event.target.value, 254))}
                     placeholder="ornek@mail.com"
                     className="h-14 pl-14"
+                    maxLength={254}
+                    autoComplete="email"
                     required
                   />
                 </InputIcon>
@@ -2459,10 +2461,11 @@ function LoginScreen({
                 <PasswordInput
                   id="login-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => setPassword(limitText(event.target.value, 72))}
                   placeholder="••••••••"
                   className="h-14 pl-14"
                   autoComplete="current-password"
+                  maxLength={72}
                   required
                 />
               </Field>
@@ -2572,14 +2575,14 @@ function BuyerRegisterScreen({
         <div className="mt-8 space-y-5">
           <Field label="E-posta" htmlFor="buyer-email">
             <InputIcon icon={Mail}>
-              <Input id="buyer-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="ornek@email.com" className="h-14 pl-14" required />
+              <Input id="buyer-email" type="email" value={email} onChange={(event) => setEmail(limitText(event.target.value, 254))} placeholder="ornek@email.com" className="h-14 pl-14" maxLength={254} autoComplete="email" required />
             </InputIcon>
           </Field>
           <Field label="Şifre" htmlFor="buyer-password">
-            <PasswordInput id="buyer-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifrenizi girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} required />
+            <PasswordInput id="buyer-password" value={password} onChange={(event) => setPassword(limitText(event.target.value, 72))} placeholder="Şifrenizi girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} maxLength={72} required />
           </Field>
           <Field label="Şifre tekrar" htmlFor="buyer-confirm">
-            <PasswordInput id="buyer-confirm" value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Şifrenizi tekrar girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} required />
+            <PasswordInput id="buyer-confirm" value={confirm} onChange={(event) => setConfirm(limitText(event.target.value, 72))} placeholder="Şifrenizi tekrar girin" className="h-14 pl-14" autoComplete="new-password" minLength={6} maxLength={72} required />
           </Field>
           <label className="flex items-center gap-3 text-sm font-semibold">
             <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} className="size-5 accent-primary" />
@@ -2629,17 +2632,25 @@ function SellerRegisterScreen({
       showToast("Koşulları kabul etmelisin.", "info");
       return;
     }
+    if (digitsOnly(vergiNo).length !== 11) {
+      showToast("Vergi/TC numarası 11 hane olmalı.", "info");
+      return;
+    }
+    if (digitsOnly(phoneNumber).length < 10) {
+      showToast("Telefon numarası en az 10 hane olmalı.", "info");
+      return;
+    }
     setStatus("loading");
     try {
       await yoremioApi.registerSeller({
         email: email.trim(),
         password,
-        phoneNumber,
-        magazaAdi,
-        vergiNo,
-        adres,
-        sehir,
-        ilce,
+        phoneNumber: phoneInput(phoneNumber).trim(),
+        magazaAdi: magazaAdi.trim(),
+        vergiNo: digitsOnly(vergiNo, 11),
+        adres: adres.trim(),
+        sehir: sehir.trim(),
+        ilce: ilce.trim(),
       });
       showToast("Satıcı kaydı oluşturuldu. Doğrulama tamamlanınca giriş yapabilirsin.", "success");
       onNavigate("verify");
@@ -2664,20 +2675,20 @@ function SellerRegisterScreen({
           <p className="mt-2 text-muted-foreground">Yerel ürünlerini binlerce alıcıya ulaştır.</p>
         </div>
         <InputIcon icon={Mail}>
-          <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="ornek@mail.com" className="h-12 pl-12" required />
+          <Input type="email" value={email} onChange={(event) => setEmail(limitText(event.target.value, 254))} placeholder="ornek@mail.com" className="h-12 pl-12" maxLength={254} autoComplete="email" required />
         </InputIcon>
         <InputIcon icon={Phone}>
-          <Input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="+90 5XX XXX XX XX" className="h-12 pl-12" required />
+          <Input type="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(phoneInput(event.target.value))} placeholder="+90 5XX XXX XX XX" className="h-12 pl-12" maxLength={18} autoComplete="tel" required />
         </InputIcon>
-        <PasswordInput value={password} onChange={(event) => setPassword(event.target.value)} placeholder="En az 8 karakter" className="h-12 pl-12" autoComplete="new-password" minLength={8} required />
+        <PasswordInput value={password} onChange={(event) => setPassword(limitText(event.target.value, 72))} placeholder="En az 8 karakter" className="h-12 pl-12" autoComplete="new-password" minLength={8} maxLength={72} required />
         <InputIcon icon={Store}>
-          <Input value={magazaAdi} onChange={(event) => setMagazaAdi(event.target.value)} placeholder="Mağaza adınızı girin" className="h-12 pl-12" required />
+          <Input value={magazaAdi} onChange={(event) => setMagazaAdi(limitText(event.target.value, 80))} placeholder="Mağaza adınızı girin" className="h-12 pl-12" maxLength={80} required />
         </InputIcon>
-        <Input value={vergiNo} onChange={(event) => setVergiNo(event.target.value)} placeholder="11 hane vergi numaranızı girin" className="h-12" required />
-        <textarea value={adres} onChange={(event) => setAdres(event.target.value)} placeholder="Açık adresinizi girin" className="min-h-20 w-full rounded-md border border-input bg-white px-3 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/20" />
+        <Input value={vergiNo} onChange={(event) => setVergiNo(digitsOnly(event.target.value, 11))} placeholder="11 hane vergi numaranızı girin" className="h-12" inputMode="numeric" maxLength={11} pattern="\d{11}" required />
+        <textarea value={adres} onChange={(event) => setAdres(limitText(event.target.value, 250))} placeholder="Açık adresinizi girin" className="min-h-20 w-full rounded-md border border-input bg-white px-3 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/20" maxLength={250} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input value={sehir} onChange={(event) => setSehir(event.target.value)} placeholder="Şehir seçin" className="h-12" />
-          <Input value={ilce} onChange={(event) => setIlce(event.target.value)} placeholder="İlçe seçin" className="h-12" />
+          <Input value={sehir} onChange={(event) => setSehir(limitText(event.target.value, 50))} placeholder="Şehir seçin" className="h-12" maxLength={50} />
+          <Input value={ilce} onChange={(event) => setIlce(limitText(event.target.value, 50))} placeholder="İlçe seçin" className="h-12" maxLength={50} />
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
           <div className="flex items-start gap-3">
@@ -3027,13 +3038,15 @@ function VerificationColumn({
       </div>
       <div className="mt-7 space-y-4">
         <Field label={contactLabel} htmlFor={`${title}-contact`}>
-          <Input value={contactValue} onChange={(event) => onContactChange(event.target.value)} />
+          <Input value={contactValue} onChange={(event) => onContactChange(limitText(event.target.value, 254))} maxLength={254} />
         </Field>
         <Field label="Kod" htmlFor={`${title}-code`}>
           <Input
             id={`${title}-code`}
             value={code}
-            onChange={(event) => onCodeChange(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(event) => onCodeChange(digitsOnly(event.target.value, 6))}
+            inputMode="numeric"
+            maxLength={6}
             className="sr-only"
           />
           <label className="grid grid-cols-6 gap-2" htmlFor={`${title}-code`}>
@@ -3487,12 +3500,12 @@ function SellerProductScreen({
                 actionStatus={actionStatus}
                 video
               />
-              <div className="flex gap-3 border-t border-border pt-5">
-                <Button disabled={actionStatus === "product-save" || !kategoriId} className="min-w-40">
+              <div className="grid gap-3 border-t border-border pt-5 sm:flex">
+                <Button disabled={actionStatus === "product-save" || !kategoriId} className="w-full sm:min-w-40 sm:w-auto">
                   {actionStatus === "product-save" ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
                   Kaydet
                 </Button>
-                <Button type="button" variant="outline" onClick={() => onNavigate("seller")}>
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onNavigate("seller")}>
                   Vazgeç
                 </Button>
               </div>
@@ -3631,7 +3644,7 @@ function SellerProfileScreen({
               <Input value={ilce} onChange={(event) => setIlce(event.target.value)} />
             </ProfileRow>
             <ProfileRow label="Telefon">
-              <Input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} />
+              <Input type="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(phoneInput(event.target.value))} maxLength={18} autoComplete="tel" />
             </ProfileRow>
             <ProfileRow label="E-posta">
               <Input value={profile?.email ?? authUser?.email ?? ""} disabled />
@@ -3966,7 +3979,7 @@ function ReviewsScreen({
         onNavigate={onNavigate}
         onLogout={onLogout}
       />
-      <section className="mx-auto max-w-[1520px] px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-[1520px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[480px_1fr_430px] lg:gap-6">
             <div className="grid grid-cols-[56px_1fr] gap-2 sm:grid-cols-[72px_1fr] sm:gap-3">
               <div className="space-y-3">
@@ -3980,10 +3993,10 @@ function ReviewsScreen({
               <Image src={productImage(product)} alt={product.adi} fill sizes="430px" className="object-cover" />
             </div>
           </div>
-          <div className="space-y-4">
-            <h1 className="text-3xl font-black">{product.adi}</h1>
+          <div className="min-w-0 space-y-4">
+            <h1 className="text-2xl font-black sm:text-3xl">{product.adi}</h1>
             <p className="text-muted-foreground">{product.kategoriAdi ?? "Yerel ürün"}</p>
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="relative size-12 overflow-hidden rounded-full">
                 <Image src={productImage(product)} alt="" fill sizes="48px" className="object-cover" />
               </div>
@@ -4006,7 +4019,7 @@ function ReviewsScreen({
               {productLocation(product)}
             </p>
           </div>
-          <Card className="overflow-hidden border-amber-200 bg-amber-50/55 p-5">
+          <Card className="overflow-hidden border-amber-200 bg-amber-50/55 p-4 sm:p-5">
             <ShieldCheck className="size-8 text-primary" aria-hidden />
             <h2 className="mt-4 text-xl font-black text-primary">Yorum yetkisi backend tarafından doğrulanır</h2>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -4043,10 +4056,10 @@ function ReviewsScreen({
 
         <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_430px]">
           <div className="space-y-5">
-            <Card className="grid gap-5 p-5 lg:grid-cols-[220px_1fr_180px]">
+            <Card className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[220px_1fr_180px]">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Ortalama puan</p>
-                <p className="mt-1 text-5xl font-black">{product.ortalamaPuan.toFixed(1)}</p>
+                <p className="mt-1 text-4xl font-black sm:text-5xl">{product.ortalamaPuan.toFixed(1)}</p>
                 <Stars className="mt-2 justify-center" value={product.ortalamaPuan} />
               </div>
               <RatingBreakdown ratings={ratings} />
@@ -4070,18 +4083,18 @@ function ReviewsScreen({
               </div>
             ) : null}
             {tab === "ratings" ? (
-              <Card className="p-5">
+              <Card className="p-4 sm:p-5">
                 <RatingBreakdown ratings={ratings} />
               </Card>
             ) : null}
             {tab === "description" ? (
-              <Card className="p-5 text-sm leading-7 text-muted-foreground">
+              <Card className="p-4 text-sm leading-7 text-muted-foreground sm:p-5">
                 {product.aciklama || "Ürün açıklaması bulunmuyor."}
               </Card>
             ) : null}
           </div>
 
-          <Card className="p-5">
+          <Card className="p-4 sm:p-5">
             <h2 className="text-xl font-black">Yorum yaz</h2>
             <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-950">
               <p className="font-black">{canWriteReview ? "Yorum hakkı açık" : "Yorum hakkı kapalı"}</p>
@@ -4330,7 +4343,7 @@ function SupportRequestPanel({
   };
 
   return (
-    <Card className="p-5">
+    <Card className="p-4 sm:p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-black">Yardım / destek</h2>
@@ -4353,16 +4366,18 @@ function SupportRequestPanel({
             id="support-email"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => setEmail(limitText(event.target.value, 254))}
             placeholder="ornek@eposta.com"
+            maxLength={254}
           />
         </Field>
         <Field label="Telefon" htmlFor="support-phone">
           <Input
             id="support-phone"
             value={telefon}
-            onChange={(event) => setTelefon(event.target.value)}
+            onChange={(event) => setTelefon(phoneInput(event.target.value))}
             placeholder="+90..."
+            maxLength={18}
           />
         </Field>
         <Field label="Mesaj *" htmlFor="support-message" className="md:col-span-2">
@@ -4473,15 +4488,15 @@ function DashboardFrame({
 
   return (
     <main className="min-h-screen bg-[#f7f8f6]">
-      <div className={cn("grid min-h-screen", dark ? "lg:grid-cols-[260px_1fr]" : "lg:grid-cols-[288px_1fr]")}>
+      <div className={cn("grid min-h-screen overflow-hidden", dark ? "lg:grid-cols-[260px_1fr]" : "lg:grid-cols-[288px_1fr]")}>
         <aside
           className={cn(
-            "flex min-h-0 flex-col border-b border-border px-4 py-4 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5",
+            "flex min-h-0 flex-col border-b border-border px-3 py-3 sm:px-4 sm:py-4 lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5",
             dark ? "bg-[linear-gradient(165deg,#006b35,#00382b)] text-white" : "bg-white text-foreground",
           )}
         >
           <button type="button" onClick={() => onNavigate("home")} className="mb-4 self-start lg:mb-8">
-            <BrandLogo inverse={dark} />
+            <BrandLogo inverse={dark} compact className="max-w-[150px] sm:max-w-none" />
           </button>
           <nav className="scroll-shelf flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
             {navItems.map(([label, Icon, screen], index) => (
@@ -4505,11 +4520,11 @@ function DashboardFrame({
               </button>
             ))}
           </nav>
-          <div className="mt-4 flex gap-2 border-t border-current/15 pt-4 lg:mt-auto lg:block lg:space-y-2 lg:pt-5">
+          <div className="mt-3 flex gap-2 overflow-x-auto border-t border-current/15 pt-3 lg:mt-auto lg:block lg:space-y-2 lg:overflow-visible lg:pt-5">
             <button
               type="button"
               onClick={() => onNavigate("states")}
-              className={cn("flex h-11 min-w-max items-center gap-3 rounded-md px-3 text-left text-sm font-bold lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              className={cn("flex h-10 min-w-max shrink-0 items-center gap-2 rounded-md px-3 text-left text-sm font-bold lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <Bell className="size-4" aria-hidden />
               Bildirimler
@@ -4517,7 +4532,7 @@ function DashboardFrame({
             <button
               type="button"
               onClick={authUser ? onLogout : () => onNavigate("login")}
-              className={cn("flex h-11 min-w-max items-center gap-3 rounded-md px-3 text-left text-sm font-bold lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
+              className={cn("flex h-10 min-w-max shrink-0 items-center gap-2 rounded-md px-3 text-left text-sm font-bold lg:h-11 lg:w-full", dark ? "text-white/82 hover:bg-white/10" : "hover:bg-muted")}
             >
               <LogOut className="size-4" aria-hidden />
               {authUser ? "Çıkış yap" : "Giriş yap"}
@@ -4525,14 +4540,14 @@ function DashboardFrame({
           </div>
         </aside>
         <section className="min-w-0">
-          <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-3 border-b border-border bg-white px-3 py-3 sm:min-h-[78px] sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-xl font-black tracking-normal sm:text-2xl">{title}</h1>
-                <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <header className="flex min-h-[72px] flex-wrap items-start justify-between gap-3 border-b border-border bg-white px-3 py-3 sm:min-h-[78px] sm:flex-nowrap sm:items-center sm:gap-4 sm:px-6 sm:py-0">
+            <div className="min-w-0 flex-1">
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-black tracking-normal sm:text-2xl">{title}</h1>
+                <p className="line-clamp-2 text-sm text-muted-foreground sm:line-clamp-1">{subtitle}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               <IconButton icon={Bell} label="Bildirimler" badge={notificationUnreadCount} onClick={() => onNavigate("states")} />
               <AccountChip
                 authUser={authUser}
@@ -4542,7 +4557,7 @@ function DashboardFrame({
               />
             </div>
           </header>
-          <div className="p-4 sm:p-6">{children}</div>
+          <div className="p-3 sm:p-6">{children}</div>
         </section>
       </div>
     </main>
@@ -4580,7 +4595,7 @@ function AccountChip({
         onClick={onLogout}
         title="Çıkış yap"
         aria-label="Çıkış yap"
-        className="grid size-11 place-items-center rounded-full bg-primary text-sm font-black text-white"
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-black text-white sm:size-11"
       >
         {accountName(authUser, sellerProfile).slice(0, 2).toUpperCase()}
       </button>
@@ -4624,9 +4639,9 @@ function IconButton({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={cn("relative grid size-11 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted", className)}
+      className={cn("relative grid size-10 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted sm:size-11", className)}
     >
-      <Icon className="size-6" aria-hidden />
+      <Icon className="size-5 sm:size-6" aria-hidden />
       {badge ? (
         <span className="absolute right-1 top-1 grid min-w-5 place-items-center rounded-full bg-red-600 px-1 text-xs font-black text-white">
           {badge}
@@ -4651,18 +4666,18 @@ function Panel({
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_8px_18px_rgba(16,24,40,0.05)]">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h2 className="flex items-center gap-2 text-lg font-black">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-4">
+        <h2 className="flex min-w-0 items-center gap-2 text-base font-black sm:text-lg">
           {title}
           {badge ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">{badge}</span> : null}
         </h2>
         {action && onAction ? (
-          <button type="button" onClick={onAction} className="text-sm font-bold text-primary">
+          <button type="button" onClick={onAction} className="shrink-0 text-sm font-bold text-primary">
             {action}
           </button>
         ) : null}
       </div>
-      <div className="p-4">{children}</div>
+      <div className="p-3 sm:p-4">{children}</div>
     </div>
   );
 }
@@ -4677,10 +4692,10 @@ function PanelHeader({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-xl font-black text-primary">{title}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-lg font-black text-primary sm:text-xl">{title}</h2>
       {action && onAction ? (
-        <button className="text-sm font-bold text-primary" type="button" onClick={onAction}>
+        <button className="shrink-0 text-sm font-bold text-primary" type="button" onClick={onAction}>
           {action}
         </button>
       ) : null}
@@ -4702,22 +4717,22 @@ function MetricCard({
   tone?: "green" | "amber" | "lime";
 }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-5 shadow-[0_8px_18px_rgba(16,24,40,0.05)]">
+    <div className="rounded-lg border border-border bg-white p-4 shadow-[0_8px_18px_rgba(16,24,40,0.05)] sm:p-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-muted-foreground">{label}</p>
-          <p className="mt-3 text-3xl font-black">{value}</p>
+          <p className="mt-2 text-2xl font-black sm:mt-3 sm:text-3xl">{value}</p>
         </div>
         <span
           className={cn(
-            "grid size-12 place-items-center rounded-full",
+            "grid size-10 shrink-0 place-items-center rounded-full sm:size-12",
             tone === "amber" ? "bg-amber-100 text-amber-700" : tone === "lime" ? "bg-lime-100 text-lime-700" : "bg-emerald-100 text-primary",
           )}
         >
-          <Icon className="size-6" aria-hidden />
+          <Icon className="size-5 sm:size-6" aria-hidden />
         </span>
       </div>
-      {helper ? <p className="mt-5 text-sm font-semibold text-muted-foreground">{helper}</p> : null}
+      {helper ? <p className="mt-4 text-sm font-semibold text-muted-foreground sm:mt-5">{helper}</p> : null}
     </div>
   );
 }
@@ -4738,7 +4753,80 @@ function SellerProductTable({
   onToggleProductStatus: (product: ProductDto) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <>
+      <div className="space-y-3 md:hidden">
+        {products.map((product) => {
+          const statusPending = actionStatus === `product-status-${product.id}`;
+          const deletePending = actionStatus === `product-delete-${product.id}`;
+
+          return (
+            <article key={product.id} className="rounded-lg border border-border bg-white p-3 shadow-sm">
+              <div className="grid grid-cols-[72px_1fr] gap-3">
+                <div className="relative aspect-square overflow-hidden rounded-md border border-border">
+                  <Image src={productImage(product)} alt="" fill sizes="72px" className="object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 font-black">{product.adi}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">SKU: YRM-{Math.abs(product.id)}</p>
+                    </div>
+                    <Badge variant={product.aktifMi === false ? "outline" : "green"}>
+                      {product.aktifMi === false ? "Pasif" : "Aktif"}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-muted/60 p-2 text-sm">
+                    <span>
+                      <span className="block text-xs font-semibold text-muted-foreground">Fiyat</span>
+                      <span className="font-black text-primary">{formatPrice(product.fiyat)}</span>
+                    </span>
+                    <span>
+                      <span className="block text-xs font-semibold text-muted-foreground">Stok</span>
+                      <span className={cn("font-black", product.stokMiktari === 0 ? "text-red-600" : product.stokMiktari < 5 ? "text-amber-600" : "text-primary")}>
+                        {product.stokMiktari}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                <Button variant="outline" size="icon" title="Düzenle" onClick={() => onSelectProduct(product, "seller-product")}>
+                  <Edit3 aria-hidden />
+                </Button>
+                <Button variant="outline" size="icon" title="Kopyala" onClick={() => onDuplicateProduct(product)}>
+                  <Package aria-hidden />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title={product.aktifMi === false ? "Aktif yap" : "Pasife al"}
+                  disabled={statusPending}
+                  onClick={() => onToggleProductStatus(product)}
+                >
+                  {statusPending ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : product.aktifMi === false ? (
+                    <Check aria-hidden />
+                  ) : (
+                    <X aria-hidden />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Sil"
+                  className="text-red-600"
+                  disabled={deletePending}
+                  onClick={() => onDeleteProduct(product)}
+                >
+                  {deletePending ? <Loader2 className="animate-spin" aria-hidden /> : <Trash2 aria-hidden />}
+                </Button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[780px] text-left text-sm">
         <thead className="bg-muted text-xs uppercase text-muted-foreground">
           <tr>
@@ -4815,7 +4903,8 @@ function SellerProductTable({
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -4887,7 +4976,27 @@ function DemandTable({ demands }: { demands: DemandDto[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      <div className="space-y-3 sm:hidden">
+        {demands.map((demand) => (
+          <article key={demand.id} className="rounded-lg border border-border bg-white p-3 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-black">#T-{Math.abs(demand.id)}</p>
+                <p className="mt-1 line-clamp-2 text-sm font-semibold">{demand.urunAdi}</p>
+              </div>
+              <Badge variant={demand.durum === "ANLASILDI" ? "green" : demand.durum === "IPTAL" ? "outline" : "gold"}>
+                {demand.durum === "ACIK" ? "Teklif Bekliyor" : demand.durum}
+              </Badge>
+            </div>
+            <div className="mt-3 rounded-md bg-muted/60 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Miktar</span>
+              <span className="float-right font-black">{demand.miktar}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
       <table className="w-full min-w-[440px] text-sm">
         <thead className="text-left text-xs text-muted-foreground">
           <tr>
@@ -4912,7 +5021,8 @@ function DemandTable({ demands }: { demands: DemandDto[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -4949,7 +5059,7 @@ function OfferCards({
             </div>
             <p className="mt-3 font-bold">{demand.urunAdi} {demand.miktar} kg</p>
             <p className="mt-2 text-sm text-muted-foreground">Teklif Tutarı</p>
-            <div className="mt-1 flex items-center justify-between">
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
               <p className="text-2xl font-black text-primary">{formatPrice((offer?.birimFiyat ?? demand.urunFiyat ?? 0) * demand.miktar)}</p>
               <Button
                 size="sm"
@@ -4994,8 +5104,8 @@ function ChatPanel({
   }
 
   return (
-    <div className="grid min-h-[420px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border sm:min-h-[560px]">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+    <div className="grid min-h-[360px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border sm:min-h-[560px]">
+      <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-4">
         <div className="flex items-center gap-3">
           <div>
             <p className="font-black">{activeConversation?.userName ?? "Yeni görüşme"}</p>
@@ -5003,7 +5113,7 @@ function ChatPanel({
           </div>
         </div>
       </div>
-      <div className="space-y-3 overflow-y-auto bg-[#fbfcfa] p-4">
+      <div className="space-y-3 overflow-y-auto bg-[#fbfcfa] p-3 sm:p-4">
         {conversations.length > 0 ? (
           <div className="mb-3 flex flex-wrap gap-2">
             {conversations.map((conversation) => (
@@ -5065,7 +5175,7 @@ function AcceptedOffer({ demands, onNavigate }: { demands: DemandDto[]; onNaviga
 
   return (
     <div className="grid gap-4 md:grid-cols-[120px_1fr_auto]">
-      <div className="relative aspect-square overflow-hidden rounded-lg border border-border">
+      <div className="relative aspect-[1.7] overflow-hidden rounded-lg border border-border md:aspect-square">
         <Image src={demandImage(demand)} alt="" fill sizes="120px" className="object-cover" />
       </div>
       <div>
@@ -5074,7 +5184,7 @@ function AcceptedOffer({ demands, onNavigate }: { demands: DemandDto[]; onNaviga
         <p className="mt-3 font-bold">{offer?.saticiMagazaAdi ?? demand.saticiMagazaAdi}</p>
         <Badge className="mt-2" variant="green">Doğrulanmış Satıcı</Badge>
       </div>
-      <div className="min-w-44 border-t border-border pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+      <div className="border-t border-border pt-4 md:min-w-44 md:border-l md:border-t-0 md:pl-5 md:pt-0">
         <p className="text-sm text-muted-foreground">Teklif Tutarı</p>
         <p className="text-2xl font-black text-primary">{formatPrice((offer?.birimFiyat ?? demand.urunFiyat ?? 0) * demand.miktar)}</p>
         <Button className="mt-4 w-full" onClick={() => onNavigate("reviews")}>Puan ver</Button>
@@ -5106,14 +5216,14 @@ function MediaGrid({
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-black">{title}</h3>
           <p className="text-sm text-muted-foreground">
             {video ? "En fazla 3 video yükleyebilirsiniz." : "En fazla 10 görsel yükleyebilirsiniz."}
           </p>
         </div>
-        <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55">
+        <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-bold transition hover:border-primary/55 hover:bg-secondary/55 sm:w-auto">
           <UploadCloud aria-hidden />
           Medya yükle
           <input
@@ -5125,7 +5235,7 @@ function MediaGrid({
           />
         </label>
       </div>
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-5">
         {mediaItems.slice(0, video ? 3 : 10).map((item) => (
           <div key={item.id} className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
             {video ? (
@@ -5156,7 +5266,7 @@ function MediaGrid({
             <span className="line-clamp-3">{file.name}</span>
           </div>
         ))}
-        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input text-sm font-bold text-muted-foreground">
+        <label className="grid aspect-square cursor-pointer place-items-center rounded-lg border border-dashed border-input p-2 text-center text-sm font-bold text-muted-foreground">
           <Icon className="mb-2 size-7 text-muted-foreground" aria-hidden />
           {video ? "Video ekle" : "Görsel ekle"}
           <input
@@ -5195,8 +5305,8 @@ function CategoryEditor({
   }, [selected]);
 
   return (
-    <Card className="p-5">
-      <div className="mb-5 flex items-center justify-between">
+    <Card className="p-4 sm:p-5">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <h2 className="text-2xl font-black">{selected ? "Kategori düzenle" : "Yeni kategori"}</h2>
         <Button variant="ghost" size="icon" type="button" onClick={() => onSelectedIdChange("new")}>
           <X aria-hidden />
@@ -5234,7 +5344,7 @@ function CategoryEditor({
             className="min-h-44 w-full rounded-md border border-input px-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
           />
         </Field>
-        <div className="grid grid-cols-2 gap-3 pt-4">
+        <div className="grid gap-3 pt-4 sm:grid-cols-2">
           <Button type="button" variant="outline" onClick={() => onSelectedIdChange("new")}>
             İptal
           </Button>
@@ -5262,8 +5372,27 @@ function CategoryTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left text-sm">
+    <div className="space-y-3 md:space-y-0 md:overflow-x-auto">
+      <div className="space-y-3 md:hidden">
+        {categories.map((category) => (
+          <article key={category.id} className="rounded-lg border border-border bg-white p-3 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">ID {category.id}</p>
+            <p className="mt-1 line-clamp-2 font-black">{category.adi}</p>
+            <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{category.aciklama ?? "-"}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" type="button" onClick={() => onEdit(category.id)}>
+                <PenLine aria-hidden />
+                Düzenle
+              </Button>
+              <Button variant="outline" size="sm" type="button" className="border-red-300 text-red-600" onClick={() => onDelete(category.id)}>
+                <Trash2 aria-hidden />
+                Sil
+              </Button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <table className="hidden w-full min-w-[720px] text-left text-sm md:table">
         <thead className="bg-muted text-xs uppercase text-muted-foreground">
           <tr>
             <th className="px-3 py-3">ID</th>
@@ -5394,7 +5523,7 @@ function PreviewPanel({ title, children }: { title: string; children: ReactNode 
 
 function DemandMediaLine({ demand }: { demand: DemandDto }) {
   return (
-    <div className="grid grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
+    <div className="grid grid-cols-[48px_1fr] items-center gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0 sm:grid-cols-[52px_1fr_auto]">
       <div className="relative size-12 overflow-hidden rounded-md">
         <Image src={demandImage(demand)} alt="" fill sizes="52px" className="object-cover" />
       </div>
@@ -5403,7 +5532,7 @@ function DemandMediaLine({ demand }: { demand: DemandDto }) {
         <p className="text-sm text-muted-foreground">Miktar: {demand.miktar} kg</p>
         <p className="text-xs text-muted-foreground">{shortDate(demand.olusturmaTarihi)}</p>
       </div>
-      <Badge variant={demand.durum === "ACIK" ? "gold" : "outline"}>{demand.durum === "ACIK" ? "Yeni" : demand.durum}</Badge>
+      <Badge className="col-start-2 justify-self-start sm:col-start-auto sm:justify-self-auto" variant={demand.durum === "ACIK" ? "gold" : "outline"}>{demand.durum === "ACIK" ? "Yeni" : demand.durum}</Badge>
     </div>
   );
 }
@@ -5439,9 +5568,9 @@ function MiniMetric({
   tone?: "green" | "red" | "amber";
 }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-5">
+    <div className="rounded-lg border border-border bg-white p-4 sm:p-5">
       <Icon className={cn("size-7", tone === "red" ? "text-red-600" : tone === "amber" ? "text-amber-500" : "text-primary")} aria-hidden />
-      <p className="mt-4 text-3xl font-black">{value}</p>
+      <p className="mt-3 text-2xl font-black sm:mt-4 sm:text-3xl">{value}</p>
       <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
   );

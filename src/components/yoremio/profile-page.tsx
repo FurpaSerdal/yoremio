@@ -265,11 +265,11 @@ export function YoremioProfilePage() {
 
   return (
     <ProfileShell onLogout={logout}>
-      <main className="mx-auto max-w-[1360px] px-3 py-8 sm:px-5">
+      <main className="mx-auto max-w-[1360px] px-3 py-5 sm:px-5 sm:py-8">
         <Card className="overflow-hidden border-white/70 bg-white/94">
-          <div className="bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.12),rgba(255,255,255,0.98))] px-5 py-5 sm:px-6 sm:py-6">
-            <div className="flex flex-col gap-5 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
+          <div className="bg-[linear-gradient(135deg,rgba(10,106,68,0.1),rgba(231,163,33,0.12),rgba(255,255,255,0.98))] px-4 py-4 sm:px-6 sm:py-6">
+            <div className="flex flex-col gap-4 border-b border-border/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={hasRole(authUser, "SATICI") ? "green" : "plum"}>
                     <ShieldCheck className="size-3.5" aria-hidden />
@@ -277,7 +277,7 @@ export function YoremioProfilePage() {
                   </Badge>
                   <Badge variant="outline">Canlı oturum yönetimi</Badge>
                 </div>
-                <h1 className="mt-3 text-4xl font-black tracking-normal text-brand-brown sm:text-5xl">
+                <h1 className="mt-3 break-words text-3xl font-black tracking-normal text-brand-brown sm:text-5xl">
                   {name}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
@@ -288,7 +288,7 @@ export function YoremioProfilePage() {
                   {authUser?.email}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-3 min-[460px]:grid-cols-2 sm:flex sm:flex-wrap">
                 <ProfilePill
                   label="Durum"
                   value={
@@ -323,7 +323,7 @@ export function YoremioProfilePage() {
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-3 min-[420px]:grid-cols-2 sm:mt-6 xl:grid-cols-4">
           <ProfileStat icon={ShieldCheck} label="Email" value={authUser?.emailConfirmed ? "Doğrulandı" : "Bekliyor"} />
           <ProfileStat icon={UserRound} label="Telefon" value={phoneNumber ? "Kayıtlı" : "Eksik"} />
           <ProfileStat icon={MessageCircle} label="Görüşme" value={String(conversations.length)} />
@@ -335,8 +335,8 @@ export function YoremioProfilePage() {
         </div>
 
         {hasRole(authUser, "SATICI") ? (
-          <div className="mt-6 grid gap-5 lg:grid-cols-[430px_minmax(0,1fr)]">
-            <Card className="p-5 lg:sticky lg:top-24 lg:self-start">
+          <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,430px)_minmax(0,1fr)]">
+            <Card className="p-4 sm:p-5 lg:sticky lg:top-24 lg:self-start">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black text-brand-brown">Mağaza profili</h2>
@@ -435,9 +435,9 @@ function ProfileShell({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-[#fbfaf7]/96 shadow-[0_8px_24px_rgba(32,39,52,0.06)]">
-        <div className="mx-auto flex h-[76px] max-w-[1360px] items-center justify-between gap-3 px-3 sm:px-5">
-          <Link href="/">
-            <BrandLogo compact />
+        <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between gap-3 px-3 sm:h-[76px] sm:px-5">
+          <Link href="/" className="min-w-0">
+            <BrandLogo compact className="max-w-[145px] sm:max-w-none" />
           </Link>
           {onLogout ? (
             <Button variant="outline" onClick={onLogout} className="bg-white/90">
@@ -478,11 +478,11 @@ function ProfilePill({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-white/85 px-4 py-3 shadow-sm">
+    <div className="min-w-0 rounded-lg border border-border bg-white/85 px-3 py-3 shadow-sm sm:px-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-brand-brown">{value}</p>
+      <p className="mt-1 break-words text-sm font-black text-brand-brown">{value}</p>
     </div>
   );
 }
@@ -498,20 +498,20 @@ function ProfileActivity({
 }) {
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-[#fbfaf7] px-5 py-4">
+      <div className="flex items-center justify-between border-b border-border bg-[#fbfaf7] px-4 py-3 sm:px-5 sm:py-4">
         <h2 className="font-black text-brand-brown">{title}</h2>
         <Users className="size-5 text-primary" aria-hidden />
       </div>
       {rows.length > 0 ? (
         <div className="divide-y divide-border">
           {rows.map((row) => (
-            <p key={row} className="px-5 py-4 text-sm font-semibold">
+            <p key={row} className="break-words px-4 py-3 text-sm font-semibold sm:px-5 sm:py-4">
               {row}
             </p>
           ))}
         </div>
       ) : (
-        <div className="p-6 text-center">
+        <div className="p-5 text-center sm:p-6">
           <Inbox className="mx-auto size-8 text-muted-foreground" aria-hidden />
           <p className="mt-3 font-bold">{emptyTitle}</p>
           <p className="mt-1 text-sm text-muted-foreground">
