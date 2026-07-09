@@ -309,7 +309,7 @@ export function YoremioProfilePage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ProfileStat icon={ShieldCheck} label="Email" value={authUser?.emailConfirmed ? "Doğrulandı" : "Bekliyor"} />
-          <ProfileStat icon={UserRound} label="Telefon" value={authUser?.phoneNumberConfirmed ? "Doğrulandı" : "Bekliyor"} />
+          <ProfileStat icon={UserRound} label="Telefon" value={phoneNumber ? "Kayıtlı" : "Eksik"} />
           <ProfileStat icon={MessageCircle} label="Görüşme" value={String(conversations.length)} />
           {hasRole(authUser, "SATICI") ? (
             <ProfileStat icon={PackageCheck} label="Ürün" value={String(sellerProducts.length)} />

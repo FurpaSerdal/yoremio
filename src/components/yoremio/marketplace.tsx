@@ -2280,7 +2280,6 @@ function LoginScreen({
         role: login.role,
         roles: login.roles,
         emailConfirmed: false,
-        phoneNumberConfirmed: false,
       };
 
       onAuthenticated(fullUser);
@@ -2789,9 +2788,7 @@ function VerificationScreen({
   showToast: (message: string, kind: ToastKind) => void;
 }) {
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [emailCode, setEmailCode] = useState("");
-  const [phoneCode, setPhoneCode] = useState("");
   const [status, setStatus] = useState<"idle" | "loading">("idle");
 
   const devVerificationUrl =
@@ -2800,11 +2797,10 @@ function VerificationScreen({
       ? `${API_BASE_URL}${bootstrap.verification.devVerificationInboxUrl}`
       : null;
 
-  const verify = async (kind: "email" | "phone") => {
+  const verify = async () => {
     setStatus("loading");
     try {
-      if (kind === "email") await yoremioApi.confirmEmail(email.trim(), emailCode.trim());
-      else await yoremioApi.confirmPhone(email.trim(), phoneCode.trim());
+      await yoremioApi.confirmEmail(email.trim(), emailCode.trim());
       showToast("Doğrulama tamamlandı.", "success");
     } catch (error) {
       showToast(apiErrorMessage(error), "error");
@@ -2848,22 +2844,18 @@ function VerificationScreen({
         <div className="text-center">
           <h1 className="text-4xl font-black">Hesabını doğrula</h1>
           <p className="mt-2 text-muted-foreground">
-            Email veya telefonuna gönderilen kodu gir.
+            Email adresine gönderilen kodu gir.
           </p>
         </div>
         <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className="overflow-hidden rounded-lg border border-border bg-white shadow-[0_12px_36px_rgba(16,24,40,0.08)]">
-            <div className="grid border-b border-border md:grid-cols-2">
+            <div className="border-b border-border">
               <div className="border-b-2 border-primary px-6 py-4 text-center font-black">
                 <Mail className="mr-2 inline size-5 text-primary" aria-hidden />
                 Email doğrulama
               </div>
-              <div className="px-6 py-4 text-center font-black text-muted-foreground">
-                <Phone className="mr-2 inline size-5" aria-hidden />
-                Telefon doğrulama
-              </div>
             </div>
-            <div className="grid gap-0 md:grid-cols-2">
+            <div>
               <VerificationColumn
                 icon={Mail}
                 title="Email doğrulama"
@@ -2873,20 +2865,7 @@ function VerificationScreen({
                 onContactChange={setEmail}
                 code={emailCode}
                 onCodeChange={setEmailCode}
-                onSubmit={() => verify("email")}
-                onResend={resend}
-                disabled={status === "loading"}
-              />
-              <VerificationColumn
-                icon={Phone}
-                title="Telefon doğrulama"
-                description="Telefonuna gönderilen 6 haneli kodu gir."
-                contactLabel="Telefon numarası"
-                contactValue={phone}
-                onContactChange={setPhone}
-                code={phoneCode}
-                onCodeChange={setPhoneCode}
-                onSubmit={() => verify("phone")}
+                onSubmit={verify}
                 onResend={resend}
                 disabled={status === "loading"}
               />
@@ -2894,7 +2873,7 @@ function VerificationScreen({
           </div>
           <div className="space-y-4">
             <StatusBox kind="warning" title="Bekliyor" text="Email doğrulama kodu girilmeli." />
-            <StatusBox kind="success" title="Doğrulandı" text="Telefon doğrulaması tamamlandı." />
+            <StatusBox kind="success" title="Email" text="Doğrulama tamamlanınca satıcı hesabı aktif olur." />
             <Card className="p-5">
               <ShieldCheck className="size-9 text-primary" aria-hidden />
               <h3 className="mt-4 font-black">Hesabını doğrulamak güvenliği artırır</h3>

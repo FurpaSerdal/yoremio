@@ -105,7 +105,6 @@ export function AuthDialog({
           role: login.role,
           roles: login.roles,
           emailConfirmed: false,
-          phoneNumberConfirmed: false,
         };
 
         try {
@@ -139,7 +138,7 @@ export function AuthDialog({
           ilce,
         });
         setMessage(
-          "Satıcı kaydı oluşturuldu. Email ve telefon doğrulaması tamamlanınca giriş yapabilirsin.",
+          "Satıcı kaydı oluşturuldu. Email doğrulaması tamamlanınca giriş yapabilirsin.",
         );
         setMode("login");
         setPassword("");
@@ -193,7 +192,7 @@ export function AuthDialog({
         ? "E-posta ve şifre ile alıcı hesabını oluştur."
         : mode === "seller"
           ? "Mağaza, vergi, adres ve iletişim bilgilerini gir."
-          : "E-posta veya telefon doğrulama kodunu gir.";
+          : "E-posta doğrulama kodunu gir.";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-white">

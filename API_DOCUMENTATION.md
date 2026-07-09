@@ -52,7 +52,7 @@ Startup:
 Production notları:
 
 - `Jwt:Key` production'da appsettings içindeki varsayılan secret olamaz.
-- `ConnectionStrings:DefaultConnection`, JWT, SMTP ve SMS bilgileri production'da environment/secret manager üzerinden verilmelidir.
+- `ConnectionStrings:DefaultConnection`, JWT ve SMTP bilgileri production'da environment/secret manager üzerinden verilmelidir.
 - Development seed ve mock ayarları production için açılmamalıdır.
 
 ## 3. Frontend İçin Temel Kurallar
@@ -100,7 +100,6 @@ Response `data`:
   },
   "verification": {
     "requireConfirmedEmailForSellerLogin": true,
-    "requireConfirmedPhoneForSellerLogin": true,
     "devVerificationInboxUrl": "/dev/verification"
   },
   "uploads": {
@@ -357,8 +356,7 @@ Not: Kategori oluşturma/güncelleme/silme endpointleri `ADMIN` rolü ister. Sat
     "phoneNumber": "+905321000001",
     "role": "ALICI",
     "roles": ["ALICI"],
-    "emailConfirmed": true,
-    "phoneNumberConfirmed": true
+    "emailConfirmed": true
   },
   "traceId": "..."
 }
@@ -560,7 +558,7 @@ Response:
 }
 ```
 
-Dogrulama mesaji gonderimi SMTP/SMS kaynakli basarisiz olursa kayit geri alinmaz; response yine `success=true` doner:
+Dogrulama mesaji gonderimi SMTP kaynakli basarisiz olursa kayit geri alinmaz; response yine `success=true` doner:
 
 ```json
 {
@@ -576,12 +574,11 @@ Dogrulama mesaji gonderimi SMTP/SMS kaynakli basarisiz olursa kayit geri alinmaz
 
 Mantık:
 
-- Satıcı kaydı sonrası email/telefon doğrulama akışı config'e bağlıdır.
-- `Verification:RequireConfirmedEmailForSellerLogin=true` veya `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satıcı profili `AktifMi=false` başlar.
-- Zorunlu doğrulamalar tamamlanınca satıcı aktif hale gelir.
-- Gerçek email/SMS servisi yoksa bu flag'ler `false` yapılır; satıcı kayıt sonrası direkt aktif/login olabilir.
+- Satıcı kaydı sonrası email doğrulama akışı config'e bağlıdır.
+- `Verification:RequireConfirmedEmailForSellerLogin=true` ise satıcı profili `AktifMi=false` başlar.
+- Email doğrulaması tamamlanınca satıcı aktif hale gelir.
+- Gerçek email servisi yoksa bu flag `false` yapılır; satıcı kayıt sonrası direkt aktif/login olabilir.
 - Config `Verification:RequireConfirmedEmailForSellerLogin=true` ise satıcı login için email doğrulaması gerekir.
-- Config `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satıcı login için telefon doğrulaması da gerekir.
 
 ### 6.2 Alıcı Kaydı
 
@@ -666,8 +663,7 @@ Response `data`:
   "phoneNumber": "+905551112233",
   "role": "SATICI",
   "roles": ["SATICI", "ALICI"],
-  "emailConfirmed": true,
-  "phoneNumberConfirmed": true
+  "emailConfirmed": true
 }
 ```
 
@@ -735,57 +731,7 @@ UI notu:
 - Daha iyi UX için frontend bir doğrulama sayfası açıp query parametrelerini backend'e iletebilir.
 - Bu GET endpointi kullanıcı formu için değil, email linkinden tıklama senaryosu içindir.
 
-### 6.6 Telefon Doğrulama
-
-UI kod formu için ana endpoint:
-
-`POST /api/Auth/confirm-phone`
-
-Auth: Yok
-
-Body:
-
-```json
-{
-  "email": "seller@example.com",
-  "code": "123456"
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Telefon basariyla dogrulandi.",
-  "data": null,
-  "traceId": "..."
-}
-```
-
-UI notu:
-
-- Kullanıcıya `userId` sorulmaz.
-- SMS kodu girilirken email bilgisi kayıt formundan veya doğrulama ekran state'inden taşınmalıdır.
-
-Direkt link fallback endpointi:
-
-`GET /api/Auth/confirm-phone?userId={userId}&token={token}`
-
-Auth: Yok
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Telefon başarıyla doğrulandı.",
-  "data": null,
-  "traceId": "..."
-}
-```
-
-### 6.7 Dogrulama Mesajini Yeniden Gonder
+### 6.6 Dogrulama Mesajini Yeniden Gonder
 
 `POST /api/Auth/resend-verification`
 
@@ -793,9 +739,9 @@ Auth: Yok
 
 Kullanim:
 
-- Satici kayit sonrasi kullanici email/SMS mesajini bulamazsa.
-- Login denemesinde "email dogrulanmamis" veya "telefon dogrulanmamis" hatasi alirsa.
-- Development ortaminda mock kutuya yeni email/SMS mesajlari dusurmek icin.
+- Satici kayit sonrasi kullanici email dogrulama mesajini bulamazsa.
+- Login denemesinde "email dogrulanmamis" hatasi alirsa.
+- Development ortaminda mock kutuya yeni email mesajlari dusurmek icin.
 
 Body:
 
@@ -820,8 +766,8 @@ Guvenlik davranisi:
 
 - Email sistemde yoksa veya kullanici satici degilse yine basarili gibi cevap doner.
 - Bu davranis hesap/email varligini disariya sizdirmamak icindir.
-- Email ve telefon zaten dogrulanmissa yeni mesaj gonderilmez, yine basarili cevap doner.
-- Eksik olan dogrulamalar icin yeniden mesaj uretilir. Ornek: email dogrulanmis ama telefon dogrulanmamis ise sadece SMS uretilir.
+- Email zaten dogrulanmissa yeni mesaj gonderilmez, yine basarili cevap doner.
+- Eksik email dogrulamasi icin yeniden mesaj uretilir.
 
 UI onerisi:
 
@@ -829,14 +775,13 @@ UI onerisi:
 - Login `401` donup mesaj dogrulama eksigine isaret ediyorsa ayni butonu login ekraninda da gosterin.
 - Development modunda buton sonrasi `/dev/verification` ekranina link verilebilir.
 
-### 6.8 Development Mock Dogrulama Kutusu
+### 6.7 Development Mock Dogrulama Kutusu
 
-Bu proje simdilik ucretli SMS/email servislerine bagimli kalmadan gelistirilebilsin diye Development ortaminda mock dogrulama kutusu sunar.
+Bu proje gercek SMTP ayari olmadan gelistirilebilsin diye Development ortaminda mock email dogrulama kutusu sunar.
 
 Ne zaman kullanilir:
 
 - `Email:Smtp:UseMockSender=true`
-- `Sms:Twilio:UseMockSender=true`
 - `ASPNETCORE_ENVIRONMENT=Development`
 
 UI sayfasi:
@@ -849,8 +794,8 @@ Ortam: Sadece Development
 
 Davranis:
 
-- Tarayicida mock email ve SMS mesajlarini listeler.
-- Satici kaydi sonrasi uretilen email dogrulama linki ve telefon dogrulama kodu burada gorunur.
+- Tarayicida mock email mesajlarini listeler.
+- Satici kaydi sonrasi uretilen email dogrulama linki burada gorunur.
 - Sayfa 5 saniyede bir otomatik yenilenir.
 - Mesajlar uygulama belleğinde tutulur; API yeniden baslatilirsa temizlenir.
 - Production ortaminda `404 Not Found` doner.
@@ -870,14 +815,6 @@ Response `data`:
     "subject": "Yoremio email dogrulama",
     "body": "Yoremio email dogrulama kodunuz: 123456 ... <a href='http://localhost:5089/api/auth/confirm-email?...'>Email adresimi dogrula</a>",
     "createdAtUtc": "2026-06-29T12:30:00Z"
-  },
-  {
-    "id": "3811d71a-29c4-44b8-98e7-1698de1696d4",
-    "channel": "sms",
-    "to": "+905551112233",
-    "subject": null,
-    "body": "Yoremio telefon dogrulama kodunuz: 123456. Dogrulama baglantisi: http://localhost:5089/api/auth/confirm-phone?...",
-    "createdAtUtc": "2026-06-29T12:30:01Z"
   }
 ]
 ```
@@ -900,16 +837,15 @@ Response:
 UI akisi:
 
 1. Satici kayit formu `POST /api/Auth/register/satici` cagirir.
-2. Basarili response sonrasi UI kullaniciya "Email ve telefon dogrulama gerekiyor" mesaji gosterir.
+2. Basarili response sonrasi UI kullaniciya "Email dogrulama gerekiyor" mesaji gosterir.
 3. Development modunda gelistirici veya test kullanicisi `/dev/verification` ekranini acar.
 4. Email mesajindaki kod `POST /api/Auth/confirm-email` ile `email + code` olarak gonderilir.
-5. SMS mesajindaki kod `POST /api/Auth/confirm-phone` ile `email + code` olarak gonderilir.
-6. Linke tiklama senaryosunda eski GET endpointleri de calisir, ama UI formunda `userId` istenmez.
-7. Zorunlu dogrulamalar tamamlaninca satici profili aktif olur.
+5. Linke tiklama senaryosunda GET email endpointi de calisir, ama UI formunda `userId` istenmez.
+6. Email dogrulamasi tamamlaninca satici profili aktif olur.
 
 Gercek servis notu:
 
-- Smtp ve Twilio ayarlari doldurulursa mock kapatilip gercek gonderim yapilabilir.
+- SMTP ayarlari doldurulursa mock kapatilip gercek gonderim yapilabilir.
 - Ucretsiz/deneme servislerin limitleri zamanla degisebildigi icin production karari verilmeden once guncel kota ve KVKK/veri isleme kosullari ayrica kontrol edilmelidir.
 - Simdilik en maliyetsiz ve stabil gelistirme yolu bu mock dogrulama kutusudur.
 
@@ -2261,7 +2197,7 @@ Kapsam icinde olanlar:
 - Urun listeleme, arama, filtreleme, siralama ve oneriler.
 - Favori, talep, teklif, yorum, puan.
 - REST + SignalR tabanli chat.
-- Development icin mock email/SMS dogrulama kutusu.
+- Development icin mock email dogrulama kutusu.
 
 Kapsam disinda olanlar:
 
@@ -2281,7 +2217,7 @@ Solution katmanlari:
 | API | `API/` | Controller, middleware, auth pipeline, CORS, rate limit, health, SignalR map. |
 | Application | `Application/` | DTO, servis arayuzleri, validation attribute'lari. |
 | Domain | `Domain/` | Entity, role/durum sabitleri, repository arayuzleri, query modelleri. |
-| Infrastructure | `Infrastructure/` | EF Core context, repository implementasyonlari, servis implementasyonlari, email/SMS/dosya/chat altyapisi. |
+| Infrastructure | `Infrastructure/` | EF Core context, repository implementasyonlari, servis implementasyonlari, email/dosya/chat altyapisi. |
 | Tests | `Tests/` | Console test runner ve chat e2e runner. |
 
 Backend request akisi:
@@ -2343,9 +2279,9 @@ Satici kaydi:
 2. Identity kullanicisi olusturulur.
 3. `SaticiProfili` olusturulur ve `AktifMi=false` baslar.
 4. Kullaniciya `SATICI` ve `ALICI` rolleri verilir.
-5. Email dogrulama kodu/linki ve telefon dogrulama kodu/linki uretilir.
+5. Email dogrulama kodu/linki uretilir.
 6. Mock sender aciksa mesajlar `/dev/verification` kutusuna duser.
-7. Email ve telefon dogrulaninca satici profili aktif olur.
+7. Email dogrulaninca satici profili aktif olur.
 
 Alici kaydi:
 
@@ -2359,14 +2295,13 @@ Login:
 1. UI `POST /api/Auth/login` cagirir.
 2. Email/password kontrol edilir.
 3. `Verification:RequireConfirmedEmailForSellerLogin=true` ise satici email dogrulamasi zorunludur.
-4. `Verification:RequireConfirmedPhoneForSellerLogin=true` ise satici telefon dogrulamasi da zorunludur.
-5. JWT icine user id, email, username ve tum roller yazilir.
+4. JWT icine user id, email, username ve tum roller yazilir.
 
 Yeniden dogrulama:
 
 - `POST /api/Auth/resend-verification` email alir.
 - Kullanici yoksa veya satici degilse yine basarili cevap doner.
-- Eksik dogrulamalar icin yeniden email/SMS uretilir.
+- Eksik email dogrulamasi icin yeniden email uretilir.
 - Bu davranis hesap varligini disari sizdirmemek icindir.
 
 ### App Bootstrap Lifecycle
@@ -2576,9 +2511,9 @@ Production icin zorunlu kurallar:
 - `Startup:SeedSampleData=false` olmali.
 - Migration uygulamasi pipeline veya kontrollu startup ayariyla yonetilmeli.
 - Local `wwwroot` uploadlari kalici disk olmayan ortamlarda kullanilmamali; Cloudinary acilmali.
-- SMTP/SMS gercek servis ayarlari secret olarak verilmeli.
-- Gercek SMTP/SMS baglanana kadar production demo ortaminda `Verification:RequireConfirmedEmailForSellerLogin=false` ve `Verification:RequireConfirmedPhoneForSellerLogin=false` kullanilabilir.
-- Gercek SMTP/SMS baglandiginda `Email:Smtp:UseMockSender=false`, `Sms:Twilio:UseMockSender=false` ve iki dogrulama flag'i `true` yapilmalidir.
+- SMTP gercek servis ayarlari secret olarak verilmeli.
+- Gercek SMTP baglanana kadar production demo ortaminda `Verification:RequireConfirmedEmailForSellerLogin=false` kullanilabilir.
+- Gercek SMTP baglandiginda `Email:Smtp:UseMockSender=false` ve `Verification:RequireConfirmedEmailForSellerLogin=true` yapilmalidir.
 - CORS sadece gercek frontend originlerini icermeli.
 
 ### Frontend Screen Contract
@@ -2646,21 +2581,19 @@ Bu bolum UI ve deployment tarafinin yeni production kurallarini tek yerden gorme
 | `POST` | `/api/Auth/login` | Hayır | - | JWT login |
 | `GET` | `/api/Auth/me` | Evet | Any | Aktif kullanıcı |
 | `POST` | `/api/Auth/confirm-email` | Hayır | - | Email kod doğrulama (`email + code`) |
-| `POST` | `/api/Auth/confirm-phone` | Hayır | - | Telefon kod doğrulama (`email + code`) |
 | `GET` | `/api/Auth/confirm-email` | Hayır | - | Email link fallback doğrulama |
-| `GET` | `/api/Auth/confirm-phone` | Hayır | - | Telefon link fallback doğrulama |
 
 Auth ek endpoint:
 
 | Method | Endpoint | Auth | Rol | Aciklama |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/Auth/resend-verification` | Hayir | - | Satici email/SMS dogrulama mesajini yeniden gonder |
+| `POST` | `/api/Auth/resend-verification` | Hayir | - | Satici email dogrulama mesajini yeniden gonder |
 
 ### Development Verification
 
 | Method | Endpoint | Auth | Rol | Aciklama |
 | --- | --- | --- | --- | --- |
-| `GET` | `/dev/verification` | Hayir | - | Development mock email/SMS kutusu HTML arayuzu |
+| `GET` | `/dev/verification` | Hayir | - | Development mock email kutusu HTML arayuzu |
 | `GET` | `/dev/verification/messages` | Hayir | - | Mock dogrulama mesajlari JSON listesi |
 | `DELETE` | `/dev/verification/messages` | Hayir | - | Mock dogrulama kutusunu temizle |
 
@@ -2775,7 +2708,7 @@ Frontend tarafında özellikle unutulmaması gerekenler:
 - Upload endpointlerinde JSON değil `multipart/form-data` kullanın.
 - Upload alan adlarını backend DTO adlarıyla gönderin: `Adi`, `Fiyat`, `Resimler`, `Videolar`.
 - Media URL'leri local/demo için relative, Cloudinary için absolute gelebilir; `http` ile başlıyorsa direkt kullanın, değilse API base URL ile birleştirin.
-- Satıcı login için email + telefon doğrulama gereksinimini UI metninde açıklayın.
+- Satıcı login için email doğrulama gereksinimini UI metninde açıklayın.
 - Chat'te REST geçmiş + SignalR canlı eventleri birlikte kullanılmalıdır.
 - Puan sonrası gerçek ortalama için ürün detayını veya ortalama endpointini refresh edin.
 - Talep kabulü ödeme/sipariş değildir; UI metinlerinde "anlaşıldı" olarak konumlandırın.

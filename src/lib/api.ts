@@ -22,7 +22,6 @@ export type SessionUser = {
   role: UserRole;
   roles?: UserRole[];
   emailConfirmed: boolean;
-  phoneNumberConfirmed: boolean;
 };
 
 export type LoginResponse = {
@@ -45,7 +44,6 @@ export type AppFeatureFlags = {
 
 export type AppVerificationConfig = {
   requireConfirmedEmailForSellerLogin: boolean;
-  requireConfirmedPhoneForSellerLogin: boolean;
   devVerificationInboxUrl?: string | null;
 };
 
@@ -533,18 +531,9 @@ export const yoremioApi = {
       method: "POST",
       body: JSON.stringify({ email, code }),
     }),
-  confirmPhone: (email: string, code: string) =>
-    request<null>("/api/Auth/confirm-phone", {
-      method: "POST",
-      body: JSON.stringify({ email, code }),
-    }),
   confirmEmailLink: (userId: string, token: string) =>
     request<null>(
       `/api/Auth/confirm-email?${queryString({ userId, token })}`,
-    ),
-  confirmPhoneLink: (userId: string, token: string) =>
-    request<null>(
-      `/api/Auth/confirm-phone?${queryString({ userId, token })}`,
     ),
   resendVerification: (email: string) =>
     request<null>("/api/Auth/resend-verification", {
