@@ -121,7 +121,7 @@ export function AuthDialog({
 
       if (mode === "buyer") {
         await yoremioApi.registerBuyer({ email: email.trim(), password });
-        setMessage("Alıcı kaydı oluşturuldu. Doğrulama linkini kontrol et.");
+        setMessage("Alıcı kaydı oluşturuldu. Giriş yapabilirsin.");
         setMode("login");
         setPassword("");
       }

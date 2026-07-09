@@ -1225,7 +1225,7 @@ function HomeScreen({
       />
 
       <section className="relative border-b border-border bg-white">
-        <div className="relative h-[320px] overflow-hidden sm:h-[390px] lg:h-[420px]">
+        <div className="relative h-[260px] overflow-hidden sm:h-[390px] lg:h-[420px]">
           <Image
             src="/hero-market-1600.jpg"
             alt=""
@@ -1236,12 +1236,12 @@ function HomeScreen({
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,25,12,0.18),rgba(8,25,12,0.02)_38%,rgba(8,25,12,0.16))]" />
           <div className="absolute inset-0 grid place-items-center px-4 pb-12 text-center">
-            <h1 className="font-serif text-5xl font-black leading-none text-white drop-shadow-[0_5px_20px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
+            <h1 className="font-serif text-4xl font-black leading-none text-white drop-shadow-[0_5px_20px_rgba(0,0,0,0.42)] sm:text-6xl lg:text-7xl">
               Yerel ürünler
             </h1>
           </div>
         </div>
-        <div className="relative z-10 mx-auto -mt-14 max-w-5xl px-4 pb-8">
+        <div className="relative z-10 mx-auto -mt-10 max-w-5xl px-3 pb-6 sm:-mt-14 sm:px-4 sm:pb-8">
           <CategoryDock
             categories={categories}
             activeId={categoryId}
@@ -1251,7 +1251,7 @@ function HomeScreen({
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1520px] px-4 py-7 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-[1520px] px-3 py-5 sm:px-6 sm:py-7 lg:px-8">
         {marketError ? (
           <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
             {marketError}
@@ -1311,9 +1311,9 @@ function PublicHeader({
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/96 backdrop-blur">
-      <div className="grid min-h-20 grid-cols-[auto_1fr_auto] items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:min-h-20 sm:gap-4 sm:px-6 lg:grid-cols-[auto_1fr_auto] lg:px-8">
         <button type="button" onClick={() => onNavigate("home")} className="min-w-0">
-          <BrandLogo className="min-w-[170px]" />
+          <BrandLogo className="max-w-[150px] sm:max-w-none sm:min-w-[170px]" />
         </button>
 
         <div className="hidden min-w-0 items-center gap-8 lg:flex">
@@ -1347,7 +1347,7 @@ function PublicHeader({
             icon={UserRound}
             onClick={() => onNavigate(dashboardScreenFor(authUser))}
           />
-          <IconButton label="Favoriler" icon={Heart} onClick={() => onNavigate(buyerScreenFor(authUser))} />
+          <IconButton className="hidden min-[390px]:grid" label="Favoriler" icon={Heart} onClick={() => onNavigate(buyerScreenFor(authUser))} />
           <IconButton
             label="Bildirimler"
             icon={Bell}
@@ -1355,7 +1355,7 @@ function PublicHeader({
             onClick={() => onNavigate(authUser ? "states" : "login")}
           />
           {authUser ? (
-            <Button variant="ghost" size="icon" title="Çıkış yap" onClick={onLogout}>
+            <Button variant="ghost" size="icon" title="Çıkış yap" className="hidden sm:inline-flex" onClick={onLogout}>
               <LogOut aria-hidden />
             </Button>
           ) : (
@@ -1365,7 +1365,7 @@ function PublicHeader({
           )}
         </div>
       </div>
-      <form className="border-t border-border px-4 py-3 lg:hidden" onSubmit={handleSearch}>
+      <form className="border-t border-border px-3 py-3 sm:px-4 lg:hidden" onSubmit={handleSearch}>
         <label className="relative block">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1394,8 +1394,8 @@ function CategoryDock({
   const icons = [Leaf, Package, Tag, Star, ShieldCheck, Store];
 
   return (
-    <div className="rounded-lg border border-border bg-white px-4 py-4 shadow-[0_18px_42px_rgba(16,24,40,0.14)]">
-      <div className="scroll-shelf flex gap-4 overflow-x-auto">
+    <div className="rounded-lg border border-border bg-white px-3 py-3 shadow-[0_18px_42px_rgba(16,24,40,0.14)] sm:px-4 sm:py-4">
+      <div className="scroll-shelf flex gap-2 overflow-x-auto sm:gap-4">
         <CategoryPill
           active={activeId === "all"}
           icon={Leaf}
@@ -1436,7 +1436,7 @@ function CategoryPill({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-[126px] shrink-0 flex-col items-center gap-2 rounded-lg px-3 py-2 text-center transition hover:bg-secondary"
+      className="flex min-w-[104px] shrink-0 flex-col items-center gap-2 rounded-lg px-2 py-2 text-center transition hover:bg-secondary sm:min-w-[126px] sm:px-3"
     >
       <span
         className={cn(
@@ -1704,9 +1704,9 @@ function DiscoveryScreen({
   return (
     <main className="min-h-screen bg-white text-foreground">
       <header className="sticky top-0 z-40 border-b border-border bg-white/96 backdrop-blur">
-        <div className="grid min-h-[72px] grid-cols-[auto_1fr_auto] items-center gap-4 px-4 sm:px-6">
-          <button type="button" onClick={() => onNavigate("home")}>
-            <BrandLogo compact className="min-w-[170px]" />
+        <div className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:min-h-[72px] sm:gap-4 sm:px-6 lg:grid-cols-[auto_1fr_auto]">
+          <button type="button" onClick={() => onNavigate("home")} className="min-w-0">
+            <BrandLogo compact className="max-w-[145px] sm:max-w-none sm:min-w-[170px]" />
           </button>
           <div className="hidden min-w-0 items-center gap-5 lg:flex">
             <Button onClick={() => onNavigate("discover")} className="h-12 px-7">
@@ -1742,6 +1742,17 @@ function DiscoveryScreen({
             />
           </div>
         </div>
+        <form className="border-t border-border px-3 py-3 lg:hidden" onSubmit={handleSearch}>
+          <label className="relative block">
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ürün, kategori veya satıcı ara..."
+              className="h-11 rounded-lg pl-4 pr-11"
+            />
+            <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          </label>
+        </form>
       </header>
 
       <div className="grid min-h-[calc(100vh-73px)] lg:grid-cols-[300px_minmax(0,1fr)_minmax(380px,43vw)]">
@@ -1769,7 +1780,7 @@ function DiscoveryScreen({
           }}
         />
 
-        <section className="min-w-0 border-r border-border bg-[#fbfcfa] p-4 sm:p-5">
+        <section className="min-w-0 border-border bg-[#fbfcfa] p-3 sm:p-5 lg:border-r">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-muted-foreground">
@@ -1781,11 +1792,11 @@ function DiscoveryScreen({
                 </h1>
               ) : null}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <select
                 value={sort}
                 onChange={(event) => onSortChange(event.target.value)}
-                className="h-10 rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none"
+                className="h-10 min-w-0 flex-1 rounded-md border border-input bg-white px-3 text-sm font-semibold outline-none sm:flex-none"
               >
                 {productSorts.map((item) => (
                   <option key={item} value={item}>
@@ -1855,7 +1866,7 @@ function DiscoveryScreen({
           <PaginationBar page={page} totalPages={productsPage.totalPages} onPageChange={onPageChange} />
         </section>
 
-        <aside className="min-w-0 bg-white p-4 sm:p-5">
+        <aside className="min-w-0 bg-white p-3 sm:p-5">
           {selectedProduct ? (
             <ProductDetailPanel
               product={selectedProduct}
@@ -1911,6 +1922,7 @@ function DiscoveryFilters({
   onStockChange: (value: boolean) => void;
   onClear: () => void;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const hasActiveFilters =
     categoryId !== "all" ||
     Boolean(cityFilter.trim()) ||
@@ -1920,12 +1932,25 @@ function DiscoveryFilters({
     inStockOnly;
 
   return (
-    <aside className="border-r border-border bg-white p-4 sm:p-5">
-      <div className="flex items-center justify-between border-b border-border pb-4">
+    <aside className="border-b border-border bg-white p-3 sm:p-5 lg:border-b-0 lg:border-r">
+      <div className="flex items-center justify-between border-b border-border pb-3 sm:pb-4">
         <h2 className="text-lg font-black">Filtreler</h2>
-        <Filter className="size-5 text-muted-foreground" aria-hidden />
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={filtersOpen ? "secondary" : "outline"}
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setFiltersOpen((current) => !current)}
+          >
+            <Filter aria-hidden />
+            {filtersOpen ? "Kapat" : hasActiveFilters ? "Aktif filtreler" : "Filtrele"}
+          </Button>
+          <Filter className="hidden size-5 text-muted-foreground lg:block" aria-hidden />
+        </div>
       </div>
 
+      <div className={cn("lg:block", !filtersOpen && "hidden")}>
       <FilterGroup title="Kategori">
         <FilterButton active={categoryId === "all"} onClick={() => onCategoryChange("all")}>
           Tüm Kategoriler
@@ -2019,6 +2044,17 @@ function DiscoveryFilters({
       <Button type="button" variant="outline" className="mt-5 w-full" disabled={!hasActiveFilters} onClick={onClear}>
         Filtreleri temizle
       </Button>
+      </div>
+
+      {!filtersOpen && hasActiveFilters ? (
+        <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
+          {categoryId !== "all" ? <Badge variant="green">Kategori</Badge> : null}
+          {cityFilter.trim() ? <Badge variant="green">Şehir</Badge> : null}
+          {minPrice || maxPrice ? <Badge variant="green">Fiyat</Badge> : null}
+          {minRating ? <Badge variant="green">Puan</Badge> : null}
+          {inStockOnly ? <Badge variant="green">Stokta</Badge> : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
@@ -2168,7 +2204,7 @@ function ProductDetailPanel({
   }, [product.id]);
 
   return (
-    <div className="sticky top-[92px] space-y-5">
+    <div className="space-y-4 lg:sticky lg:top-[92px] lg:space-y-5">
       <div className="relative aspect-[1.44] overflow-hidden rounded-lg bg-muted">
         <Image
           src={activeGallerySrc}
@@ -2237,12 +2273,12 @@ function ProductDetailPanel({
       </div>
 
       <div>
-        <h1 className="text-3xl font-black tracking-normal">{product.adi}</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
+        <h1 className="text-2xl font-black tracking-normal sm:text-3xl">{product.adi}</h1>
+        <p className="mt-2 text-base text-muted-foreground sm:text-lg">
           {product.kategoriAdi ?? "Yerel ürün"} · {product.stokMiktari > 0 ? "Stokta var" : "Stok bekliyor"}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="text-3xl font-black text-primary">{formatPrice(product.fiyat)}</span>
+          <span className="text-2xl font-black text-primary sm:text-3xl">{formatPrice(product.fiyat)}</span>
           <Badge variant="green">{product.stokMiktari > 0 ? "Stokta var" : "Stok bekliyor"}</Badge>
         </div>
         <button type="button" onClick={onReviews} className="mt-3 flex items-center gap-2 text-sm font-bold">
@@ -2255,7 +2291,7 @@ function ProductDetailPanel({
       </div>
 
       <div className="rounded-lg border border-border bg-white p-4 shadow-[0_8px_20px_rgba(16,24,40,0.06)]">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <div className="relative size-16 overflow-hidden rounded-full border border-border bg-muted">
             <Image src={productImage(product)} alt="" fill sizes="64px" className="object-cover" />
           </div>
@@ -2383,11 +2419,11 @@ function LoginScreen({
 
   return (
     <main className="min-h-screen bg-white">
-      <div className="grid min-h-[calc(100vh-120px)] lg:grid-cols-[minmax(480px,48vw)_1fr]">
-        <section className="flex items-center justify-center p-5 sm:p-8">
+      <div className="grid min-h-[calc(100vh-96px)] lg:min-h-[calc(100vh-120px)] lg:grid-cols-[minmax(480px,48vw)_1fr]">
+        <section className="flex items-center justify-center p-3 sm:p-8">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-[720px] rounded-lg border border-border bg-white px-7 py-9 shadow-[0_18px_50px_rgba(16,24,40,0.12)] sm:px-14"
+            className="w-full max-w-[720px] rounded-lg border border-border bg-white px-5 py-7 shadow-[0_18px_50px_rgba(16,24,40,0.12)] sm:px-14 sm:py-9"
           >
             <Button
               type="button"
@@ -2401,7 +2437,7 @@ function LoginScreen({
             <button type="button" onClick={() => onNavigate("home")} className="mx-auto block">
               <BrandLogo className="justify-center" />
             </button>
-            <h1 className="mt-8 text-center text-4xl font-black">Giriş yap</h1>
+            <h1 className="mt-6 text-center text-3xl font-black sm:mt-8 sm:text-4xl">Giriş yap</h1>
 
             <div className="mt-8 space-y-5">
               <Field label="E-posta" htmlFor="login-email">
@@ -2512,8 +2548,8 @@ function BuyerRegisterScreen({
     setStatus("loading");
     try {
       await yoremioApi.registerBuyer({ email: email.trim(), password });
-      showToast("Alıcı kaydı oluşturuldu. Doğrulama adımına geçebilirsin.", "success");
-      onNavigate("verify");
+      showToast("Alıcı kaydı oluşturuldu. Giriş yapabilirsin.", "success");
+      onNavigate("login");
     } catch (error) {
       showToast(apiErrorMessage(error), "error");
     } finally {
@@ -2530,8 +2566,8 @@ function BuyerRegisterScreen({
         <BuyerPreview products={products} />
       }
     >
-      <form onSubmit={handleSubmit} className="w-full max-w-xl rounded-lg border border-border bg-white p-8 shadow-[0_18px_45px_rgba(16,24,40,0.08)]">
-        <h1 className="text-center text-4xl font-black text-primary">Alıcı kaydı</h1>
+      <form onSubmit={handleSubmit} className="w-full max-w-xl rounded-lg border border-border bg-white p-5 shadow-[0_18px_45px_rgba(16,24,40,0.08)] sm:p-8">
+        <h1 className="text-center text-3xl font-black text-primary sm:text-4xl">Alıcı kaydı</h1>
         <p className="mt-2 text-center text-muted-foreground">Yöremio ailesine katıl, yerel lezzetleri keşfet.</p>
         <div className="mt-8 space-y-5">
           <Field label="E-posta" htmlFor="buyer-email">
@@ -2626,9 +2662,9 @@ function SellerRegisterScreen({
       wide
       side={<SellerRegisterPreview products={products} />}
     >
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-5">
+      <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4 sm:space-y-5">
         <div>
-          <h1 className="text-4xl font-black">Satıcı kaydı</h1>
+          <h1 className="text-3xl font-black sm:text-4xl">Satıcı kaydı</h1>
           <p className="mt-2 text-muted-foreground">Yerel ürünlerini binlerce alıcıya ulaştır.</p>
         </div>
         <InputIcon icon={Mail}>
@@ -2690,23 +2726,23 @@ function AuthLayout({
 }) {
   return (
     <main className="min-h-screen bg-white">
-      <header className="flex min-h-[88px] items-center justify-between border-b border-border px-5 sm:px-8">
-        <button type="button" onClick={onHome}>
-          <BrandLogo />
+      <header className="flex min-h-[72px] items-center justify-between gap-3 border-b border-border px-3 sm:min-h-[88px] sm:px-8">
+        <button type="button" onClick={onHome} className="min-w-0">
+          <BrandLogo compact className="max-w-[145px] sm:max-w-none" />
         </button>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={onHome}>
+          <Button variant="ghost" className="h-9 px-3 text-xs sm:h-10 sm:text-sm" onClick={onHome}>
             <Home aria-hidden />
-            Ana sayfa
+            <span className="hidden min-[390px]:inline">Ana sayfa</span>
           </Button>
-          <Button variant="outline" onClick={onAction}>
+          <Button variant="outline" className="h-9 px-3 text-xs sm:h-10 sm:text-sm" onClick={onAction}>
             <UserRound aria-hidden />
             {actionLabel}
           </Button>
         </div>
       </header>
-      <div className={cn("grid min-h-[calc(100vh-89px)]", wide ? "lg:grid-cols-[42vw_1fr]" : "lg:grid-cols-[48vw_1fr]")}>
-        <section className="relative flex items-center justify-center overflow-hidden p-5 sm:p-8">
+      <div className={cn("grid min-h-[calc(100vh-73px)] sm:min-h-[calc(100vh-89px)]", wide ? "lg:grid-cols-[42vw_1fr]" : "lg:grid-cols-[48vw_1fr]")}>
+        <section className="relative flex items-center justify-center overflow-hidden p-3 sm:p-8">
           <DecorativeProduce side="left" />
           <div className="relative z-10 w-full">{children}</div>
         </section>
@@ -3937,8 +3973,8 @@ function ReviewsScreen({
         onLogout={onLogout}
       />
       <section className="mx-auto max-w-[1520px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[480px_1fr_430px]">
-            <div className="grid grid-cols-[72px_1fr] gap-3">
+        <div className="grid gap-5 lg:grid-cols-[480px_1fr_430px] lg:gap-6">
+            <div className="grid grid-cols-[56px_1fr] gap-2 sm:grid-cols-[72px_1fr] sm:gap-3">
               <div className="space-y-3">
               {displayGalleryImages.map((image, index) => (
                 <div key={`${image}-${index}`} className="relative aspect-square overflow-hidden rounded-md border border-border">
@@ -3985,24 +4021,24 @@ function ReviewsScreen({
           </Card>
         </div>
 
-        <div className="mt-6 border-b border-border">
-          <div className="flex gap-8 text-base font-bold">
+        <div className="mt-6 overflow-x-auto border-b border-border">
+          <div className="flex min-w-max gap-3 text-sm font-bold sm:gap-8 sm:text-base">
             <button
-              className={cn("px-5 py-4", tab === "comments" && "border-b-2 border-primary text-primary")}
+              className={cn("px-4 py-4 sm:px-5", tab === "comments" && "border-b-2 border-primary text-primary")}
               type="button"
               onClick={() => setTab("comments")}
             >
               Yorumlar
             </button>
             <button
-              className={cn("px-5 py-4", tab === "ratings" && "border-b-2 border-primary text-primary")}
+              className={cn("px-4 py-4 sm:px-5", tab === "ratings" && "border-b-2 border-primary text-primary")}
               type="button"
               onClick={() => setTab("ratings")}
             >
               Puanlar
             </button>
             <button
-              className={cn("px-5 py-4", tab === "description" && "border-b-2 border-primary text-primary")}
+              className={cn("px-4 py-4 sm:px-5", tab === "description" && "border-b-2 border-primary text-primary")}
               type="button"
               onClick={() => setTab("description")}
             >
@@ -4495,10 +4531,10 @@ function DashboardFrame({
           </div>
         </aside>
         <section className="min-w-0">
-          <header className="flex min-h-[78px] items-center justify-between gap-4 border-b border-border bg-white px-4 sm:px-6">
+          <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-3 border-b border-border bg-white px-3 py-3 sm:min-h-[78px] sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-2xl font-black tracking-normal">{title}</h1>
+                <h1 className="text-xl font-black tracking-normal sm:text-2xl">{title}</h1>
                 <p className="text-sm text-muted-foreground">{subtitle}</p>
               </div>
             </div>
@@ -4532,9 +4568,9 @@ function AccountChip({
 }) {
   if (!authUser) {
     return (
-      <Button variant="outline" onClick={onLogin}>
+      <Button variant="outline" title="Giriş yap" aria-label="Giriş yap" className="px-3" onClick={onLogin}>
         <UserRound aria-hidden />
-        Giriş yap
+        <span className="hidden sm:inline">Giriş yap</span>
       </Button>
     );
   }
@@ -4579,11 +4615,13 @@ function IconButton({
   icon: Icon,
   label,
   badge,
+  className,
   onClick,
 }: {
   icon: LucideIcon;
   label: string;
   badge?: number;
+  className?: string;
   onClick: () => void;
 }) {
   return (
@@ -4592,7 +4630,7 @@ function IconButton({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="relative grid size-11 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted"
+      className={cn("relative grid size-11 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted", className)}
     >
       <Icon className="size-6" aria-hidden />
       {badge ? (
@@ -4962,7 +5000,7 @@ function ChatPanel({
   }
 
   return (
-    <div className="grid min-h-[560px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border">
+    <div className="grid min-h-[420px] grid-rows-[auto_1fr_auto] overflow-hidden rounded-lg border border-border sm:min-h-[560px]">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <div>
