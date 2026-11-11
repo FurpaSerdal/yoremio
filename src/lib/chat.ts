@@ -2,56 +2,56 @@
 
 import * as signalR from "@microsoft/signalr";
 
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, type ChatMessageDto } from "@/lib/api";
 
-export type ChatMessageDto = {
-  id: number;
-  senderId: string;
-  receiverId: string;
-  message: string;
-  sentAt: string;
-  readAt: string | null;
-  isMine: boolean;
-};
+export type { ChatMessageDto };
 
 export function createChatConnection(getToken: () => string) {
   return new signalR.HubConnectionBuilder()
     .withUrl(`${API_BASE_URL}/chathub`, {
       accessTokenFactory: getToken,
     })
-    .withAutomaticReconnect()
+    .withAutomaticReconnect([0, 2000, 5000, 10000])
+    .configureLogging(signalR.LogLevel.Warning)
     .build();
 }
 
 export function bindChatEvents(
   connection: signalR.HubConnection,
   handlers: {
+    onConnected?: (userId: string) => void;
     onReceive?: (message: ChatMessageDto) => void;
     onSent?: (message: ChatMessageDto) => void;
     onRead?: (readerUserId: string, readAtUtc: string) => void;
+    onConversationRead?: (otherUserId: string, markedCount: number, readAtUtc: string) => void;
     onTyping?: (fromUserId: string) => void;
   },
 ) {
+  if (handlers.onConnected) {
+    connection.on("Connected", handlers.onConnected);
+  }
   if (handlers.onReceive) {
     connection.on("ReceiveMessageV2", handlers.onReceive);
   }
-
   if (handlers.onSent) {
     connection.on("MessageSentV2", handlers.onSent);
   }
-
   if (handlers.onRead) {
     connection.on("MessagesRead", handlers.onRead);
   }
-
+  if (handlers.onConversationRead) {
+    connection.on("ConversationRead", handlers.onConversationRead);
+  }
   if (handlers.onTyping) {
     connection.on("Typing", handlers.onTyping);
   }
 
   return () => {
+    connection.off("Connected");
     connection.off("ReceiveMessageV2");
     connection.off("MessageSentV2");
     connection.off("MessagesRead");
+    connection.off("ConversationRead");
     connection.off("Typing");
   };
 }

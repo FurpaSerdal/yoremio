@@ -1,0 +1,1050 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+import {
+  Check,
+  Film,
+  Heart,
+  LayoutGrid,
+  List,
+  MapPin,
+  MessageCircle,
+  Minus,
+  Plus,
+  Search,
+  Send,
+  ShieldCheck,
+  SlidersHorizontal,
+  Star,
+  Store,
+  X,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  EmptyState,
+  Field,
+  MobileBottomNav,
+  PaginationBar,
+  PublicHeader,
+  SiteFooter,
+  Stars,
+} from "@/components/yoremio/ui-kit";
+import {
+  mediaImageSrc,
+  mediaVideoSrc,
+  productImage,
+  productLocation,
+  sellerName,
+  sortLabels,
+  type AuthState,
+  type LoadState,
+  type ProductListMode,
+  type Screen,
+  type SortKey,
+} from "@/components/yoremio/types";
+import type { CategoryDto, Paginated, ProductDto, SellerProfileDto } from "@/lib/api";
+import { cn, formatPrice } from "@/lib/utils";
+
+export function DiscoveryScreen({
+  authUser,
+  sellerProfile,
+  notificationUnreadCount,
+  unreadMessageCount,
+  categories,
+  productsPage,
+  productsState,
+  selectedProduct,
+  favoriteIds,
+  query,
+  categoryId,
+  city,
+  district,
+  minPrice,
+  maxPrice,
+  onlyInStock,
+  verifiedOnly,
+  sort,
+  sortOptions,
+  actionStatus,
+  demandFlowEnabled = true,
+  favoritesEnabled = true,
+  chatEnabled = true,
+  onQueryChange,
+  onCategoryChange,
+  onCityChange,
+  onDistrictChange,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onOnlyInStockChange,
+  onVerifiedOnlyChange,
+  onSortChange,
+  onPageChange,
+  onSelectProduct,
+  onOpenStorefront,
+  onCreateDemand,
+  onToggleFavorite,
+  onStartChat,
+  onGoReviews,
+  onClearFilters,
+  onRetry,
+  onNavigate,
+  onLogout,
+}: {
+  authUser: AuthState | null;
+  sellerProfile?: SellerProfileDto | null;
+  notificationUnreadCount: number;
+  unreadMessageCount?: number;
+  categories: CategoryDto[];
+  productsPage: Paginated<ProductDto>;
+  productsState: LoadState;
+  selectedProduct: ProductDto | null;
+  favoriteIds: Set<number>;
+  query: string;
+  categoryId: number | null;
+  city: string;
+  district: string;
+  minPrice: string;
+  maxPrice: string;
+  onlyInStock: boolean;
+  verifiedOnly: boolean;
+  sort: SortKey;
+  sortOptions: string[];
+  actionStatus: string | null;
+  demandFlowEnabled?: boolean;
+  favoritesEnabled?: boolean;
+  chatEnabled?: boolean;
+  onQueryChange: (value: string) => void;
+  onCategoryChange: (value: number | null) => void;
+  onCityChange: (value: string) => void;
+  onDistrictChange: (value: string) => void;
+  onMinPriceChange: (value: string) => void;
+  onMaxPriceChange: (value: string) => void;
+  onOnlyInStockChange: (value: boolean) => void;
+  onVerifiedOnlyChange: (value: boolean) => void;
+  onSortChange: (value: SortKey) => void;
+  onPageChange: (page: number) => void;
+  onSelectProduct: (product: ProductDto) => void;
+  onOpenStorefront: (saticiId: string) => void;
+  onCreateDemand: (product: ProductDto, miktar: number, note?: string) => Promise<void> | void;
+  onToggleFavorite: (productId: number) => void;
+  onStartChat: (product: ProductDto) => void;
+  onGoReviews: (product: ProductDto) => void;
+  onClearFilters: () => void;
+  onRetry: () => void;
+  onNavigate: (screen: Screen) => void;
+  onLogout: () => void;
+}) {
+  const [viewMode, setViewMode] = useState<ProductListMode>("grid");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+
+  const activeFilterCount = [
+    categoryId !== null,
+    Boolean(city.trim()),
+    Boolean(district.trim()),
+    Boolean(minPrice.trim()),
+    Boolean(maxPrice.trim()),
+    onlyInStock,
+    verifiedOnly,
+  ].filter(Boolean).length;
+
+  const activeCategoryName =
+    categories.find((c) => c.id === categoryId)?.adi ?? "Tüm Yöresel Ürünler";
+
+  const handleSelectProduct = (product: ProductDto) => {
+    onSelectProduct(product);
+    if (typeof window !== "undefined" && window.innerWidth < 1280) {
+      setMobileDetailOpen(true);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f6f8f5] pb-20 lg:pb-0">
+      <PublicHeader
+        authUser={authUser}
+        sellerProfile={sellerProfile}
+        notificationUnreadCount={notificationUnreadCount}
+        unreadMessageCount={unreadMessageCount}
+        query={query}
+        setQuery={onQueryChange}
+        activeScreen="discover"
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+        onOpenStorefront={onOpenStorefront}
+      />
+
+      <main className="mx-auto max-w-[1360px] px-4 py-5 sm:px-6 sm:py-7">
+        {/* Top Discovery Header & Controls */}
+        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-white p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-serif text-xl font-bold text-[#14271c] sm:text-2xl">
+                {activeCategoryName}
+              </h1>
+              <Badge variant="secondary" className="tabular-nums">
+                {productsPage.totalCount} ürün
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Üreticiden doğrudan ürünler — ürün seçip ihtiyacına göre talep ve mesaj başlatabilirsin.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-xl lg:hidden"
+              onClick={() => setMobileFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+              Filtrele
+              {activeFilterCount > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </Button>
+
+            <select
+              aria-label="Sıralama"
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value)}
+              className="h-9 rounded-xl border border-border bg-white px-3 text-xs font-bold text-foreground outline-none focus:border-primary sm:text-sm"
+            >
+              {sortOptions.map((key) => (
+                <option key={key} value={key}>
+                  {sortLabels[key] ?? key}
+                </option>
+              ))}
+            </select>
+
+            <div className="hidden items-center rounded-xl border border-border bg-[#f7faf6] p-1 sm:flex">
+              <button
+                type="button"
+                aria-label="Izgara görünümü"
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "rounded-lg p-1.5 transition",
+                  viewMode === "grid"
+                    ? "bg-white text-primary shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <LayoutGrid className="size-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                aria-label="Liste görünümü"
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "rounded-lg p-1.5 transition",
+                  viewMode === "list"
+                    ? "bg-white text-primary shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <List className="size-4" aria-hidden />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop 3-column layout */}
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_395px]">
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <DiscoveryFilters
+                categories={categories}
+                query={query}
+                categoryId={categoryId}
+                city={city}
+                district={district}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                onlyInStock={onlyInStock}
+                verifiedOnly={verifiedOnly}
+                onQueryChange={onQueryChange}
+                onCategoryChange={onCategoryChange}
+                onCityChange={onCityChange}
+                onDistrictChange={onDistrictChange}
+                onMinPriceChange={onMinPriceChange}
+                onMaxPriceChange={onMaxPriceChange}
+                onOnlyInStockChange={onOnlyInStockChange}
+                onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onClear={onClearFilters}
+              />
+            </div>
+          </aside>
+
+          {/* Product Results */}
+          <section className="min-w-0">
+            {productsState === "loading" && productsPage.items.length === 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="h-72 animate-pulse rounded-2xl border border-border bg-white"
+                  />
+                ))}
+              </div>
+            ) : productsState === "error" && productsPage.items.length === 0 ? (
+              <EmptyState
+                icon={Search}
+                title="Ürünler yüklenemedi"
+                description="Bağlantı geçici olarak yanıt vermedi. Lütfen tekrar dene."
+                action={<Button onClick={onRetry}>Yeniden Dene</Button>}
+              />
+            ) : productsPage.items.length === 0 ? (
+              <EmptyState
+                icon={Search}
+                title="Eşleşen ürün bulunamadı"
+                description="Arama kelimesini, il/ilçe bilgisini veya fiyat aralığını esnetebilirsin."
+                action={<Button onClick={onClearFilters}>Filtreleri Temizle</Button>}
+              />
+            ) : (
+              <>
+                <div
+                  className={cn(
+                    viewMode === "grid"
+                      ? "grid gap-4 sm:grid-cols-2"
+                      : "space-y-3",
+                  )}
+                >
+                  {productsPage.items.map((product) => {
+                    const selected = selectedProduct?.id === product.id;
+                    const fav = favoriteIds.has(product.id);
+                    return (
+                      <Card
+                        key={product.id}
+                        className={cn(
+                          "group overflow-hidden rounded-2xl border bg-white transition",
+                          selected
+                            ? "border-primary ring-2 ring-primary/15"
+                            : "border-border hover:-translate-y-0.5 hover:shadow-md",
+                          viewMode === "list" && "sm:grid sm:grid-cols-[175px_1fr]",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "relative bg-[#f2f5f0]",
+                            viewMode === "grid" ? "aspect-[4/3]" : "h-44 sm:h-full",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleSelectProduct(product)}
+                            className="block size-full text-left"
+                          >
+                            <Image
+                              src={productImage(product)}
+                              alt={product.adi}
+                              fill
+                              sizes="(max-width: 640px) 100vw, 320px"
+                              className="object-cover transition duration-300 group-hover:scale-105"
+                            />
+                          </button>
+
+                          {product.saticiDogrulanmis ? (
+                            <span className="pointer-events-none absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-black text-primary shadow-xs">
+                              <ShieldCheck className="size-3" aria-hidden />
+                              Doğrulanmış
+                            </span>
+                          ) : null}
+
+                          {favoritesEnabled ? (
+                            <button
+                              type="button"
+                              aria-label={fav ? "Favoriden çıkar" : "Favorilere ekle"}
+                              onClick={() => onToggleFavorite(product.id)}
+                              className={cn(
+                                "absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-white/90 shadow-xs transition hover:scale-105",
+                                fav ? "text-red-500" : "text-muted-foreground",
+                              )}
+                            >
+                              <Heart className={cn("size-4", fav && "fill-current")} aria-hidden />
+                            </button>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-col p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectProduct(product)}
+                              className="text-left"
+                            >
+                              <h3 className="line-clamp-2 text-base font-black text-brand-brown group-hover:text-primary">
+                                {product.adi}
+                              </h3>
+                            </button>
+                            <Badge variant="outline" className="shrink-0 text-[10px]">
+                              {product.kategoriAdi}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                            {product.saticiId ? (
+                              <button
+                                type="button"
+                                onClick={() => onOpenStorefront(product.saticiId!)}
+                                className="inline-flex items-center gap-1 font-bold text-primary hover:underline"
+                              >
+                                <Store className="size-3.5" aria-hidden />
+                                {sellerName(product)}
+                              </button>
+                            ) : (
+                              <span>{sellerName(product)}</span>
+                            )}
+                            <span>·</span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="size-3" aria-hidden />
+                              {productLocation(product)}
+                            </span>
+                          </div>
+
+                          {product.aciklama ? (
+                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                              {product.aciklama}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3 mt-3">
+                            <div>
+                              <span className="text-lg font-black text-primary tabular-nums">
+                                {formatPrice(product.fiyat)}
+                              </span>
+                              <div className="mt-0.5 flex items-center gap-1 text-xs font-bold text-amber-700">
+                                <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                                {(product.ortalamaPuan ?? 0).toFixed(1)}
+                                <span className="font-normal text-muted-foreground">
+                                  ({product.toplamYorum ?? 0})
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={selected ? "default" : "secondary"}
+                              className="rounded-xl font-extrabold"
+                              onClick={() => handleSelectProduct(product)}
+                            >
+                              İncele
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                <PaginationBar
+                  page={productsPage.page}
+                  totalPages={productsPage.totalPages}
+                  onPageChange={onPageChange}
+                />
+              </>
+            )}
+          </section>
+
+          {/* Desktop Product Detail Inspector */}
+          <aside className="hidden xl:block">
+            <div className="sticky top-24">
+              {selectedProduct ? (
+                <ProductDetailPanel
+                  product={selectedProduct}
+                  favorite={favoriteIds.has(selectedProduct.id)}
+                  actionStatus={actionStatus}
+                  demandFlowEnabled={demandFlowEnabled}
+                  favoritesEnabled={favoritesEnabled}
+                  chatEnabled={chatEnabled}
+                  onOpenStorefront={onOpenStorefront}
+                  onCreateDemand={onCreateDemand}
+                  onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
+                  onStartChat={() => onStartChat(selectedProduct)}
+                  onGoReviews={() => onGoReviews(selectedProduct)}
+                />
+              ) : (
+                <Card className="p-6 text-center">
+                  <p className="font-black text-brand-brown">Ürün Detayı Seç</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Sol taraftan bir ürüne tıkla; galeri, üretici güven puanı ve talep oluşturma alanını burada gör.
+                  </p>
+                </Card>
+              )}
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      {/* Mobile Slide-Over Filters Drawer */}
+      {mobileFiltersOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-xs lg:hidden"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="flex h-full w-full max-w-sm flex-col bg-[#f6f8f5] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border bg-white px-4 py-3.5">
+              <h2 className="text-base font-black text-brand-brown">Filtreler</h2>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label="Kapat"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <DiscoveryFilters
+                categories={categories}
+                query={query}
+                categoryId={categoryId}
+                city={city}
+                district={district}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                onlyInStock={onlyInStock}
+                verifiedOnly={verifiedOnly}
+                onQueryChange={onQueryChange}
+                onCategoryChange={onCategoryChange}
+                onCityChange={onCityChange}
+                onDistrictChange={onDistrictChange}
+                onMinPriceChange={onMinPriceChange}
+                onMaxPriceChange={onMaxPriceChange}
+                onOnlyInStockChange={onOnlyInStockChange}
+                onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onClear={onClearFilters}
+              />
+            </div>
+            <div className="border-t border-border bg-white p-4">
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => setMobileFiltersOpen(false)}
+              >
+                Sonuçları Göster ({productsPage.totalCount})
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Mobile / Tablet Product Detail Bottom Sheet Modal */}
+      {mobileDetailOpen && selectedProduct ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs xl:hidden"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#f6f8f5] p-3 pb-6 shadow-2xl">
+            <div className="mb-2 flex items-center justify-between px-2 pt-1">
+              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                Ürün İnceleme & Talep
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileDetailOpen(false)}
+                aria-label="Detayı kapat"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+            <ProductDetailPanel
+              product={selectedProduct}
+              favorite={favoriteIds.has(selectedProduct.id)}
+              actionStatus={actionStatus}
+              demandFlowEnabled={demandFlowEnabled}
+              favoritesEnabled={favoritesEnabled}
+              chatEnabled={chatEnabled}
+              onOpenStorefront={onOpenStorefront}
+              onCreateDemand={onCreateDemand}
+              onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
+              onStartChat={() => {
+                setMobileDetailOpen(false);
+                onStartChat(selectedProduct);
+              }}
+              onGoReviews={() => {
+                setMobileDetailOpen(false);
+                onGoReviews(selectedProduct);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <SiteFooter onNavigate={onNavigate} authUser={authUser} />
+      <MobileBottomNav
+        activeScreen="discover"
+        authUser={authUser}
+        unreadMessages={unreadMessageCount}
+        onNavigate={onNavigate}
+      />
+    </div>
+  );
+}
+
+function DiscoveryFilters({
+  categories,
+  query,
+  categoryId,
+  city,
+  district,
+  minPrice,
+  maxPrice,
+  onlyInStock,
+  verifiedOnly,
+  onQueryChange,
+  onCategoryChange,
+  onCityChange,
+  onDistrictChange,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onOnlyInStockChange,
+  onVerifiedOnlyChange,
+  onClear,
+}: {
+  categories: CategoryDto[];
+  query: string;
+  categoryId: number | null;
+  city: string;
+  district: string;
+  minPrice: string;
+  maxPrice: string;
+  onlyInStock: boolean;
+  verifiedOnly: boolean;
+  onQueryChange: (value: string) => void;
+  onCategoryChange: (value: number | null) => void;
+  onCityChange: (value: string) => void;
+  onDistrictChange: (value: string) => void;
+  onMinPriceChange: (value: string) => void;
+  onMaxPriceChange: (value: string) => void;
+  onOnlyInStockChange: (value: boolean) => void;
+  onVerifiedOnlyChange: (value: boolean) => void;
+  onClear: () => void;
+}) {
+  return (
+    <Card className="space-y-5 rounded-2xl p-4">
+      <div className="flex items-center justify-between border-b border-border pb-3">
+        <span className="text-sm font-black text-brand-brown">Detaylı Filtreler</span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="text-xs font-bold text-primary hover:underline"
+        >
+          Sıfırla
+        </button>
+      </div>
+
+      <Field label="Ürün / Açıklama Ara" htmlFor="filter-q">
+        <Input
+          id="filter-q"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder="Ör: yayla balı, nohut..."
+        />
+      </Field>
+
+      <div>
+        <p className="mb-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Kategori
+        </p>
+        <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+          <button
+            type="button"
+            onClick={() => onCategoryChange(null)}
+            className={cn(
+              "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-bold transition",
+              categoryId === null
+                ? "bg-emerald-50 text-primary"
+                : "text-foreground hover:bg-muted",
+            )}
+          >
+            <span>Tüm Kategoriler</span>
+            {categoryId === null ? <Check className="size-3.5" aria-hidden /> : null}
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => onCategoryChange(categoryId === cat.id ? null : cat.id)}
+              className={cn(
+                "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-bold transition",
+                categoryId === cat.id
+                  ? "bg-emerald-50 text-primary"
+                  : "text-foreground hover:bg-muted",
+              )}
+            >
+              <span className="truncate">{cat.adi}</span>
+              {categoryId === cat.id ? <Check className="size-3.5 shrink-0" aria-hidden /> : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Şehir" htmlFor="filter-city">
+          <Input
+            id="filter-city"
+            value={city}
+            onChange={(event) => onCityChange(event.target.value)}
+            placeholder="İl"
+          />
+        </Field>
+        <Field label="İlçe" htmlFor="filter-district">
+          <Input
+            id="filter-district"
+            value={district}
+            onChange={(event) => onDistrictChange(event.target.value)}
+            placeholder="İlçe"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="En Az (₺)" htmlFor="filter-min">
+          <Input
+            id="filter-min"
+            type="number"
+            min="0"
+            value={minPrice}
+            onChange={(event) => onMinPriceChange(event.target.value)}
+            placeholder="0"
+          />
+        </Field>
+        <Field label="En Çok (₺)" htmlFor="filter-max">
+          <Input
+            id="filter-max"
+            type="number"
+            min="0"
+            value={maxPrice}
+            onChange={(event) => onMaxPriceChange(event.target.value)}
+            placeholder="2000"
+          />
+        </Field>
+      </div>
+
+      <div className="space-y-2.5 border-t border-border pt-3">
+        <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+          <input
+            type="checkbox"
+            checked={onlyInStock}
+            onChange={(event) => onOnlyInStockChange(event.target.checked)}
+            className="size-4 accent-primary"
+          />
+          <span>Sadece stokta olanlar</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+          <input
+            type="checkbox"
+            checked={verifiedOnly}
+            onChange={(event) => onVerifiedOnlyChange(event.target.checked)}
+            className="size-4 accent-primary"
+          />
+          <span>Sadece doğrulanmış üreticiler</span>
+        </label>
+      </div>
+    </Card>
+  );
+}
+
+export function ProductDetailPanel({
+  product,
+  favorite,
+  actionStatus,
+  demandFlowEnabled = true,
+  favoritesEnabled = true,
+  chatEnabled = true,
+  onOpenStorefront,
+  onCreateDemand,
+  onToggleFavorite,
+  onStartChat,
+  onGoReviews,
+}: {
+  product: ProductDto;
+  favorite: boolean;
+  actionStatus: string | null;
+  demandFlowEnabled?: boolean;
+  favoritesEnabled?: boolean;
+  chatEnabled?: boolean;
+  onOpenStorefront: (saticiId: string) => void;
+  onCreateDemand: (product: ProductDto, miktar: number, note?: string) => Promise<void> | void;
+  onToggleFavorite: () => void;
+  onStartChat: () => void;
+  onGoReviews: () => void;
+}) {
+  const images = product.resimler ?? [];
+  const videos = product.videolar ?? [];
+
+  type MediaChoice =
+    | { kind: "image"; id: number; src: string }
+    | { kind: "video"; id: number; src: string };
+
+  const mediaItems: MediaChoice[] = [
+    ...images.map((img) => ({
+      kind: "image" as const,
+      id: img.id,
+      src: mediaImageSrc(img.url),
+    })),
+    ...videos
+      .filter((vid) => Boolean(mediaVideoSrc(vid.url)))
+      .map((vid) => ({
+        kind: "video" as const,
+        id: vid.id,
+        src: mediaVideoSrc(vid.url),
+      })),
+  ];
+
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [amount, setAmount] = useState(1);
+  const [note, setNote] = useState("");
+  const [trackedProductId, setTrackedProductId] = useState(product.id);
+
+  if (trackedProductId !== product.id) {
+    setTrackedProductId(product.id);
+    setSelectedIdx(0);
+    setAmount(1);
+    setNote("");
+  }
+
+  const activeMedia = mediaItems[selectedIdx] ?? {
+    kind: "image" as const,
+    id: 0,
+    src: productImage(product),
+  };
+
+  const outOfStock = (product.stokMiktari ?? 0) <= 0;
+  const maxSelectable = Math.max(1, product.stokMiktari ?? 99);
+  const estimatedTotal = product.fiyat * amount;
+
+  return (
+    <Card id="product-detail-panel" className="overflow-hidden rounded-2xl border-border bg-white shadow-sm">
+      {/* Main Media Stage */}
+      <div className="relative aspect-[4/3] bg-[#eff4ec]">
+        {activeMedia.kind === "video" ? (
+          <video
+            key={activeMedia.src}
+            src={activeMedia.src}
+            controls
+            playsInline
+            preload="metadata"
+            className="size-full bg-black object-contain"
+          />
+        ) : (
+          <Image
+            src={activeMedia.src}
+            alt={product.adi}
+            fill
+            sizes="(max-width: 1280px) 100vw, 400px"
+            className="object-cover"
+          />
+        )}
+
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          <Badge variant="green">{product.kategoriAdi}</Badge>
+          {outOfStock ? <Badge variant="outline">Stok Tükendi</Badge> : null}
+        </div>
+
+        {favoritesEnabled ? (
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            aria-label={favorite ? "Favoriden çıkar" : "Favorilere ekle"}
+            className={cn(
+              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/95 shadow-sm transition",
+              favorite ? "text-red-500" : "text-muted-foreground hover:text-red-500",
+            )}
+          >
+            <Heart className={cn("size-4", favorite && "fill-current")} aria-hidden />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Media Thumbnails (Images + Videos) */}
+      {mediaItems.length > 1 ? (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto border-b border-border bg-[#f9fbf8] px-3 py-2.5">
+          {mediaItems.map((item, idx) => (
+            <button
+              key={`${item.kind}-${item.id}`}
+              type="button"
+              onClick={() => setSelectedIdx(idx)}
+              className={cn(
+                "relative size-12 shrink-0 overflow-hidden rounded-lg border-2 transition",
+                selectedIdx === idx
+                  ? "border-primary ring-2 ring-primary/20"
+                  : "border-transparent opacity-80 hover:opacity-100",
+              )}
+            >
+              {item.kind === "video" ? (
+                <div className="grid size-full place-items-center bg-slate-900 text-white">
+                  <Film className="size-5" aria-hidden />
+                </div>
+              ) : (
+                <Image src={item.src} alt="" fill sizes="48px" className="object-cover" />
+              )}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="space-y-4 p-4 sm:p-5">
+        <div>
+          <h2 className="font-serif text-xl font-bold leading-snug text-[#14271c]">
+            {product.adi}
+          </h2>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <span className="text-2xl font-black text-primary tabular-nums">
+              {formatPrice(product.fiyat)}
+            </span>
+            <span className="text-xs font-bold text-muted-foreground">
+              Stok: {product.stokMiktari ?? 0} adet
+            </span>
+          </div>
+        </div>
+
+        {/* Producer Card */}
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-[#f8faf7] p-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Store className="size-4 shrink-0 text-primary" aria-hidden />
+              <span className="truncate text-sm font-black text-brand-brown">
+                {sellerName(product)}
+              </span>
+              {product.saticiDogrulanmis ? (
+                <ShieldCheck className="size-4 shrink-0 text-primary" aria-label="Doğrulanmış satıcı" />
+              ) : null}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {productLocation(product)}
+            </p>
+          </div>
+          {product.saticiId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-xl bg-white text-xs font-bold"
+              onClick={() => onOpenStorefront(product.saticiId!)}
+            >
+              Mağaza
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Rating & Comments Trigger */}
+        <button
+          type="button"
+          onClick={onGoReviews}
+          className="flex w-full items-center justify-between rounded-xl border border-border px-3.5 py-2.5 text-left transition hover:bg-secondary/60"
+        >
+          <div className="flex items-center gap-2">
+            <Stars value={product.ortalamaPuan ?? 0} />
+            <span className="text-sm font-black tabular-nums">
+              {(product.ortalamaPuan ?? 0).toFixed(1)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({product.toplamYorum ?? 0} yorum)
+            </span>
+          </div>
+          <span className="text-xs font-extrabold text-primary">Yorumları Gör</span>
+        </button>
+
+        {product.aciklama ? (
+          <p className="text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6">
+            {product.aciklama}
+          </p>
+        ) : null}
+
+        {/* Demand Creation Box */}
+        {demandFlowEnabled ? (
+          <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black uppercase tracking-wider text-primary">
+                Doğrudan Talep Oluştur
+              </span>
+              <span className="text-xs font-black text-brand-brown tabular-nums">
+                Tahmini: {formatPrice(estimatedTotal)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-foreground">Miktar</span>
+              <div className="inline-flex items-center rounded-xl border border-border bg-white">
+                <button
+                  type="button"
+                  aria-label="Miktarı azalt"
+                  disabled={amount <= 1}
+                  onClick={() => setAmount((prev) => Math.max(1, prev - 1))}
+                  className="grid size-9 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="min-w-10 text-center text-sm font-black tabular-nums">
+                  {amount}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Miktarı artır"
+                  disabled={amount >= maxSelectable}
+                  onClick={() => setAmount((prev) => Math.min(maxSelectable, prev + 1))}
+                  className="grid size-9 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <Input
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Üreticiye notun (ör. paketleme / teslim zamanı)..."
+              className="bg-white text-xs"
+            />
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                className="flex-1 rounded-xl font-extrabold"
+                disabled={outOfStock || actionStatus === `demand-${product.id}`}
+                onClick={() => onCreateDemand(product, amount, note.trim() || undefined)}
+              >
+                <Send className="size-4" aria-hidden />
+                {actionStatus === `demand-${product.id}`
+                  ? "Gönderiliyor..."
+                  : outOfStock
+                    ? "Stok Yok"
+                    : "Talep Oluştur"}
+              </Button>
+              {chatEnabled ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl bg-white font-bold"
+                  onClick={onStartChat}
+                >
+                  <MessageCircle className="size-4 text-primary" aria-hidden />
+                  Sor
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : chatEnabled ? (
+          <Button type="button" className="w-full rounded-xl" onClick={onStartChat}>
+            <MessageCircle className="size-4" aria-hidden />
+            Üreticiyle Mesajlaş
+          </Button>
+        ) : null}
+      </div>
+    </Card>
+  );
+}

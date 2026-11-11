@@ -184,6 +184,7 @@ export type ProductQuery = {
   ilce?: string;
   sadeceStoktaOlanlar?: boolean;
   sadeceAktif?: boolean;
+  sadeceDogrulanmisSatici?: boolean;
   minOrtalamaPuan?: number;
   sort?: string;
 };
@@ -232,6 +233,17 @@ export type FeaturedSellerDto = SellerTrustScoreDto & {
   vitrinUrunId?: number | null;
 };
 
+export type PublicSellerSummaryDto = FeaturedSellerDto;
+
+export type DevVerificationMessageDto = {
+  id: string;
+  channel: string;
+  to: string;
+  subject: string;
+  body: string;
+  createdAtUtc: string;
+};
+
 export type ReviewEligibilityDto = {
   yorumYapabilir: boolean;
   sebep?: string | null;
@@ -270,6 +282,7 @@ export type ChatConversationDto = {
   userId: string;
   userName?: string | null;
   email?: string | null;
+  magazaAdi?: string | null;
   lastMessage?: string | null;
   lastSenderId?: string | null;
   lastMessageAt?: string | null;
@@ -593,6 +606,7 @@ export const yoremioApi = {
         ilce: query.ilce,
         sadeceStoktaOlanlar: query.sadeceStoktaOlanlar,
         sadeceAktif: query.sadeceAktif,
+        sadeceDogrulanmisSatici: query.sadeceDogrulanmisSatici,
         minOrtalamaPuan: query.minOrtalamaPuan,
         sort: query.sort ?? "newest",
       })}`,
@@ -654,13 +668,15 @@ export const yoremioApi = {
     }),
   sellerTrustScore: (saticiId: string) =>
     request<SellerTrustScoreDto>(`/api/Profil/satici/${saticiId}/guven-skoru`),
+  publicSellerProfile: (saticiId: string) =>
+    request<PublicSellerSummaryDto>(`/api/Profil/satici/${saticiId}`),
   featuredSellers: (take = 6) =>
     request<FeaturedSellerDto[]>(
       `/api/Profil/saticilar/one-cikan?${queryString({ take })}`,
     ),
 
   rateProduct: (token: string, urunId: number, puanDegeri: number) =>
-    request<{ ortalama: number }>("/api/Puan/puan-ekle", {
+    request<{ ortalama: number; urunOrtalama?: number }>("/api/Puan/puan-ekle", {
       method: "POST",
       token,
       body: JSON.stringify({ urunId, puanDegeri }),
@@ -721,6 +737,26 @@ export const yoremioApi = {
     request<DemandDto>(`/api/Talep/teklif/${teklifId}/kabul`, {
       method: "POST",
       token,
+    }),
+  rejectOffer: (token: string, teklifId: number) =>
+    request<DemandDto>(`/api/Talep/teklif/${teklifId}/red`, {
+      method: "POST",
+      token,
+    }),
+  cancelDemand: (token: string, talepId: number) =>
+    request<DemandDto>(`/api/Talep/${talepId}/iptal`, {
+      method: "POST",
+      token,
+    }),
+  demandDetail: (token: string, talepId: number) =>
+    request<DemandDto>(`/api/Talep/${talepId}`, {
+      token,
+    }),
+  devVerificationMessages: () =>
+    request<DevVerificationMessageDto[]>("/dev/verification/messages"),
+  clearDevVerificationMessages: () =>
+    request<null>("/dev/verification/messages", {
+      method: "DELETE",
     }),
 
   conversations: (token: string) =>
