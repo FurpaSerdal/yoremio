@@ -68,6 +68,7 @@ export function DiscoveryScreen({
   maxPrice,
   onlyInStock,
   verifiedOnly,
+  minRating,
   sort,
   sortOptions,
   actionStatus,
@@ -82,6 +83,7 @@ export function DiscoveryScreen({
   onMaxPriceChange,
   onOnlyInStockChange,
   onVerifiedOnlyChange,
+  onMinRatingChange,
   onSortChange,
   onPageChange,
   onSelectProduct,
@@ -112,6 +114,7 @@ export function DiscoveryScreen({
   maxPrice: string;
   onlyInStock: boolean;
   verifiedOnly: boolean;
+  minRating: number | null;
   sort: SortKey;
   sortOptions: string[];
   actionStatus: string | null;
@@ -126,6 +129,7 @@ export function DiscoveryScreen({
   onMaxPriceChange: (value: string) => void;
   onOnlyInStockChange: (value: boolean) => void;
   onVerifiedOnlyChange: (value: boolean) => void;
+  onMinRatingChange: (value: number | null) => void;
   onSortChange: (value: SortKey) => void;
   onPageChange: (page: number) => void;
   onSelectProduct: (product: ProductDto) => void;
@@ -144,6 +148,7 @@ export function DiscoveryScreen({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   const activeFilterCount = [
+    Boolean(query.trim()),
     categoryId !== null,
     Boolean(city.trim()),
     Boolean(district.trim()),
@@ -151,10 +156,47 @@ export function DiscoveryScreen({
     Boolean(maxPrice.trim()),
     onlyInStock,
     verifiedOnly,
+    minRating !== null,
   ].filter(Boolean).length;
 
   const activeCategoryName =
     categories.find((c) => c.id === categoryId)?.adi ?? "Tüm Yöresel Ürünler";
+
+  const activeChips: { key: string; label: string; onClear: () => void }[] = [
+    ...(query.trim()
+      ? [{ key: "q", label: `Arama: "${query.trim()}"`, onClear: () => onQueryChange("") }]
+      : []),
+    ...(categoryId !== null
+      ? [{ key: "cat", label: `Kategori: ${activeCategoryName}`, onClear: () => onCategoryChange(null) }]
+      : []),
+    ...(city.trim()
+      ? [{ key: "city", label: `Şehir: ${city.trim()}`, onClear: () => onCityChange("") }]
+      : []),
+    ...(district.trim()
+      ? [{ key: "dist", label: `İlçe: ${district.trim()}`, onClear: () => onDistrictChange("") }]
+      : []),
+    ...(minPrice.trim() || maxPrice.trim()
+      ? [
+          {
+            key: "price",
+            label: `Fiyat: ${minPrice || "0"} - ${maxPrice || "∞"} ₺`,
+            onClear: () => {
+              onMinPriceChange("");
+              onMaxPriceChange("");
+            },
+          },
+        ]
+      : []),
+    ...(minRating !== null
+      ? [{ key: "rate", label: `Min ${minRating}★`, onClear: () => onMinRatingChange(null) }]
+      : []),
+    ...(onlyInStock
+      ? [{ key: "stock", label: "Sadece Stokta", onClear: () => onOnlyInStockChange(false) }]
+      : []),
+    ...(verifiedOnly
+      ? [{ key: "verified", label: "Doğrulanmış Üretici", onClear: () => onVerifiedOnlyChange(false) }]
+      : []),
+  ];
 
   const handleSelectProduct = (product: ProductDto) => {
     onSelectProduct(product);
@@ -256,6 +298,33 @@ export function DiscoveryScreen({
           </div>
         </div>
 
+        {/* Active Filter Chips Bar */}
+        {activeChips.length > 0 ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border/80 bg-white px-3.5 py-2.5">
+            <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+              Aktif Filtreler:
+            </span>
+            {activeChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onClear}
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-primary transition hover:bg-emerald-100"
+              >
+                <span>{chip.label}</span>
+                <X className="size-3" aria-hidden />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="ml-auto text-xs font-extrabold text-red-600 hover:underline"
+            >
+              Tümünü Temizle
+            </button>
+          </div>
+        ) : null}
+
         {/* Desktop 3-column layout */}
         <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_395px]">
           <aside className="hidden lg:block">
@@ -270,6 +339,7 @@ export function DiscoveryScreen({
                 maxPrice={maxPrice}
                 onlyInStock={onlyInStock}
                 verifiedOnly={verifiedOnly}
+                minRating={minRating}
                 onQueryChange={onQueryChange}
                 onCategoryChange={onCategoryChange}
                 onCityChange={onCityChange}
@@ -278,6 +348,7 @@ export function DiscoveryScreen({
                 onMaxPriceChange={onMaxPriceChange}
                 onOnlyInStockChange={onOnlyInStockChange}
                 onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onMinRatingChange={onMinRatingChange}
                 onClear={onClearFilters}
               />
             </div>
@@ -351,12 +422,25 @@ export function DiscoveryScreen({
                             />
                           </button>
 
-                          {product.saticiDogrulanmis ? (
-                            <span className="pointer-events-none absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-black text-primary shadow-xs">
-                              <ShieldCheck className="size-3" aria-hidden />
-                              Doğrulanmış
-                            </span>
-                          ) : null}
+                          <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
+                            {product.saticiDogrulanmis ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-black text-primary shadow-xs">
+                                <ShieldCheck className="size-3" aria-hidden />
+                                Doğrulanmış
+                              </span>
+                            ) : null}
+                            {(product.videolar?.length ?? 0) > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                                <Film className="size-3" aria-hidden />
+                                Video
+                              </span>
+                            ) : null}
+                            {product.stokMiktari > 0 && product.stokMiktari <= 5 ? (
+                              <span className="inline-flex items-center rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+                                Son {product.stokMiktari} adet
+                              </span>
+                            ) : null}
+                          </div>
 
                           {favoritesEnabled ? (
                             <button
@@ -514,6 +598,7 @@ export function DiscoveryScreen({
                 maxPrice={maxPrice}
                 onlyInStock={onlyInStock}
                 verifiedOnly={verifiedOnly}
+                minRating={minRating}
                 onQueryChange={onQueryChange}
                 onCategoryChange={onCategoryChange}
                 onCityChange={onCityChange}
@@ -522,6 +607,7 @@ export function DiscoveryScreen({
                 onMaxPriceChange={onMaxPriceChange}
                 onOnlyInStockChange={onOnlyInStockChange}
                 onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onMinRatingChange={onMinRatingChange}
                 onClear={onClearFilters}
               />
             </div>
@@ -604,6 +690,7 @@ function DiscoveryFilters({
   maxPrice,
   onlyInStock,
   verifiedOnly,
+  minRating,
   onQueryChange,
   onCategoryChange,
   onCityChange,
@@ -612,6 +699,7 @@ function DiscoveryFilters({
   onMaxPriceChange,
   onOnlyInStockChange,
   onVerifiedOnlyChange,
+  onMinRatingChange,
   onClear,
 }: {
   categories: CategoryDto[];
@@ -623,6 +711,7 @@ function DiscoveryFilters({
   maxPrice: string;
   onlyInStock: boolean;
   verifiedOnly: boolean;
+  minRating: number | null;
   onQueryChange: (value: string) => void;
   onCategoryChange: (value: number | null) => void;
   onCityChange: (value: string) => void;
@@ -631,6 +720,7 @@ function DiscoveryFilters({
   onMaxPriceChange: (value: string) => void;
   onOnlyInStockChange: (value: boolean) => void;
   onVerifiedOnlyChange: (value: boolean) => void;
+  onMinRatingChange: (value: number | null) => void;
   onClear: () => void;
 }) {
   return (
@@ -711,27 +801,89 @@ function DiscoveryFilters({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="En Az (₺)" htmlFor="filter-min">
-          <Input
-            id="filter-min"
-            type="number"
-            min="0"
-            value={minPrice}
-            onChange={(event) => onMinPriceChange(event.target.value)}
-            placeholder="0"
-          />
-        </Field>
-        <Field label="En Çok (₺)" htmlFor="filter-max">
-          <Input
-            id="filter-max"
-            type="number"
-            min="0"
-            value={maxPrice}
-            onChange={(event) => onMaxPriceChange(event.target.value)}
-            placeholder="2000"
-          />
-        </Field>
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="En Az (₺)" htmlFor="filter-min">
+            <Input
+              id="filter-min"
+              type="number"
+              min="0"
+              value={minPrice}
+              onChange={(event) => onMinPriceChange(event.target.value)}
+              placeholder="0"
+            />
+          </Field>
+          <Field label="En Çok (₺)" htmlFor="filter-max">
+            <Input
+              id="filter-max"
+              type="number"
+              min="0"
+              value={maxPrice}
+              onChange={(event) => onMaxPriceChange(event.target.value)}
+              placeholder="2000"
+            />
+          </Field>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { label: "0-250 ₺", min: "0", max: "250" },
+            { label: "250-500 ₺", min: "250", max: "500" },
+            { label: "500+ ₺", min: "500", max: "" },
+          ].map((preset) => {
+            const active = minPrice === preset.min && maxPrice === preset.max;
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => {
+                  if (active) {
+                    onMinPriceChange("");
+                    onMaxPriceChange("");
+                  } else {
+                    onMinPriceChange(preset.min);
+                    onMaxPriceChange(preset.max);
+                  }
+                }}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition",
+                  active
+                    ? "border-primary bg-primary text-white"
+                    : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                )}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Minimum Puan
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { label: "Tümü", value: null },
+            { label: "3★+", value: 3 },
+            { label: "4★+", value: 4 },
+            { label: "4.5★+", value: 4.5 },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => onMinRatingChange(opt.value)}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-[11px] font-extrabold transition",
+                minRating === opt.value
+                  ? "border-amber-500 bg-amber-50 text-amber-900"
+                  : "border-border bg-white text-muted-foreground hover:border-amber-300",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2.5 border-t border-border pt-3">

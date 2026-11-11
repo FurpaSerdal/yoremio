@@ -5,6 +5,7 @@ import * as signalR from "@microsoft/signalr";
 
 import {
   yoremioApi,
+  type AdminDashboardDto,
   type AppBootstrapDto,
   type CategoryDto,
   type ChatConversationDto,
@@ -18,6 +19,7 @@ import {
   type ProductDto,
   type RatingDto,
   type ReviewEligibilityDto,
+  type SellerDashboardDto,
   type SellerProfileDto,
   type SellerProfileUpdateValues,
 } from "@/lib/api";
@@ -114,6 +116,7 @@ export function YoremioMarketplace() {
   const [maxPrice, setMaxPrice] = useState("");
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [minRating, setMinRating] = useState<number | null>(null);
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
 
@@ -122,6 +125,8 @@ export function YoremioMarketplace() {
   const [recommended, setRecommended] = useState<ProductDto[]>([]);
   const [buyerDemands, setBuyerDemands] = useState<DemandDto[]>([]);
   const [sellerProfile, setSellerProfile] = useState<SellerProfileDto | null>(null);
+  const [sellerStats, setSellerStats] = useState<SellerDashboardDto | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminDashboardDto | null>(null);
   const [sellerTrustScore, setSellerTrustScore] = useState<number>(0);
   const [sellerProducts, setSellerProducts] = useState<ProductDto[]>([]);
   const [sellerDemands, setSellerDemands] = useState<DemandDto[]>([]);
@@ -245,6 +250,7 @@ export function YoremioMarketplace() {
         maxFiyat: Number.isFinite(parsedMax) ? parsedMax : undefined,
         sadeceStoktaOlanlar: onlyInStock || undefined,
         sadeceDogrulanmisSatici: verifiedOnly || undefined,
+        minOrtalamaPuan: minRating ?? undefined,
         sort,
       });
 
@@ -271,6 +277,7 @@ export function YoremioMarketplace() {
     maxPrice,
     onlyInStock,
     verifiedOnly,
+    minRating,
     sort,
     showToast,
   ]);
@@ -334,6 +341,12 @@ export function YoremioMarketplace() {
       if (hasRole(user, "SATICI")) {
         tasks.push(
           yoremioApi
+            .sellerDashboard(token)
+            .then(setSellerStats)
+            .catch(() => {}),
+        );
+        tasks.push(
+          yoremioApi
             .sellerProfile(token)
             .then((prof) => {
               setSellerProfile(prof);
@@ -358,6 +371,15 @@ export function YoremioMarketplace() {
               .catch(() => {}),
           );
         }
+      }
+
+      if (hasRole(user, "ADMIN")) {
+        tasks.push(
+          yoremioApi
+            .adminDashboard(token)
+            .then(setAdminStats)
+            .catch(() => {}),
+        );
       }
 
       await Promise.all(tasks);
@@ -565,6 +587,9 @@ export function YoremioMarketplace() {
     setRecommended([]);
     setBuyerDemands([]);
     setSellerProfile(null);
+    setSellerStats(null);
+    setAdminStats(null);
+    setSellerTrustScore(0);
     setSellerProducts([]);
     setSellerDemands([]);
     setNotifications([]);
@@ -866,6 +891,7 @@ export function YoremioMarketplace() {
     setMaxPrice("");
     setOnlyInStock(false);
     setVerifiedOnly(false);
+    setMinRating(null);
     setSort("newest");
     setPage(1);
   };
@@ -1008,6 +1034,7 @@ export function YoremioMarketplace() {
           maxPrice={maxPrice}
           onlyInStock={onlyInStock}
           verifiedOnly={verifiedOnly}
+          minRating={minRating}
           sort={sort}
           sortOptions={sortOptions}
           actionStatus={actionStatus}
@@ -1044,6 +1071,10 @@ export function YoremioMarketplace() {
           }}
           onVerifiedOnlyChange={(val) => {
             setVerifiedOnly(val);
+            setPage(1);
+          }}
+          onMinRatingChange={(val) => {
+            setMinRating(val);
             setPage(1);
           }}
           onSortChange={(val) => {
@@ -1215,6 +1246,7 @@ export function YoremioMarketplace() {
           activeTab={sellerTab}
           onTabChange={setSellerTab}
           profile={sellerProfile}
+          sellerStats={sellerStats}
           trustScore={sellerTrustScore}
           products={sellerProducts}
           demands={sellerDemands}
@@ -1372,6 +1404,7 @@ export function YoremioMarketplace() {
           authUser={authUser}
           activeTab={adminTab}
           onTabChange={setAdminTab}
+          adminStats={adminStats}
           categories={categories}
           totalProducts={productsPage.totalCount}
           featuredSellerCount={featuredSellers.length}

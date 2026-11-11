@@ -56,18 +56,21 @@ import type {
   ChatMessageDto,
   DemandDto,
   ProductDto,
+  SellerDashboardDto,
   SellerProfileDto,
   SellerProfileUpdateValues,
 } from "@/lib/api";
 import { cn, formatPrice, limitText, phoneInput } from "@/lib/utils";
 
 type InventoryFilter = "all" | "active" | "passive" | "out_of_stock";
+type DemandStatusFilter = "ALL" | "ACIK" | "ANLASILDI" | "IPTAL";
 
 export function SellerDashboard({
   authUser,
   activeTab,
   onTabChange,
   profile,
+  sellerStats,
   trustScore: trustScoreProp,
   products,
   demands,
@@ -97,6 +100,7 @@ export function SellerDashboard({
   activeTab: SellerTab;
   onTabChange: (tab: SellerTab) => void;
   profile: SellerProfileDto | null;
+  sellerStats?: SellerDashboardDto | null;
   trustScore?: number;
   products: ProductDto[];
   demands: DemandDto[];
@@ -124,11 +128,21 @@ export function SellerDashboard({
 }) {
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilter>("all");
   const [inventoryQuery, setInventoryQuery] = useState("");
+  const [demandStatusFilter, setDemandStatusFilter] = useState<DemandStatusFilter>("ALL");
 
-  const activeProductsCount = products.filter((p) => p.aktifMi !== false).length;
-  const openDemandsCount = demands.filter((d) => d.durum !== "IPTAL").length;
+  const activeProductsCount =
+    sellerStats?.activeProducts ?? products.filter((p) => p.aktifMi !== false).length;
+  const openDemandsCount =
+    sellerStats?.openDemands ?? demands.filter((d) => d.durum !== "IPTAL").length;
   const pendingDemandsCount = demands.filter((d) => d.durum === "ACIK").length;
-  const trustScore = Math.round(trustScoreProp ?? 0);
+  const agreedDemandsCount =
+    sellerStats?.agreedDemands ?? demands.filter((d) => d.durum === "ANLASILDI").length;
+  const trustScore = Math.round(sellerStats?.trustScore ?? trustScoreProp ?? 0);
+
+  const filteredDemands = useMemo(() => {
+    if (demandStatusFilter === "ALL") return demands;
+    return demands.filter((d) => d.durum === demandStatusFilter);
+  }, [demands, demandStatusFilter]);
 
   const filteredProducts = useMemo(() => {
     const q = inventoryQuery.trim().toLowerCase();
@@ -268,36 +282,80 @@ export function SellerDashboard({
 
           {/* KPI Grid */}
           {showOverview ? (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-              <MetricCard
-                icon={Package}
-                label="Aktif Ürün"
-                value={String(activeProductsCount)}
-                helper={`Toplam ${products.length} ürün kaydı`}
-                tone="green"
-              />
-              <MetricCard
-                icon={ClipboardList}
-                label="Gelen Talepler"
-                value={String(openDemandsCount)}
-                helper={`${pendingDemandsCount} yeni yanıt bekleyen`}
-                tone="amber"
-              />
-              <MetricCard
-                icon={CheckCircle2}
-                label="Anlaşılan Talep"
-                value={String(demands.filter((d) => d.durum === "ANLASILDI").length)}
-                helper="Alıcı onayı tamamlananlar"
-                tone="lime"
-              />
-              <MetricCard
-                icon={MessageCircle}
-                label="Canlı Sohbet"
-                value={String(conversations.length)}
-                helper={unreadMessageCount ? `${unreadMessageCount} okunmamış mesaj` : "Tüm mesajlar okundu"}
-                tone="green"
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+                <MetricCard
+                  icon={Package}
+                  label="Aktif Ürün"
+                  value={String(activeProductsCount)}
+                  helper={`Toplam ${sellerStats?.totalProducts ?? products.length} ürün · ${sellerStats?.outOfStockProducts ?? 0} stoksuz`}
+                  tone="green"
+                />
+                <MetricCard
+                  icon={ClipboardList}
+                  label="Açık Talepler"
+                  value={String(openDemandsCount)}
+                  helper={`${sellerStats?.pendingOffers ?? pendingDemandsCount} bekleyen teklif`}
+                  tone="amber"
+                />
+                <MetricCard
+                  icon={CheckCircle2}
+                  label="Anlaşılan"
+                  value={String(agreedDemandsCount)}
+                  helper={`${sellerStats?.acceptedOffers ?? agreedDemandsCount} kabul edilen teklif`}
+                  tone="lime"
+                />
+                <MetricCard
+                  icon={MessageCircle}
+                  label="Canlı Sohbet"
+                  value={String(conversations.length)}
+                  helper={
+                    (sellerStats?.unreadMessages ?? unreadMessageCount) > 0
+                      ? `${sellerStats?.unreadMessages ?? unreadMessageCount} okunmamış mesaj`
+                      : "Tüm mesajlar okundu"
+                  }
+                  tone="green"
+                />
+              </div>
+
+              {sellerStats ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Card className="rounded-xl border-border bg-white p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Mağaza Ortalama Puanı
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-amber-600 tabular-nums">
+                      {sellerStats.averageRating.toFixed(1)} ★
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {sellerStats.totalRatings} puan · {sellerStats.totalReviews} alıcı yorumu
+                    </p>
+                  </Card>
+                  <Card className="rounded-xl border-border bg-white p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Toplam Favorilenme
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-primary tabular-nums">
+                      {sellerStats.totalFavorites}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Alıcıların takip listelerindeki ürünler
+                    </p>
+                  </Card>
+                  <Card className="rounded-xl border-border bg-white p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Teklif Dönüşüm Özeti
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                      {sellerStats.acceptedOffers} Kabul / {sellerStats.rejectedOffers} Red
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Yanıt bekleyen: {sellerStats.pendingOffers} teklif
+                    </p>
+                  </Card>
+                </div>
+              ) : null}
+            </>
           ) : null}
 
           {/* Incoming Demands (Interactive -> opens DemandDetailModal for Offer submission!) */}
@@ -308,15 +366,55 @@ export function SellerDashboard({
               action={activeTab !== "demands" ? "Tümünü Gör" : undefined}
               onAction={() => onTabChange("demands")}
             >
-              {demands.length === 0 ? (
+              {demands.length > 0 ? (
+                <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
+                  {(
+                    [
+                      { id: "ALL", label: `Tümü (${demands.length})` },
+                      {
+                        id: "ACIK",
+                        label: `Açık (${demands.filter((d) => d.durum === "ACIK").length})`,
+                      },
+                      {
+                        id: "ANLASILDI",
+                        label: `Anlaşılan (${demands.filter((d) => d.durum === "ANLASILDI").length})`,
+                      },
+                      {
+                        id: "IPTAL",
+                        label: `İptal (${demands.filter((d) => d.durum === "IPTAL").length})`,
+                      },
+                    ] as const
+                  ).map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setDemandStatusFilter(chip.id)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                        demandStatusFilter === chip.id
+                          ? "border-primary bg-primary text-white"
+                          : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {filteredDemands.length === 0 ? (
                 <EmptyState
                   icon={ClipboardList}
-                  title="Henüz gelen talep yok"
-                  description="Alıcılar ürünlerine talep oluşturduğunda buradan birim fiyat ve mesaj teklifi verebilirsin."
+                  title={demands.length === 0 ? "Henüz gelen talep yok" : "Bu durumda talep yok"}
+                  description={
+                    demands.length === 0
+                      ? "Alıcılar ürünlerine talep oluşturduğunda buradan birim fiyat ve mesaj teklifi verebilirsin."
+                      : "Diğer durum sekmelerinden gelen talepleri görebilirsin."
+                  }
                 />
               ) : (
                 <div className="space-y-2.5">
-                  {demands.map((demand) => (
+                  {filteredDemands.map((demand) => (
                     <div
                       key={demand.id}
                       className="flex flex-col gap-3 rounded-xl border border-border bg-[#fcfdfb] p-3 transition sm:flex-row sm:items-center sm:justify-between"
@@ -964,6 +1062,7 @@ export function SellerProfileScreen({
   onOpenStorefront,
 }: {
   profile: SellerProfileDto | null;
+  sellerStats?: SellerDashboardDto | null;
   trustScore?: number;
   actionStatus: string | null;
   onBack: () => void;

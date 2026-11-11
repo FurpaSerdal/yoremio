@@ -7,16 +7,18 @@ import {
   Bell,
   Check,
   CheckCheck,
+  ClipboardList,
   FolderKanban,
   LayoutDashboard,
   LockKeyhole,
+  MessageCircle,
   MessageSquare,
   Pencil,
   Plus,
-  ShieldCheck,
   Star,
   Store,
   Trash2,
+  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +50,7 @@ import {
   type ToastKind,
 } from "@/components/yoremio/types";
 import type {
+  AdminDashboardDto,
   CategoryDto,
   CommentDto,
   NotificationDto,
@@ -64,6 +67,7 @@ export function AdminDashboard({
   authUser,
   activeTab,
   onTabChange,
+  adminStats,
   categories,
   totalProducts,
   featuredSellerCount,
@@ -78,6 +82,7 @@ export function AdminDashboard({
   authUser: AuthState | null;
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
+  adminStats?: AdminDashboardDto | null;
   categories: CategoryDto[];
   totalProducts: number;
   featuredSellerCount: number;
@@ -102,6 +107,22 @@ export function AdminDashboard({
       onClick: () => onTabChange("overview"),
     },
     {
+      id: "users",
+      label: "Üretici & Alıcılar",
+      icon: Users,
+      badge: adminStats?.totalUsers || undefined,
+      active: activeTab === "users",
+      onClick: () => onTabChange("users"),
+    },
+    {
+      id: "demands",
+      label: "Talep & İletişim",
+      icon: ClipboardList,
+      badge: adminStats?.openDemands || undefined,
+      active: activeTab === "demands",
+      onClick: () => onTabChange("demands"),
+    },
+    {
       id: "categories",
       label: "Kategori Yönetimi",
       icon: FolderKanban,
@@ -110,6 +131,16 @@ export function AdminDashboard({
       onClick: () => onTabChange("categories"),
     },
   ];
+
+  const sellerRatio = adminStats?.totalSellers
+    ? Math.round((adminStats.activeSellers / adminStats.totalSellers) * 100)
+    : 0;
+  const activeProductRatio = adminStats?.totalProducts
+    ? Math.round((adminStats.activeProducts / adminStats.totalProducts) * 100)
+    : 0;
+  const demandAgreeRatio = adminStats?.totalDemands
+    ? Math.round((adminStats.agreedDemands / adminStats.totalDemands) * 100)
+    : 0;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,12 +157,14 @@ export function AdminDashboard({
     }
   };
 
+  const showOverview = activeTab === "overview";
+
   return (
     <>
       <DashboardFrame
         variant="dark"
         title="Platform Yönetim Merkezi"
-        subtitle="Yöremio kategori yapısını yönet, katalog sağlığını ve üretici görünürlüğünü takip et."
+        subtitle="Yöremio kategori yapısını yönet, kullanıcı, ürün ve talep metriklerini canlı takip et."
         authUser={authUser}
         notificationUnreadCount={unreadNotifications}
         onNavigate={onNavigate}
@@ -139,55 +172,142 @@ export function AdminDashboard({
         navItems={navItems}
       >
         <div className="space-y-6">
-          {activeTab === "overview" ? (
+          {showOverview ? (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                 <MetricCard
-                  icon={FolderKanban}
-                  label="Aktif Kategori"
-                  value={String(categories.length)}
-                  helper="Yalnızca Admin tarafından düzenlenebilir"
+                  icon={Users}
+                  label="Toplam Kullanıcı"
+                  value={String(adminStats?.totalUsers ?? 0)}
+                  helper={`${adminStats?.totalSellers ?? 0} satıcı · ${adminStats?.totalBuyers ?? 0} alıcı`}
                   tone="green"
                 />
                 <MetricCard
                   icon={Store}
-                  label="Vitrin Üreticisi"
-                  value={String(featuredSellerCount)}
-                  helper="Öne çıkan doğrulanmış mağazalar"
+                  label="Aktif Ürünler"
+                  value={String(adminStats?.activeProducts ?? totalProducts)}
+                  helper={`Toplam ${adminStats?.totalProducts ?? totalProducts} ürün (${adminStats?.inactiveProducts ?? 0} pasif)`}
                   tone="amber"
                 />
                 <MetricCard
-                  icon={ShieldCheck}
-                  label="Yayındaki Ürün"
-                  value={String(totalProducts)}
-                  helper="Katalogda listelenen aktif kayıt"
+                  icon={ClipboardList}
+                  label="Toplam Talepler"
+                  value={String(adminStats?.totalDemands ?? 0)}
+                  helper={`${adminStats?.agreedDemands ?? 0} anlaşıldı · ${adminStats?.openDemands ?? 0} açık`}
                   tone="lime"
+                />
+                <MetricCard
+                  icon={FolderKanban}
+                  label="Kategoriler"
+                  value={String(categories.length)}
+                  helper={`${featuredSellerCount} vitrin üreticisi`}
+                  tone="green"
                 />
               </div>
 
-              <Panel title="Sistem & Katalog Sağlığı">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <ProgressLine
-                    label="Kategori Kapsama Oranı"
-                    value={Math.min(100, categories.length * 14)}
-                  />
-                  <ProgressLine
-                    label="Vitrin Ürün Doluluğu"
-                    value={Math.min(100, totalProducts * 5)}
-                  />
+              <Panel title="Platform Performans & Katalog Sağlığı">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <ProgressLine label="Aktif Satıcı Oranı" value={sellerRatio} />
+                  <ProgressLine label="Yayındaki Ürün Oranı" value={activeProductRatio} />
+                  <ProgressLine label="Talep Anlaşma Oranı" value={demandAgreeRatio} />
                 </div>
               </Panel>
             </>
           ) : null}
 
-          <Panel
-            title={
-              editingCategoryId
-                ? `Kategori Düzenle (#${editingCategoryId})`
-                : "Kategori Yönetimi (Sadece Admin)"
-            }
-            badge={categories.length || undefined}
-          >
+          {(showOverview || activeTab === "users") ? (
+            <Panel title="Üretici & Alıcı Dağılımı">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Kayıtlı Satıcı
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                    {adminStats?.totalSellers ?? featuredSellerCount}
+                  </p>
+                  <p className="mt-1 text-xs text-primary font-semibold">
+                    {adminStats?.activeSellers ?? featuredSellerCount} aktif mağaza
+                  </p>
+                </Card>
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Kayıtlı Alıcı
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                    {adminStats?.totalBuyers ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Doğrulanmış tüketici hesabı</p>
+                </Card>
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Vitrin Üreticisi
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-amber-600 tabular-nums">
+                    {featuredSellerCount}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Ana sayfada sergilenenler</p>
+                </Card>
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Toplam Yorum
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-primary tabular-nums">
+                    {adminStats?.totalReviews ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Ürün geri bildirimleri</p>
+                </Card>
+              </div>
+            </Panel>
+          ) : null}
+
+          {(showOverview || activeTab === "demands") ? (
+            <Panel title="Talep & Mesajlaşma Trafiği">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Açık Talepler
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-amber-600 tabular-nums">
+                    {adminStats?.openDemands ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Teklif ve görüşme sürecinde</p>
+                </Card>
+                <Card className="rounded-xl border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Anlaşılan Talepler
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-primary tabular-nums">
+                    {adminStats?.agreedDemands ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Başarıyla sonuçlananlar</p>
+                </Card>
+                <Card className="rounded-xl border-border p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Platform Mesajları
+                    </p>
+                    <MessageCircle className="size-4 text-primary" aria-hidden />
+                  </div>
+                  <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                    {adminStats?.totalMessages ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {adminStats?.unreadMessages ?? 0} okunmamış ileti
+                  </p>
+                </Card>
+              </div>
+            </Panel>
+          ) : null}
+
+          {(showOverview || activeTab === "categories") ? (
+            <Panel
+              title={
+                editingCategoryId
+                  ? `Kategori Düzenle (#${editingCategoryId})`
+                  : "Kategori Yönetimi (Sadece Admin)"
+              }
+              badge={categories.length || undefined}
+            >
             <form
               onSubmit={handleSubmit}
               className="mb-6 grid gap-3 rounded-2xl border border-emerald-200/80 bg-[#f6fbf6] p-4 md:grid-cols-[1fr_1.3fr_auto]"
@@ -292,7 +412,8 @@ export function AdminDashboard({
                 ))}
               </div>
             )}
-          </Panel>
+            </Panel>
+          ) : null}
         </div>
       </DashboardFrame>
 
@@ -491,6 +612,37 @@ export function ReviewsScreen({
 
         {tab === "ratings" ? (
           <Card className="space-y-5 rounded-2xl p-5 sm:p-6">
+            {/* Star Distribution Breakdown */}
+            <div className="grid gap-4 rounded-xl border border-border bg-[#f9fbf8] p-4 sm:grid-cols-[160px_1fr] sm:items-center">
+              <div className="text-center">
+                <p className="text-4xl font-black text-primary tabular-nums">
+                  {displayAvg.toFixed(1)}
+                </p>
+                <Stars value={displayAvg} className="mt-1 justify-center" />
+                <p className="mt-1 text-xs font-bold text-muted-foreground">
+                  {ratings.length} değerlendirme
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratings.filter((r) => Math.round(r.puanDegeri) === star).length;
+                  const pct = ratings.length > 0 ? Math.round((count / ratings.length) * 100) : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2 text-xs font-bold">
+                      <span className="w-8 text-right tabular-nums">{star} ★</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-amber-400 transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-muted-foreground tabular-nums">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {ratingsEnabled ? (
               <div className="rounded-xl border border-emerald-200 bg-[#f6fbf6] p-4">
                 <p className="text-sm font-black text-brand-brown">
@@ -732,6 +884,15 @@ export function GlobalStatesScreen({
   onLogout: () => void;
   showToast: (message: string, kind: ToastKind) => void;
 }) {
+  const [notifFilter, setNotifFilter] = useState<"ALL" | "UNREAD" | "DEMAND" | "CHAT">("ALL");
+
+  const filteredNotifications = notifications.filter((item) => {
+    if (notifFilter === "UNREAD") return !item.okunduMu;
+    if (notifFilter === "DEMAND") return item.tur === "TALEP" || item.tur === "TEKLIF";
+    if (notifFilter === "CHAT") return item.tur === "MESAJ";
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#f6f8f5] pb-20 lg:pb-0">
       <PublicHeader
@@ -753,6 +914,39 @@ export function GlobalStatesScreen({
           action={unreadCount > 0 ? "Tümünü Okundu İşaretle" : undefined}
           onAction={onMarkAllRead}
         >
+          {authUser && notifications.length > 0 ? (
+            <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
+              {(
+                [
+                  { id: "ALL", label: `Tümü (${notifications.length})` },
+                  { id: "UNREAD", label: `Okunmamış (${unreadCount})` },
+                  {
+                    id: "DEMAND",
+                    label: `Talep & Teklif (${notifications.filter((n) => n.tur === "TALEP" || n.tur === "TEKLIF").length})`,
+                  },
+                  {
+                    id: "CHAT",
+                    label: `Mesajlar (${notifications.filter((n) => n.tur === "MESAJ").length})`,
+                  },
+                ] as const
+              ).map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setNotifFilter(chip.id)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                    notifFilter === chip.id
+                      ? "border-primary bg-primary text-white"
+                      : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                  )}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {!authUser ? (
             <EmptyState
               icon={Bell}
@@ -760,15 +954,19 @@ export function GlobalStatesScreen({
               description="Yeni teklif, talep güncellemeleri ve mesaj bildirimlerini oturum açtıktan sonra takip edebilirsin."
               action={<Button onClick={() => onNavigate("login")}>Giriş Yap</Button>}
             />
-          ) : notifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <EmptyState
               icon={Bell}
-              title="Bildirimin yok"
-              description="Şu an için yeni bir talep, teklif veya sohbet bildirimi bulunmuyor."
+              title="Bildirim bulunamadı"
+              description={
+                notifications.length === 0
+                  ? "Şu an için yeni bir talep, teklif veya sohbet bildirimi bulunmuyor."
+                  : "Seçili filtrede gösterilecek bildirim bulunmuyor."
+              }
             />
           ) : (
             <div className="space-y-2.5">
-              {notifications.map((item) => (
+              {filteredNotifications.map((item) => (
                 <div
                   key={item.id}
                   className={cn(

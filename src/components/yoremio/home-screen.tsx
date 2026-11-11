@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Compass,
+  Film,
   Heart,
   MapPin,
   MessageCircle,
@@ -16,6 +17,7 @@ import {
   Sparkles,
   Star,
   Store,
+  UserRound,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -600,6 +602,84 @@ export function HomeScreen({
             })}
           </div>
         </section>
+
+        {/* Dual Role Presentation Showcase */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card className="relative overflow-hidden rounded-3xl border-emerald-200/80 bg-white p-5 shadow-xs sm:p-7">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-primary">
+                <UserRound className="size-3.5" aria-hidden />
+                Alıcılar İçin Şeffaf Deneyim
+              </span>
+              <span className="text-xs font-extrabold text-muted-foreground">Doğrudan Erişim</span>
+            </div>
+            <h3 className="mt-3 font-serif text-xl font-bold text-[#14271c] sm:text-2xl">
+              Aradığın Ürünü Özelleştirerek Talep Et
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              İstediğin miktarı ve ambalaj/teslim notunu doğrudan üreticiye ilet; gelen fiyat tekliflerini tek panelden kabul veya reddet.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="rounded-xl font-extrabold"
+                onClick={() => onNavigate("discover")}
+              >
+                Ürünlere Göz At
+              </Button>
+              {!authUser ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl font-bold"
+                  onClick={() => onNavigate("buyer-register")}
+                >
+                  Alıcı Hesabı Aç
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+
+          <Card className="relative overflow-hidden rounded-3xl border-amber-200/80 bg-[linear-gradient(135deg,#fffef9_0%,#f7fbf6_100%)] p-5 shadow-xs sm:p-7">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">
+                <Store className="size-3.5" aria-hidden />
+                Yerel Üreticiler İçin Vitrin
+              </span>
+              <span className="text-xs font-extrabold text-muted-foreground">Güven Puanlı Mağaza</span>
+            </div>
+            <h3 className="mt-3 font-serif text-xl font-bold text-[#14271c] sm:text-2xl">
+              Fotoğraf, Video ve Tekliflerle Satışını Yönet
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Üretim hikayeni paylaş, gelen taleplere anlık birim fiyat teklifi gönder, doğrulanmış satıcı rozeti ve yüksek güven puanı ile öne çık.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {hasRole(authUser, "SATICI") ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-xl font-extrabold"
+                  onClick={() => onNavigate("seller")}
+                >
+                  Satıcı Paneline Git
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="rounded-xl font-extrabold"
+                  onClick={() => onNavigate("seller-register")}
+                >
+                  Mağazanı Hemen Aç
+                </Button>
+              )}
+            </div>
+          </Card>
+        </section>
       </div>
 
       <PromiseBar />
@@ -642,12 +722,25 @@ function HomeProductCard({
           />
         </button>
 
-        {product.saticiDogrulanmis ? (
-          <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-black text-primary shadow-xs">
-            <ShieldCheck className="size-3" aria-hidden />
-            Doğrulanmış
-          </span>
-        ) : null}
+        <div className="pointer-events-none absolute left-2 top-2 flex flex-col items-start gap-1">
+          {product.saticiDogrulanmis ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-black text-primary shadow-xs">
+              <ShieldCheck className="size-3" aria-hidden />
+              Doğrulanmış
+            </span>
+          ) : null}
+          {(product.videolar?.length ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+              <Film className="size-3" aria-hidden />
+              Video
+            </span>
+          ) : null}
+          {product.stokMiktari > 0 && product.stokMiktari <= 5 ? (
+            <span className="inline-flex items-center rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+              Son {product.stokMiktari}
+            </span>
+          ) : null}
+        </div>
 
         {favoritesEnabled ? (
           <button

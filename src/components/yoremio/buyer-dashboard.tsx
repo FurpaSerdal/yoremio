@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   ClipboardList,
@@ -42,6 +43,9 @@ import type {
   ProductDto,
 } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+type BuyerDemandFilter = "ALL" | "ACIK" | "ANLASILDI" | "IPTAL";
 
 function statusBadge(durum: string) {
   if (durum === "ANLASILDI") return { label: "Anlaşıldı", variant: "green" as const };
@@ -176,6 +180,13 @@ export function BuyerDashboard({
         ]
       : []),
   ];
+
+  const [demandFilter, setDemandFilter] = useState<BuyerDemandFilter>("ALL");
+
+  const filteredDemands = useMemo(() => {
+    if (demandFilter === "ALL") return demands;
+    return demands.filter((d) => d.durum === demandFilter);
+  }, [demands, demandFilter]);
 
   const showOverview = activeTab === "overview";
 
@@ -343,20 +354,66 @@ export function BuyerDashboard({
               action="Yeni Talep Aç"
               onAction={() => onNavigate("discover")}
             >
-              {demands.length === 0 ? (
+              {demands.length > 0 ? (
+                <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
+                  {(
+                    [
+                      { id: "ALL", label: `Tümü (${demands.length})` },
+                      {
+                        id: "ACIK",
+                        label: `Açık (${demands.filter((d) => d.durum === "ACIK").length})`,
+                      },
+                      {
+                        id: "ANLASILDI",
+                        label: `Anlaşılan (${agreedCount})`,
+                      },
+                      {
+                        id: "IPTAL",
+                        label: `İptal (${demands.filter((d) => d.durum === "IPTAL").length})`,
+                      },
+                    ] as const
+                  ).map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setDemandFilter(chip.id)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                        demandFilter === chip.id
+                          ? "border-primary bg-primary text-white"
+                          : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                      )}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {filteredDemands.length === 0 ? (
                 <EmptyState
                   icon={ClipboardList}
-                  title="Henüz talebin yok"
-                  description="Keşfet sayfasından bir ürün seçerek miktar ve not ekleyip ilk talebini oluşturabilirsin."
+                  title={demands.length === 0 ? "Henüz talebin yok" : "Bu durumda talep bulunamadı"}
+                  description={
+                    demands.length === 0
+                      ? "Keşfet sayfasından bir ürün seçerek miktar ve not ekleyip ilk talebini oluşturabilirsin."
+                      : "Diğer durum sekmelerini seçerek tüm taleplerini görüntüleyebilirsin."
+                  }
                   action={
-                    <Button size="sm" onClick={() => onNavigate("discover")}>
-                      Ürünleri İncele
-                    </Button>
+                    demands.length === 0 ? (
+                      <Button size="sm" onClick={() => onNavigate("discover")}>
+                        Ürünleri İncele
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => setDemandFilter("ALL")}>
+                        Tümünü Göster
+                      </Button>
+                    )
                   }
                 />
               ) : (
                 <div className="space-y-3">
-                  {demands.map((demand) => {
+                  {filteredDemands.map((demand) => {
                     const st = statusBadge(demand.durum);
                     const latestOffer = demand.teklifler?.[0];
                     return (

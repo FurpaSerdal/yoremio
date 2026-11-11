@@ -39,7 +39,7 @@ export type Screen =
 
 export type BuyerTab = "overview" | "favorites" | "recommended" | "demands" | "offers" | "chat";
 export type SellerTab = "overview" | "products" | "demands" | "chat";
-export type AdminTab = "overview" | "categories";
+export type AdminTab = "overview" | "users" | "demands" | "categories";
 
 export type AuthState = SessionUser & Pick<LoginResponse, "token">;
 export type AuthCompleteOptions = {
