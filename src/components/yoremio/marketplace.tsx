@@ -7,6 +7,8 @@ import {
   yoremioApi,
   type AdminDashboardDto,
   type AppBootstrapDto,
+  type BuyerProfileDto,
+  type BuyerProfileUpdateValues,
   type CategoryDto,
   type ChatConversationDto,
   type ChatMessageDto,
@@ -124,6 +126,7 @@ export function YoremioMarketplace() {
   const [favorites, setFavorites] = useState<ProductDto[]>([]);
   const [recommended, setRecommended] = useState<ProductDto[]>([]);
   const [buyerDemands, setBuyerDemands] = useState<DemandDto[]>([]);
+  const [buyerProfile, setBuyerProfile] = useState<BuyerProfileDto | null>(null);
   const [sellerProfile, setSellerProfile] = useState<SellerProfileDto | null>(null);
   const [sellerStats, setSellerStats] = useState<SellerDashboardDto | null>(null);
   const [adminStats, setAdminStats] = useState<AdminDashboardDto | null>(null);
@@ -314,6 +317,12 @@ export function YoremioMarketplace() {
       }
 
       if (hasRole(user, "ALICI")) {
+        tasks.push(
+          yoremioApi
+            .buyerProfile(token)
+            .then(setBuyerProfile)
+            .catch(() => {}),
+        );
         if (favoritesEnabled) {
           tasks.push(
             yoremioApi
@@ -562,6 +571,22 @@ export function YoremioMarketplace() {
           setTypingFromUserId(null);
         }, 2800);
       },
+      onNotification: (notification) => {
+        setNotifications((prev) =>
+          prev.some((n) => n.id === notification.id)
+            ? prev
+            : [notification, ...prev].slice(0, 50),
+        );
+        if (typeof notification.okunmamisSayisi === "number") {
+          setUnreadCount(notification.okunmamisSayisi);
+        } else {
+          setUnreadCount((prev) => prev + 1);
+        }
+        showToast(`${notification.baslik}: ${notification.mesaj}`, "info");
+      },
+      onUnreadNotifications: (count) => {
+        setUnreadCount(count);
+      },
     });
 
     connection.onreconnected(() => setSignalrConnected(true));
@@ -578,7 +603,7 @@ export function YoremioMarketplace() {
       hubRef.current = null;
       void connection.stop();
     };
-  }, [authUser?.token, chatEnabled]);
+  }, [authUser?.token, chatEnabled, showToast]);
 
   const handleLogout = () => {
     clearStoredSession();
@@ -586,6 +611,7 @@ export function YoremioMarketplace() {
     setFavorites([]);
     setRecommended([]);
     setBuyerDemands([]);
+    setBuyerProfile(null);
     setSellerProfile(null);
     setSellerStats(null);
     setAdminStats(null);
@@ -872,11 +898,54 @@ export function YoremioMarketplace() {
     try {
       const updated = await yoremioApi.updateSellerProfile(authUser.token, values);
       setSellerProfile(updated);
+      setAuthUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              magazaAdi: updated.magazaAdi,
+              sehir: updated.sehir ?? prev.sehir,
+              ilce: updated.ilce ?? prev.ilce,
+            }
+          : prev,
+      );
+      await Promise.all([loadPublicBase(), loadProducts()]);
       setScreen("seller");
       showToast("Mağaza profilin güncellendi!", "success");
     } catch (err) {
       const info = apiErrorInfo(err);
       showToast(info.message, "error", info.traceId);
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleSaveBuyerProfile = async (values: BuyerProfileUpdateValues) => {
+    if (!authUser) return false;
+    setActionStatus("buyer-profile");
+    try {
+      const updated = await yoremioApi.updateBuyerProfile(authUser.token, values);
+      setBuyerProfile(updated);
+      setAuthUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              userName: updated.userName ?? prev.userName,
+              phoneNumber: updated.phoneNumber ?? prev.phoneNumber,
+              sehir: updated.sehir ?? prev.sehir,
+              ilce: updated.ilce ?? prev.ilce,
+            }
+          : prev,
+      );
+      await yoremioApi
+        .recommendedProducts(authUser.token)
+        .then(setRecommended)
+        .catch(() => {});
+      showToast("Alıcı profilin ve konum tercihlerin güncellendi!", "success");
+      return true;
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+      return false;
     } finally {
       setActionStatus(null);
     }
@@ -1022,6 +1091,8 @@ export function YoremioMarketplace() {
           notificationUnreadCount={unreadCount}
           unreadMessageCount={unreadMessageCount}
           categories={categories}
+          locations={bootstrap?.locations}
+          cities={bootstrap?.cities}
           productsPage={productsPage}
           productsState={productsState}
           selectedProduct={selectedProduct}
@@ -1124,6 +1195,8 @@ export function YoremioMarketplace() {
     return (
       <>
         <BuyerRegisterScreen
+          locations={bootstrap?.locations}
+          cities={bootstrap?.cities}
           onBack={() => setScreen("home")}
           onNavigate={setScreen}
           onRegistered={(email) => {
@@ -1141,6 +1214,8 @@ export function YoremioMarketplace() {
     return (
       <>
         <SellerRegisterScreen
+          locations={bootstrap?.locations}
+          cities={bootstrap?.cities}
           onBack={() => setScreen("home")}
           onNavigate={setScreen}
           onRegistered={(email) => {
@@ -1195,6 +1270,10 @@ export function YoremioMarketplace() {
           favorites={favorites}
           recommended={recommended}
           demands={buyerDemands}
+          buyerProfile={buyerProfile}
+          categories={categories}
+          locations={bootstrap?.locations}
+          cities={bootstrap?.cities}
           conversations={conversations}
           messages={messages}
           chatTargetId={chatTargetId}
@@ -1216,6 +1295,7 @@ export function YoremioMarketplace() {
           }}
           onOpenStorefront={(id) => setStorefrontSellerId(id)}
           onToggleFavorite={handleToggleFavorite}
+          onSaveProfile={handleSaveBuyerProfile}
           onNavigate={setScreen}
           onLogout={handleLogout}
         />
@@ -1373,6 +1453,9 @@ export function YoremioMarketplace() {
           key={sellerProfile?.kullaniciId ?? "profile"}
           profile={sellerProfile}
           trustScore={sellerTrustScore}
+          locations={bootstrap?.locations}
+          cities={bootstrap?.cities}
+          maxImageBytes={bootstrap?.uploads?.maxImageBytes}
           actionStatus={actionStatus}
           onBack={() => setScreen("seller")}
           onSave={handleSaveSellerProfile}
@@ -1410,6 +1493,15 @@ export function YoremioMarketplace() {
           featuredSellerCount={featuredSellers.length}
           unreadNotifications={unreadCount}
           actionStatus={actionStatus}
+          showToast={showToast}
+          onModerationUpdated={() => {
+            void yoremioApi
+              .adminDashboard(authUser.token)
+              .then(setAdminStats)
+              .catch(() => {});
+            void loadPublicBase();
+            void loadProducts();
+          }}
           onCreateCategory={async (values: CategoryFormValues) => {
             setActionStatus("category-save");
             try {
@@ -1504,8 +1596,12 @@ export function YoremioMarketplace() {
               );
               const nextAvg = res.urunOrtalama ?? res.ortalama;
               setAverageScore(nextAvg);
-              const freshRatings = await yoremioApi.productRatings(reviewProduct.id);
+              const [freshRatings, freshElig] = await Promise.all([
+                yoremioApi.productRatings(reviewProduct.id),
+                yoremioApi.reviewEligibility(authUser.token, reviewProduct.id).catch(() => null),
+              ]);
               setRatings(freshRatings);
+              if (freshElig) setEligibility(freshElig);
               showToast("Puanın kaydedildi!", "success");
             } catch (err) {
               const info = apiErrorInfo(err);

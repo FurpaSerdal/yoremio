@@ -8,19 +8,25 @@ import {
   Compass,
   Heart,
   LayoutDashboard,
+  Loader2,
+  MapPin,
   MessageCircle,
   Sparkles,
   Tag,
+  UserRound,
   XCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   ChatPanel,
   DashboardFrame,
   EmptyState,
+  Field,
+  LocationFields,
   MetricCard,
   MiniProductButton,
   MobileBottomNav,
@@ -37,13 +43,16 @@ import {
   type Screen,
 } from "@/components/yoremio/types";
 import type {
+  BootstrapLocationDto,
+  BuyerProfileDto,
+  BuyerProfileUpdateValues,
+  CategoryDto,
   ChatConversationDto,
   ChatMessageDto,
   DemandDto,
   ProductDto,
 } from "@/lib/api";
-import { formatPrice } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice, limitText, phoneInput } from "@/lib/utils";
 
 type BuyerDemandFilter = "ALL" | "ACIK" | "ANLASILDI" | "IPTAL";
 
@@ -63,6 +72,10 @@ export function BuyerDashboard({
   favorites,
   recommended,
   demands,
+  buyerProfile = null,
+  categories = [],
+  locations = [],
+  cities = [],
   conversations,
   messages,
   chatTargetId,
@@ -81,6 +94,7 @@ export function BuyerDashboard({
   onOpenProduct,
   onOpenStorefront,
   onToggleFavorite,
+  onSaveProfile,
   onNavigate,
   onLogout,
 }: {
@@ -92,6 +106,10 @@ export function BuyerDashboard({
   favorites: ProductDto[];
   recommended: ProductDto[];
   demands: DemandDto[];
+  buyerProfile?: BuyerProfileDto | null;
+  categories?: CategoryDto[];
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
   conversations: ChatConversationDto[];
   messages: ChatMessageDto[];
   chatTargetId: string;
@@ -110,6 +128,7 @@ export function BuyerDashboard({
   onOpenProduct: (product: ProductDto) => void;
   onOpenStorefront: (saticiId: string) => void;
   onToggleFavorite: (productId: number) => void;
+  onSaveProfile?: (values: BuyerProfileUpdateValues) => Promise<boolean>;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
 }) {
@@ -166,6 +185,13 @@ export function BuyerDashboard({
       icon: Sparkles,
       active: activeTab === "recommended",
       onClick: () => onTabChange("recommended"),
+    },
+    {
+      id: "profile",
+      label: "Profil & Konum",
+      icon: UserRound,
+      active: activeTab === "profile",
+      onClick: () => onTabChange("profile"),
     },
     ...(chatEnabled
       ? [
@@ -587,9 +613,28 @@ export function BuyerDashboard({
           {(showOverview || activeTab === "recommended") ? (
             <Panel
               title="Sana Özel Öneriler"
-              action="Keşifte Gör"
+              action={buyerProfile?.sehir ? `${buyerProfile.sehir} Öncelikli · Keşifte Gör` : "Keşifte Gör"}
               onAction={() => onNavigate("discover")}
             >
+              {!buyerProfile?.sehir && onSaveProfile ? (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-xs">
+                  <div className="flex items-center gap-2 font-semibold text-amber-900">
+                    <MapPin className="size-4 shrink-0 text-amber-700" aria-hidden />
+                    <span>
+                      Şehir ve favori kategorini ekleyerek bölgendeki üreticilerden sana özel öneriler alabilirsin.
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 bg-white text-xs font-extrabold"
+                    onClick={() => onTabChange("profile")}
+                  >
+                    Profili Tamamla
+                  </Button>
+                </div>
+              ) : null}
               {recommended.length === 0 ? (
                 <EmptyState
                   icon={Sparkles}
@@ -608,6 +653,20 @@ export function BuyerDashboard({
                 </div>
               )}
             </Panel>
+          ) : null}
+
+          {/* Buyer Profile & Location Preferences */}
+          {activeTab === "profile" && onSaveProfile ? (
+            <BuyerProfilePanel
+              key={`${buyerProfile?.kullaniciId ?? "anon"}-${buyerProfile?.userName ?? ""}-${buyerProfile?.sehir ?? ""}-${buyerProfile?.ilce ?? ""}-${buyerProfile?.favoriKategori ?? ""}`}
+              authUser={authUser}
+              profile={buyerProfile}
+              categories={categories}
+              locations={locations}
+              cities={cities}
+              saving={actionStatus === "buyer-profile"}
+              onSave={onSaveProfile}
+            />
           ) : null}
 
           {/* Live SignalR Chat */}
@@ -637,5 +696,133 @@ export function BuyerDashboard({
         onNavigate={onNavigate}
       />
     </>
+  );
+}
+
+function BuyerProfilePanel({
+  authUser,
+  profile,
+  categories,
+  locations,
+  cities,
+  saving,
+  onSave,
+}: {
+  authUser: AuthState | null;
+  profile: BuyerProfileDto | null;
+  categories: CategoryDto[];
+  locations: BootstrapLocationDto[];
+  cities: string[];
+  saving: boolean;
+  onSave: (values: BuyerProfileUpdateValues) => Promise<boolean>;
+}) {
+  const [userName, setUserName] = useState(profile?.userName ?? authUser?.userName ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber ?? authUser?.phoneNumber ?? "");
+  const [sehir, setSehir] = useState(profile?.sehir ?? authUser?.sehir ?? "");
+  const [ilce, setIlce] = useState(profile?.ilce ?? authUser?.ilce ?? "");
+  const [adres, setAdres] = useState(profile?.adres ?? "");
+  const [favoriKategori, setFavoriKategori] = useState(profile?.favoriKategori ?? "");
+
+  return (
+    <Panel title="Alıcı Profilim & Kişiselleştirme">
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          await onSave({
+            userName: userName.trim() || undefined,
+            phoneNumber: phoneNumber.trim() || undefined,
+            sehir: sehir.trim() || undefined,
+            ilce: ilce.trim() || undefined,
+            adres: adres.trim() || undefined,
+            favoriKategori: favoriKategori.trim() || undefined,
+          });
+        }}
+        className="space-y-4"
+      >
+        <div className="rounded-xl border border-emerald-200/70 bg-[#f6fbf6] p-3.5 text-xs text-muted-foreground">
+          Kullanıcı adın yorumlarda, puan listelerinde ve satıcıya giden taleplerde görünür. Şehir, ilçe ve favori kategori bilgilerin ise{" "}
+          <span className="font-bold text-primary">Sana Özel Öneriler</span> sıralamasını doğrudan kişiselleştirir.
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Görünen Kullanıcı Adı" htmlFor="bp-username">
+            <Input
+              id="bp-username"
+              minLength={3}
+              value={userName}
+              onChange={(event) => setUserName(limitText(event.target.value, 50))}
+              placeholder="Ör: alici_ayse"
+            />
+          </Field>
+
+          <Field label="İletişim Telefonu" htmlFor="bp-phone">
+            <Input
+              id="bp-phone"
+              value={phoneNumber}
+              onChange={(event) => setPhoneNumber(phoneInput(event.target.value))}
+              placeholder="0555 123 45 67"
+            />
+          </Field>
+        </div>
+
+        <LocationFields
+          city={sehir}
+          district={ilce}
+          onCityChange={setSehir}
+          onDistrictChange={setIlce}
+          locations={locations}
+          cities={cities}
+          cityPlaceholder="Ör: İstanbul"
+          districtPlaceholder="Ör: Kadıköy"
+          cityId="bp-city"
+          districtId="bp-district"
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Favori Ürün Kategorisi" htmlFor="bp-fav-cat">
+            <select
+              id="bp-fav-cat"
+              value={favoriKategori}
+              onChange={(event) => setFavoriKategori(event.target.value)}
+              className="flex h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary"
+            >
+              <option value="">Seçilmedi</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.adi}>
+                  {cat.adi}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="E-posta Hesabı" htmlFor="bp-email">
+            <Input
+              id="bp-email"
+              value={profile?.email ?? authUser?.email ?? ""}
+              disabled
+              className="bg-muted/60 text-muted-foreground"
+            />
+          </Field>
+        </div>
+
+        <Field label="Teslimat / Bölge Adresi" htmlFor="bp-adres">
+          <textarea
+            id="bp-adres"
+            rows={3}
+            value={adres}
+            onChange={(event) => setAdres(limitText(event.target.value, 200))}
+            placeholder="Mahalle, sokak veya teslimat tercihlerin..."
+            className="w-full rounded-xl border border-input bg-white p-3 text-sm outline-none focus:border-primary"
+          />
+        </Field>
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {saving ? "Kaydediliyor..." : "Profil Bilgilerini Kaydet"}
+          </Button>
+        </div>
+      </form>
+    </Panel>
   );
 }

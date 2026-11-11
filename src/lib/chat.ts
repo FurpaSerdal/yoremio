@@ -2,9 +2,9 @@
 
 import * as signalR from "@microsoft/signalr";
 
-import { API_BASE_URL, type ChatMessageDto } from "@/lib/api";
+import { API_BASE_URL, type ChatMessageDto, type NotificationDto } from "@/lib/api";
 
-export type { ChatMessageDto };
+export type { ChatMessageDto, NotificationDto };
 
 export function createChatConnection(getToken: () => string) {
   return new signalR.HubConnectionBuilder()
@@ -25,6 +25,8 @@ export function bindChatEvents(
     onRead?: (readerUserId: string, readAtUtc: string) => void;
     onConversationRead?: (otherUserId: string, markedCount: number, readAtUtc: string) => void;
     onTyping?: (fromUserId: string) => void;
+    onNotification?: (notification: NotificationDto) => void;
+    onUnreadNotifications?: (count: number) => void;
   },
 ) {
   if (handlers.onConnected) {
@@ -45,6 +47,12 @@ export function bindChatEvents(
   if (handlers.onTyping) {
     connection.on("Typing", handlers.onTyping);
   }
+  if (handlers.onNotification) {
+    connection.on("NotificationReceived", handlers.onNotification);
+  }
+  if (handlers.onUnreadNotifications) {
+    connection.on("UnreadNotificationCountUpdated", handlers.onUnreadNotifications);
+  }
 
   return () => {
     connection.off("Connected");
@@ -53,5 +61,7 @@ export function bindChatEvents(
     connection.off("MessagesRead");
     connection.off("ConversationRead");
     connection.off("Typing");
+    connection.off("NotificationReceived");
+    connection.off("UnreadNotificationCountUpdated");
   };
 }

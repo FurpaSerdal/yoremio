@@ -17,6 +17,7 @@ import {
   Sparkles,
   Store,
   Trash2,
+  UserRound,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -24,10 +25,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/yoremio/brand-logo";
-import { Field, InputIcon, PasswordInput, StatusBox } from "@/components/yoremio/ui-kit";
+import {
+  Field,
+  InputIcon,
+  LocationFields,
+  PasswordInput,
+  StatusBox,
+} from "@/components/yoremio/ui-kit";
 import { apiErrorInfo, type AuthCompleteOptions, type Screen, type ToastKind } from "@/components/yoremio/types";
 import {
   yoremioApi,
+  type BootstrapLocationDto,
   type DevVerificationMessageDto,
   type LoginResponse,
 } from "@/lib/api";
@@ -275,17 +283,26 @@ export function LoginScreen({
 }
 
 export function BuyerRegisterScreen({
+  locations = [],
+  cities = [],
   onBack,
   onNavigate,
   onRegistered,
   showToast,
 }: {
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
   onBack: () => void;
   onNavigate: (screen: Screen) => void;
   onRegistered: (email: string) => void;
   showToast: (message: string, kind: ToastKind, traceId?: string | null) => void;
 }) {
   const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
+  const [adres, setAdres] = useState("");
+  const [showProfileFields, setShowProfileFields] = useState(false);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -303,6 +320,10 @@ export function BuyerRegisterScreen({
       await yoremioApi.registerBuyer({
         email: email.trim(),
         password,
+        userName: userName.trim() || undefined,
+        sehir: city.trim() || undefined,
+        ilce: district.trim() || undefined,
+        adres: adres.trim() || undefined,
       });
       showToast("Kayıt başarılı! E-posta doğrulama adımına yönlendirildin.", "success");
       onRegistered(email.trim());
@@ -346,6 +367,23 @@ export function BuyerRegisterScreen({
         </Field>
 
         <Field
+          label="Kullanıcı Adı (İsteğe Bağlı)"
+          htmlFor="buyer-username"
+          error={firstFieldError(fieldErrors, ["UserName"])}
+        >
+          <InputIcon icon={UserRound}>
+            <Input
+              id="buyer-username"
+              minLength={3}
+              value={userName}
+              onChange={(event) => setUserName(limitText(event.target.value, 50))}
+              placeholder="Ör: alici_ayse (yorumlarda görünür)"
+              className="pl-11"
+            />
+          </InputIcon>
+        </Field>
+
+        <Field
           label="Şifre *"
           htmlFor="buyer-password"
           error={firstFieldError(fieldErrors, ["Password"])}
@@ -359,6 +397,47 @@ export function BuyerRegisterScreen({
             placeholder="En az 8 karakter, büyük/küçük harf, rakam ve sembol"
           />
         </Field>
+
+        <div className="rounded-xl border border-border bg-[#f8fbf7] p-3">
+          <button
+            type="button"
+            onClick={() => setShowProfileFields((prev) => !prev)}
+            className="flex w-full items-center justify-between text-left text-xs font-extrabold text-primary"
+          >
+            <span>Konum & Teslimat Bölgesi Ekle (Kişiselleştirilmiş Öneriler)</span>
+            <span>{showProfileFields ? "Gizle" : "Göster"}</span>
+          </button>
+
+          {showProfileFields ? (
+            <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
+              <LocationFields
+                compact
+                city={city}
+                district={district}
+                onCityChange={setCity}
+                onDistrictChange={setDistrict}
+                locations={locations}
+                cities={cities}
+                cityPlaceholder="Ör: İstanbul"
+                districtPlaceholder="Ör: Kadıköy"
+                cityId="buyer-reg-city"
+                districtId="buyer-reg-district"
+              />
+              <Field
+                label="Adres"
+                htmlFor="buyer-adres"
+                error={firstFieldError(fieldErrors, ["Adres"])}
+              >
+                <Input
+                  id="buyer-adres"
+                  value={adres}
+                  onChange={(event) => setAdres(limitText(event.target.value, 200))}
+                  placeholder="Mahalle, cadde bilgisi (opsiyonel)"
+                />
+              </Field>
+            </div>
+          ) : null}
+        </div>
 
         <Button type="submit" size="lg" className="w-full rounded-xl font-extrabold" disabled={loading}>
           {loading ? <Loader2 className="animate-spin" aria-hidden /> : null}
@@ -387,11 +466,15 @@ export function BuyerRegisterScreen({
 }
 
 export function SellerRegisterScreen({
+  locations = [],
+  cities = [],
   onBack,
   onNavigate,
   onRegistered,
   showToast,
 }: {
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
   onBack: () => void;
   onNavigate: (screen: Screen) => void;
   onRegistered: (email: string) => void;
@@ -530,24 +613,18 @@ export function SellerRegisterScreen({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Şehir" htmlFor="seller-city">
-            <Input
-              id="seller-city"
-              value={city}
-              onChange={(event) => setCity(limitText(event.target.value, 40))}
-              placeholder="Trabzon"
-            />
-          </Field>
-          <Field label="İlçe" htmlFor="seller-district">
-            <Input
-              id="seller-district"
-              value={district}
-              onChange={(event) => setDistrict(limitText(event.target.value, 40))}
-              placeholder="Maçka"
-            />
-          </Field>
-        </div>
+        <LocationFields
+          city={city}
+          district={district}
+          onCityChange={setCity}
+          onDistrictChange={setDistrict}
+          locations={locations}
+          cities={cities}
+          cityPlaceholder="Trabzon"
+          districtPlaceholder="Maçka"
+          cityId="seller-city"
+          districtId="seller-district"
+        />
 
         <Field
           label="Şifre *"

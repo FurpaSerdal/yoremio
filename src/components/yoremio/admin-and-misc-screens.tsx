@@ -1,20 +1,27 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   Bell,
   Check,
   CheckCheck,
   ClipboardList,
+  Eye,
+  EyeOff,
   FolderKanban,
   LayoutDashboard,
+  Loader2,
   LockKeyhole,
   MessageCircle,
   MessageSquare,
+  Package,
   Pencil,
   Plus,
+  Search,
+  ShieldCheck,
+  ShieldX,
   Star,
   Store,
   Trash2,
@@ -31,6 +38,7 @@ import {
   Field,
   MetricCard,
   MobileBottomNav,
+  PaginationBar,
   Panel,
   ProgressLine,
   PublicHeader,
@@ -39,6 +47,7 @@ import {
   type DashboardNavItem,
 } from "@/components/yoremio/ui-kit";
 import {
+  apiErrorInfo,
   productImage,
   productLocation,
   sellerName,
@@ -49,15 +58,19 @@ import {
   type Screen,
   type ToastKind,
 } from "@/components/yoremio/types";
-import type {
-  AdminDashboardDto,
-  CategoryDto,
-  CommentDto,
-  NotificationDto,
-  ProductDto,
-  RatingDto,
-  ReviewEligibilityDto,
-  SellerProfileDto,
+import {
+  yoremioApi,
+  type AdminCommentDto,
+  type AdminDashboardDto,
+  type AdminUserDto,
+  type CategoryDto,
+  type CommentDto,
+  type NotificationDto,
+  type Paginated,
+  type ProductDto,
+  type RatingDto,
+  type ReviewEligibilityDto,
+  type SellerProfileDto,
 } from "@/lib/api";
 
 type CategoryFormValues = Omit<CategoryDto, "id">;
@@ -73,6 +86,8 @@ export function AdminDashboard({
   featuredSellerCount,
   unreadNotifications,
   actionStatus,
+  showToast,
+  onModerationUpdated,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -88,6 +103,8 @@ export function AdminDashboard({
   featuredSellerCount: number;
   unreadNotifications: number;
   actionStatus: string | null;
+  showToast?: (message: string, kind: ToastKind, traceId?: string | null) => void;
+  onModerationUpdated?: () => void;
   onCreateCategory: (values: CategoryFormValues) => Promise<boolean>;
   onUpdateCategory: (id: number, values: CategoryFormValues) => Promise<boolean>;
   onDeleteCategory: (category: CategoryDto) => void;
@@ -108,11 +125,27 @@ export function AdminDashboard({
     },
     {
       id: "users",
-      label: "Üretici & Alıcılar",
+      label: "Kullanıcı & Doğrulama",
       icon: Users,
       badge: adminStats?.totalUsers || undefined,
       active: activeTab === "users",
       onClick: () => onTabChange("users"),
+    },
+    {
+      id: "products",
+      label: "Ürün Moderasyonu",
+      icon: Package,
+      badge: adminStats?.totalProducts || undefined,
+      active: activeTab === "products",
+      onClick: () => onTabChange("products"),
+    },
+    {
+      id: "comments",
+      label: "Yorum Moderasyonu",
+      icon: MessageSquare,
+      badge: adminStats?.totalReviews || undefined,
+      active: activeTab === "comments",
+      onClick: () => onTabChange("comments"),
     },
     {
       id: "demands",
@@ -258,6 +291,30 @@ export function AdminDashboard({
                 </Card>
               </div>
             </Panel>
+          ) : null}
+
+          {activeTab === "users" && authUser?.token ? (
+            <AdminUsersModerationPanel
+              token={authUser.token}
+              showToast={showToast}
+              onChanged={onModerationUpdated}
+            />
+          ) : null}
+
+          {activeTab === "products" && authUser?.token ? (
+            <AdminProductsModerationPanel
+              token={authUser.token}
+              showToast={showToast}
+              onChanged={onModerationUpdated}
+            />
+          ) : null}
+
+          {activeTab === "comments" && authUser?.token ? (
+            <AdminCommentsModerationPanel
+              token={authUser.token}
+              showToast={showToast}
+              onChanged={onModerationUpdated}
+            />
           ) : null}
 
           {(showOverview || activeTab === "demands") ? (
@@ -423,6 +480,665 @@ export function AdminDashboard({
         onNavigate={onNavigate}
       />
     </>
+  );
+}
+
+function AdminUsersModerationPanel({
+  token,
+  showToast,
+  onChanged,
+}: {
+  token: string;
+  showToast?: (message: string, kind: ToastKind, traceId?: string | null) => void;
+  onChanged?: () => void;
+}) {
+  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [note, setNote] = useState("");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [data, setData] = useState<Paginated<AdminUserDto>>({
+    items: [],
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const res = await yoremioApi.adminUsers(token, {
+        q: search.trim() || undefined,
+        rol: roleFilter || undefined,
+        sadeceBekleyenSaticilar: pendingOnly || undefined,
+        page,
+        pageSize: 10,
+      });
+      setData(res);
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    }
+  }, [page, pendingOnly, roleFilter, search, showToast, token]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const setVerification = async (user: AdminUserDto, dogrulandiMi: boolean | null) => {
+    setBusyKey(`verify-${user.id}`);
+    try {
+      const updated = await yoremioApi.adminSetSellerVerification(token, user.id, {
+        dogrulandiMi,
+        not: note.trim() || undefined,
+      });
+      setData((prev) => ({
+        ...prev,
+        items: prev.items.map((item) => (item.id === user.id ? updated : item)),
+      }));
+      showToast?.(
+        dogrulandiMi === true
+          ? `${user.magazaAdi || user.email} satıcısı doğrulandı.`
+          : dogrulandiMi === false
+            ? `${user.magazaAdi || user.email} doğrulaması reddedildi.`
+            : `${user.magazaAdi || user.email} otomatik doğrulama kuralına döndürüldü.`,
+        "success",
+      );
+      onChanged?.();
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const toggleStatus = async (user: AdminUserDto) => {
+    const nextActive = !(user.saticiAktifMi ?? true);
+    setBusyKey(`status-${user.id}`);
+    try {
+      const updated = await yoremioApi.adminSetSellerStatus(token, user.id, {
+        aktifMi: nextActive,
+        sebep: note.trim() || undefined,
+      });
+      setData((prev) => ({
+        ...prev,
+        items: prev.items.map((item) => (item.id === user.id ? updated : item)),
+      }));
+      showToast?.(
+        nextActive
+          ? "Satıcı hesabı aktif hale getirildi ve bildirim iletildi."
+          : "Satıcı hesabı pasife alındı ve bildirim iletildi.",
+        "success",
+      );
+      onChanged?.();
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return (
+    <Panel title="Kullanıcı Listesi & Satıcı Doğrulama Yönetimi" badge={data.totalCount || undefined}>
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+        <div className="flex flex-wrap items-center gap-2">
+          {(
+            [
+              { id: "", label: "Tümü" },
+              { id: "SATICI", label: "Satıcılar" },
+              { id: "ALICI", label: "Alıcılar" },
+              { id: "ADMIN", label: "Admin" },
+            ] as const
+          ).map((chip) => (
+            <button
+              key={chip.id || "all"}
+              type="button"
+              onClick={() => {
+                setRoleFilter(chip.id);
+                setPage(1);
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                roleFilter === chip.id
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-white text-muted-foreground hover:border-primary/40",
+              )}
+            >
+              {chip.label}
+            </button>
+          ))}
+
+          <label className="ml-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900">
+            <input
+              type="checkbox"
+              checked={pendingOnly}
+              onChange={(event) => {
+                setPendingOnly(event.target.checked);
+                setPage(1);
+              }}
+              className="accent-primary"
+            />
+            Bekleyen Satıcılar
+          </label>
+        </div>
+
+        <div className="relative w-full lg:w-72">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="E-posta, kullanıcı adı veya mağaza..."
+            className="h-9 pl-9 text-xs"
+          />
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          value={note}
+          onChange={(event) => setNote(limitText(event.target.value, 500))}
+          placeholder="Opsiyonel moderasyon notu / sebebi (karar öncesi yazılabilir, satıcıya bildirimde gider)..."
+          className="h-9 text-xs"
+        />
+      </div>
+
+      {data.items.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="Eşleşen kullanıcı bulunamadı"
+          description="Arama veya rol filtresini değiştirerek tekrar deneyebilirsin."
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {data.items.map((user) => {
+            const isSeller = user.roles.includes("SATICI");
+            const sellerActive = user.saticiAktifMi ?? true;
+            return (
+              <div
+                key={user.id}
+                className="flex flex-col gap-3 rounded-xl border border-border bg-[#fcfdfb] p-3.5 lg:flex-row lg:items-center lg:justify-between"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-black text-brand-brown">
+                      {user.magazaAdi || user.userName || user.email || user.id}
+                    </span>
+                    {user.roles.map((r) => (
+                      <Badge key={r} variant={r === "ADMIN" ? "gold" : r === "SATICI" ? "green" : "outline"}>
+                        {r}
+                      </Badge>
+                    ))}
+                    {isSeller ? (
+                      <>
+                        <Badge variant={user.dogrulanmisSatici ? "green" : "outline"}>
+                          {user.dogrulanmisSatici ? "Doğrulanmış" : "Doğrulama Yok"}
+                        </Badge>
+                        {user.adminDogrulamaDurumu !== null && user.adminDogrulamaDurumu !== undefined ? (
+                          <Badge variant={user.adminDogrulamaDurumu ? "secondary" : "plum"}>
+                            {user.adminDogrulamaDurumu ? "Manuel Onaylı" : "Manuel Red"}
+                          </Badge>
+                        ) : null}
+                        {!sellerActive ? <Badge variant="plum">Pasif</Badge> : null}
+                      </>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {user.email}
+                    {user.userName && user.userName !== user.email ? ` · @${user.userName}` : ""}
+                    {user.sehir ? ` · ${[user.sehir, user.ilce].filter(Boolean).join("/")}` : ""}
+                    {isSeller ? ` · ${user.urunSayisi} ürün` : ""}
+                  </p>
+                </div>
+
+                {isSeller ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={user.adminDogrulamaDurumu === true ? "default" : "outline"}
+                      className="h-8 text-xs font-bold"
+                      disabled={busyKey === `verify-${user.id}`}
+                      onClick={() => void setVerification(user, true)}
+                    >
+                      <ShieldCheck className="size-3.5" aria-hidden />
+                      Doğrula
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        "h-8 text-xs font-bold",
+                        user.adminDogrulamaDurumu === false
+                          ? "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                          : "hover:border-red-200 hover:text-red-700",
+                      )}
+                      disabled={busyKey === `verify-${user.id}`}
+                      onClick={() => void setVerification(user, false)}
+                    >
+                      <ShieldX className="size-3.5" aria-hidden />
+                      Reddet
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs font-bold"
+                      disabled={busyKey === `verify-${user.id}`}
+                      onClick={() => void setVerification(user, null)}
+                    >
+                      Otomatik
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={sellerActive ? "outline" : "secondary"}
+                      className="h-8 text-xs font-bold"
+                      disabled={busyKey === `status-${user.id}`}
+                      onClick={() => void toggleStatus(user)}
+                    >
+                      {busyKey === `status-${user.id}` ? (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                      ) : null}
+                      {sellerActive ? "Pasife Al" : "Aktif Et"}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+
+          <PaginationBar page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function AdminProductsModerationPanel({
+  token,
+  showToast,
+  onChanged,
+}: {
+  token: string;
+  showToast?: (message: string, kind: ToastKind, traceId?: string | null) => void;
+  onChanged?: () => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "passive">("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [reason, setReason] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [data, setData] = useState<Paginated<ProductDto>>({
+    items: [],
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const res = await yoremioApi.adminProducts(token, {
+        q: search.trim() || undefined,
+        aktifMi: statusFilter === "all" ? undefined : statusFilter === "active",
+        page,
+        pageSize: 10,
+      });
+      setData(res);
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    }
+  }, [page, search, showToast, statusFilter, token]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const toggleProduct = async (product: ProductDto) => {
+    const nextActive = !(product.aktifMi ?? true);
+    setBusyId(product.id);
+    try {
+      const updated = await yoremioApi.adminSetProductStatus(token, product.id, {
+        aktifMi: nextActive,
+        sebep: reason.trim() || undefined,
+      });
+      setData((prev) => ({
+        ...prev,
+        items: prev.items.map((item) => (item.id === product.id ? updated : item)),
+      }));
+      showToast?.(
+        nextActive ? `${product.adi} yayına alındı.` : `${product.adi} pasife alındı ve satıcı bilgilendirildi.`,
+        "success",
+      );
+      onChanged?.();
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <Panel title="Ürün Moderasyonu" badge={data.totalCount || undefined}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: "all", label: "Tümü" },
+              { id: "active", label: "Yayında (Aktif)" },
+              { id: "passive", label: "Pasif / Kaldırılmış" },
+            ] as const
+          ).map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => {
+                setStatusFilter(chip.id);
+                setPage(1);
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                statusFilter === chip.id
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-white text-muted-foreground hover:border-primary/40",
+              )}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Ürün adı veya açıklama ara..."
+            className="h-9 pl-9 text-xs"
+          />
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          value={reason}
+          onChange={(event) => setReason(limitText(event.target.value, 500))}
+          placeholder="Opsiyonel moderasyon sebebi (satıcı bildirimine eklenir)..."
+          className="h-9 text-xs"
+        />
+      </div>
+
+      {data.items.length === 0 ? (
+        <EmptyState
+          icon={Package}
+          title="Listelenecek ürün bulunamadı"
+          description="Arama veya durum filtresini değiştirebilirsin."
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {data.items.map((product) => {
+            const active = product.aktifMi ?? true;
+            return (
+              <div
+                key={product.id}
+                className="flex flex-col gap-3 rounded-xl border border-border bg-[#fcfdfb] p-3.5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+                    <Image
+                      src={productImage(product)}
+                      alt={product.adi}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-black text-brand-brown">{product.adi}</p>
+                      <Badge variant={active ? "green" : "plum"}>
+                        {active ? "Aktif" : "Pasif"}
+                      </Badge>
+                      {product.kategoriAdi ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          {product.kategoriAdi}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {sellerName(product)} · {productLocation(product)} ·{" "}
+                      <span className="font-bold text-primary">{formatPrice(product.fiyat)}</span> ·{" "}
+                      Stok: {product.stokMiktari}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={active ? "outline" : "default"}
+                  className="h-8 shrink-0 text-xs font-extrabold"
+                  disabled={busyId === product.id}
+                  onClick={() => void toggleProduct(product)}
+                >
+                  {busyId === product.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : null}
+                  {active ? "Pasife Al" : "Yayına Al"}
+                </Button>
+              </div>
+            );
+          })}
+
+          <PaginationBar page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function AdminCommentsModerationPanel({
+  token,
+  showToast,
+  onChanged,
+}: {
+  token: string;
+  showToast?: (message: string, kind: ToastKind, traceId?: string | null) => void;
+  onChanged?: () => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden">("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [reason, setReason] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [data, setData] = useState<Paginated<AdminCommentDto>>({
+    items: [],
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    totalPages: 1,
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const res = await yoremioApi.adminComments(token, {
+        q: search.trim() || undefined,
+        aktifMi: statusFilter === "all" ? undefined : statusFilter === "active",
+        page,
+        pageSize: 10,
+      });
+      setData(res);
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    }
+  }, [page, search, showToast, statusFilter, token]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const toggleComment = async (comment: AdminCommentDto) => {
+    const nextActive = !comment.aktifMi;
+    setBusyId(comment.id);
+    try {
+      const updated = await yoremioApi.adminSetCommentStatus(token, comment.id, {
+        aktifMi: nextActive,
+        sebep: reason.trim() || undefined,
+      });
+      setData((prev) => ({
+        ...prev,
+        items: prev.items.map((item) => (item.id === comment.id ? updated : item)),
+      }));
+      showToast?.(
+        nextActive ? "Yorum yeniden yayınlandı." : "Yorum gizlendi ve sahibine bildirim gönderildi.",
+        "success",
+      );
+      onChanged?.();
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast?.(info.message, "error", info.traceId);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <Panel title="Yorum Moderasyonu" badge={data.totalCount || undefined}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: "all", label: "Tümü" },
+              { id: "active", label: "Görünür Yorumlar" },
+              { id: "hidden", label: "Gizlenenler" },
+            ] as const
+          ).map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => {
+                setStatusFilter(chip.id);
+                setPage(1);
+              }}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-extrabold transition",
+                statusFilter === chip.id
+                  ? "border-primary bg-primary text-white"
+                  : "border-border bg-white text-muted-foreground hover:border-primary/40",
+              )}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-72">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Yorum metni veya kullanıcı ara..."
+            className="h-9 pl-9 text-xs"
+          />
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <Input
+          value={reason}
+          onChange={(event) => setReason(limitText(event.target.value, 500))}
+          placeholder="Opsiyonel gizleme / moderasyon sebebi..."
+          className="h-9 text-xs"
+        />
+      </div>
+
+      {data.items.length === 0 ? (
+        <EmptyState
+          icon={MessageSquare}
+          title="Listelenecek yorum bulunamadı"
+          description="Arama veya durum filtresini değiştirebilirsin."
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {data.items.map((comment) => (
+            <div
+              key={comment.id}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-[#fcfdfb] p-3.5 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-black text-brand-brown">
+                    {comment.kullaniciAdi || comment.kullaniciEmail || `Kullanıcı #${comment.kullaniciId.slice(0, 8)}`}
+                  </span>
+                  <span className="text-muted-foreground">· {shortDate(comment.tarih)}</span>
+                  <Badge variant={comment.aktifMi ? "green" : "plum"}>
+                    {comment.aktifMi ? "Yayında" : "Gizli"}
+                  </Badge>
+                  {comment.urunAdi ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      {comment.urunAdi}
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="text-sm text-foreground">{comment.icerik}</p>
+              </div>
+
+              <Button
+                type="button"
+                size="sm"
+                variant={comment.aktifMi ? "outline" : "default"}
+                className="h-8 shrink-0 text-xs font-extrabold"
+                disabled={busyId === comment.id}
+                onClick={() => void toggleComment(comment)}
+              >
+                {busyId === comment.id ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : comment.aktifMi ? (
+                  <EyeOff className="size-3.5" aria-hidden />
+                ) : (
+                  <Eye className="size-3.5" aria-hidden />
+                )}
+                {comment.aktifMi ? "Gizle" : "Yayınla"}
+              </Button>
+            </div>
+          ))}
+
+          <PaginationBar page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -645,34 +1361,50 @@ export function ReviewsScreen({
 
             {ratingsEnabled ? (
               <div className="rounded-xl border border-emerald-200 bg-[#f6fbf6] p-4">
-                <p className="text-sm font-black text-brand-brown">
-                  Bu ürüne puan ver (1 - 5 yıldız)
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-black text-brand-brown">
+                    Bu ürüne puan ver (1 - 5 yıldız)
+                  </p>
+                  {eligibility?.mevcutPuan ? (
+                    <Badge variant="gold">
+                      Mevcut Puanın: {eligibility.mevcutPuan} / 5 ★
+                    </Badge>
+                  ) : null}
+                </div>
                 {!authUser ? (
                   <p className="mt-1 text-xs font-semibold text-amber-800">
                     Puan vermek için alıcı hesabıyla giriş yapmalısın.
                   </p>
+                ) : eligibility && eligibility.puanlayabilir === false ? (
+                  <p className="mt-1 text-xs font-semibold text-amber-800">
+                    {eligibility.sebep || "Bu ürünü yalnızca geçerli talebi/anlaşması olan alıcılar puanlayabilir."}
+                  </p>
                 ) : (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((score) => (
-                      <button
-                        key={score}
-                        type="button"
-                        onMouseEnter={() => setHoverScore(score)}
-                        onMouseLeave={() => setHoverScore(0)}
-                        disabled={actionStatus === "rate"}
-                        onClick={() => onRate(score)}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-black transition",
-                          hoverScore >= score
-                            ? "border-amber-400 bg-amber-100 text-amber-900"
-                            : "border-border bg-white text-foreground hover:border-amber-300",
-                        )}
-                      >
-                        <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
-                        {score}
-                      </button>
-                    ))}
+                    {[1, 2, 3, 4, 5].map((score) => {
+                      const activeScore = hoverScore || eligibility?.mevcutPuan || 0;
+                      const isMine = eligibility?.mevcutPuan === score;
+                      return (
+                        <button
+                          key={score}
+                          type="button"
+                          onMouseEnter={() => setHoverScore(score)}
+                          onMouseLeave={() => setHoverScore(0)}
+                          disabled={actionStatus === "rate"}
+                          onClick={() => onRate(score)}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-black transition",
+                            activeScore >= score
+                              ? "border-amber-400 bg-amber-100 text-amber-900"
+                              : "border-border bg-white text-foreground hover:border-amber-300",
+                            isMine && "ring-2 ring-amber-400/50",
+                          )}
+                        >
+                          <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
+                          {score}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -689,7 +1421,7 @@ export function ReviewsScreen({
                   >
                     <div>
                       <span className="font-black text-brand-brown">
-                        Alıcı #{rate.kullaniciId.slice(0, 8)}
+                        {rate.kullaniciAdi || `Alıcı #${rate.kullaniciId.slice(0, 8)}`}
                       </span>
                       <span className="ml-2 text-muted-foreground">
                         {shortDate(rate.puanTarihi)}

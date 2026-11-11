@@ -37,9 +37,22 @@ export type Screen =
   | "reviews"
   | "states";
 
-export type BuyerTab = "overview" | "favorites" | "recommended" | "demands" | "offers" | "chat";
+export type BuyerTab =
+  | "overview"
+  | "favorites"
+  | "recommended"
+  | "demands"
+  | "offers"
+  | "profile"
+  | "chat";
 export type SellerTab = "overview" | "products" | "demands" | "chat";
-export type AdminTab = "overview" | "users" | "demands" | "categories";
+export type AdminTab =
+  | "overview"
+  | "users"
+  | "products"
+  | "comments"
+  | "demands"
+  | "categories";
 
 export type AuthState = SessionUser & Pick<LoginResponse, "token">;
 export type AuthCompleteOptions = {

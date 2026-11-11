@@ -31,6 +31,7 @@ import {
   DemandMediaLine,
   EmptyState,
   Field,
+  LocationFields,
   MetricCard,
   MobileBottomNav,
   Panel,
@@ -43,6 +44,7 @@ import {
   mediaImageSrc,
   mediaVideoSrc,
   productImage,
+  shortDate,
   type AuthState,
   type ProductSubmitValues,
   type Screen,
@@ -51,6 +53,7 @@ import {
 } from "@/components/yoremio/types";
 import type {
   AppBootstrapDto,
+  BootstrapLocationDto,
   CategoryDto,
   ChatConversationDto,
   ChatMessageDto,
@@ -424,6 +427,16 @@ export function SellerDashboard({
                           demand={demand}
                           onClick={() => onInspectDemand(demand.id)}
                         />
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-2 text-xs text-muted-foreground">
+                          {demand.aliciAdi ? (
+                            <span>
+                              Alıcı: <strong className="text-foreground">{demand.aliciAdi}</strong>
+                            </span>
+                          ) : null}
+                          {demand.guncellemeTarihi ? (
+                            <span>Son güncelleme: {shortDate(demand.guncellemeTarihi)}</span>
+                          ) : null}
+                        </div>
                         {demand.not ? (
                           <p className="mt-1 px-2 text-xs text-muted-foreground">
                             Alıcı notu: &ldquo;{demand.not}&rdquo;
@@ -1056,6 +1069,9 @@ export function SellerProductScreen({
 export function SellerProfileScreen({
   profile,
   trustScore,
+  locations = [],
+  cities = [],
+  maxImageBytes = 5 * 1024 * 1024,
   actionStatus,
   onBack,
   onSave,
@@ -1064,6 +1080,9 @@ export function SellerProfileScreen({
   profile: SellerProfileDto | null;
   sellerStats?: SellerDashboardDto | null;
   trustScore?: number;
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
+  maxImageBytes?: number;
   actionStatus: string | null;
   onBack: () => void;
   onSave: (values: SellerProfileUpdateValues) => Promise<void>;
@@ -1073,7 +1092,34 @@ export function SellerProfileScreen({
   const [adres, setAdres] = useState(profile?.adres ?? "");
   const [sehir, setSehir] = useState(profile?.sehir ?? "");
   const [ilce, setIlce] = useState(profile?.ilce ?? "");
+  const [aciklama, setAciklama] = useState(profile?.aciklama ?? "");
   const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber ?? "");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+
+  const handleCoverPick = (file: File | null) => {
+    setCoverError(null);
+    if (!file) {
+      setCoverFile(null);
+      setCoverPreview(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setCoverError("Kapak görseli için lütfen geçerli bir resim dosyası (JPG, PNG, WebP) seç.");
+      return;
+    }
+    if (file.size > maxImageBytes) {
+      setCoverError(`Görsel boyutu en fazla ${formatBytes(maxImageBytes)} olabilir.`);
+      return;
+    }
+    setCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setCoverPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1082,11 +1128,14 @@ export function SellerProfileScreen({
       adres: adres.trim() || undefined,
       sehir: sehir.trim() || undefined,
       ilce: ilce.trim() || undefined,
+      aciklama: aciklama.trim() || undefined,
       phoneNumber: phoneNumber.trim() || undefined,
+      kapakResim: coverFile,
     });
   };
 
   const saving = actionStatus === "seller-profile";
+  const activeCoverSrc = coverPreview || (profile?.kapakResimUrl ? mediaImageSrc(profile.kapakResimUrl) : null);
 
   return (
     <main className="min-h-screen bg-[#f6f8f5] px-4 py-6 sm:px-6 sm:py-8">
@@ -1110,6 +1159,18 @@ export function SellerProfileScreen({
 
         <Card className="grid gap-6 rounded-2xl p-5 sm:p-7 lg:grid-cols-[0.75fr_1.25fr]">
           <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-200/80 bg-[#f4faf3] p-6 text-center">
+            {activeCoverSrc ? (
+              <div className="relative mb-4 h-28 w-full overflow-hidden rounded-xl border border-emerald-200 bg-white">
+                <Image
+                  src={activeCoverSrc}
+                  alt="Mağaza kapak önizleme"
+                  fill
+                  sizes="320px"
+                  className="object-cover"
+                  unoptimized={Boolean(coverPreview)}
+                />
+              </div>
+            ) : null}
             <TrustDial score={trustScore ?? 0} large />
             <h2 className="mt-4 text-lg font-black text-brand-brown">
               {profile?.magazaAdi ?? "Üretici Mağazası"}
@@ -1126,13 +1187,56 @@ export function SellerProfileScreen({
                   {profile?.dogrulanmisSatici ? "Onaylı" : "İncelemede"}
                 </Badge>
               </ProfileRow>
+              <ProfileRow label="Admin Kararı">
+                <span className="font-semibold text-foreground">
+                  {profile?.adminDogrulamaDurumu === true
+                    ? "Manuel Onaylı"
+                    : profile?.adminDogrulamaDurumu === false
+                      ? "Manuel Kısıtlı"
+                      : "Otomatik Profil"}
+                </span>
+              </ProfileRow>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <h1 className="font-serif text-2xl font-bold text-[#14271c]">
-              Mağaza Bilgilerini Güncelle
+              Mağaza Vitrini & Profil Bilgileri
             </h1>
+
+            <Field label="Mağaza Kapak Fotoğrafı (Vitrin Görseli)" htmlFor="sp-cover">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-[#f9fbf8] p-3">
+                <label
+                  htmlFor="sp-cover"
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-extrabold text-brand-brown shadow-xs transition hover:border-primary/40 hover:text-primary"
+                >
+                  <ImagePlus className="size-4 text-primary" aria-hidden />
+                  {coverFile ? "Başka Kapak Seç" : "Kapak Fotoğrafı Yükle"}
+                </label>
+                <input
+                  id="sp-cover"
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => handleCoverPick(event.target.files?.[0] ?? null)}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {coverFile
+                    ? `${coverFile.name} (${formatBytes(coverFile.size)})`
+                    : `Maks. ${formatBytes(maxImageBytes)} · JPG/PNG/WebP`}
+                </span>
+                {coverFile ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCoverPick(null)}
+                    className="ml-auto text-xs font-bold text-red-600 hover:underline"
+                  >
+                    Kaldır
+                  </button>
+                ) : null}
+              </div>
+              {coverError ? <p className="mt-1 text-xs font-semibold text-red-600">{coverError}</p> : null}
+            </Field>
 
             <Field label="Mağaza Adı *" htmlFor="sp-store">
               <Input
@@ -1144,24 +1248,18 @@ export function SellerProfileScreen({
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Şehir" htmlFor="sp-city">
-                <Input
-                  id="sp-city"
-                  value={sehir}
-                  onChange={(event) => setSehir(limitText(event.target.value, 40))}
-                  placeholder="Ör: Artvin"
-                />
-              </Field>
-              <Field label="İlçe" htmlFor="sp-district">
-                <Input
-                  id="sp-district"
-                  value={ilce}
-                  onChange={(event) => setIlce(limitText(event.target.value, 40))}
-                  placeholder="Ör: Borçka"
-                />
-              </Field>
-            </div>
+            <LocationFields
+              city={sehir}
+              district={ilce}
+              onCityChange={setSehir}
+              onDistrictChange={setIlce}
+              locations={locations}
+              cities={cities}
+              cityPlaceholder="Ör: Artvin"
+              districtPlaceholder="Ör: Borçka"
+              cityId="sp-city"
+              districtId="sp-district"
+            />
 
             <Field label="İletişim Telefonu" htmlFor="sp-phone">
               <Input
@@ -1172,12 +1270,23 @@ export function SellerProfileScreen({
               />
             </Field>
 
-            <Field label="Adres / Yöre Tarifi" htmlFor="sp-desc">
+            <Field label="Mağaza Hikayesi & Üretim Hakkında (Vitrinde Görünür)" htmlFor="sp-story">
+              <textarea
+                id="sp-story"
+                rows={4}
+                value={aciklama}
+                onChange={(event) => setAciklama(limitText(event.target.value, 1000))}
+                placeholder="Ailenizin üretim geleneğini, yöresel yöntemlerinizi ve ürünlerinizin doğallığını anlatın (maks. 1000 karakter)..."
+                className="w-full rounded-xl border border-input bg-white p-3 text-sm outline-none focus:border-primary"
+              />
+            </Field>
+
+            <Field label="Açık Adres" htmlFor="sp-desc">
               <textarea
                 id="sp-desc"
-                rows={4}
+                rows={2}
                 value={adres}
-                onChange={(event) => setAdres(limitText(event.target.value, 1000))}
+                onChange={(event) => setAdres(limitText(event.target.value, 500))}
                 placeholder="Mağaza veya üretim adres bilgin..."
                 className="w-full rounded-xl border border-input bg-white p-3 text-sm outline-none focus:border-primary"
               />

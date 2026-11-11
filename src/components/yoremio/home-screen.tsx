@@ -354,6 +354,11 @@ export function HomeScreen({
                   <span className="line-clamp-2 text-xs font-extrabold leading-tight text-brand-brown">
                     {category.adi}
                   </span>
+                  {typeof category.urunSayisi === "number" ? (
+                    <span className="rounded-full bg-emerald-100/80 px-2 py-0.5 text-[10px] font-bold text-primary tabular-nums">
+                      {category.urunSayisi} ürün
+                    </span>
+                  ) : null}
                 </button>
               );
             })}

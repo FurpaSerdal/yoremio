@@ -22,6 +22,9 @@ export type SessionUser = {
   role: UserRole;
   roles?: UserRole[];
   emailConfirmed: boolean;
+  sehir?: string | null;
+  ilce?: string | null;
+  magazaAdi?: string | null;
 };
 
 export type LoginResponse = {
@@ -55,10 +58,17 @@ export type AppUploadsConfig = {
   videoContentTypePrefixes: string[];
 };
 
+export type BootstrapLocationDto = {
+  sehir: string;
+  ilceler: string[];
+};
+
 export type AppBootstrapDto = {
   environment: string;
   roles: UserRole[];
   categories: CategoryDto[];
+  cities?: string[];
+  locations?: BootstrapLocationDto[];
   productSorts: string[];
   features: AppFeatureFlags;
   verification: AppVerificationConfig;
@@ -116,6 +126,7 @@ export type CategoryDto = {
   id: number;
   adi: string;
   aciklama?: string | null;
+  urunSayisi?: number;
 };
 
 export type MediaDto = {
@@ -136,6 +147,7 @@ export type RatingDto = {
   id: number;
   urunId: number;
   kullaniciId: string;
+  kullaniciAdi?: string | null;
   puanDegeri: number;
   puanTarihi: string;
 };
@@ -206,12 +218,35 @@ export type SellerProfileDto = {
   adres?: string | null;
   sehir?: string | null;
   ilce?: string | null;
+  aciklama?: string | null;
+  kapakResimUrl?: string | null;
   kayitTarihi?: string | null;
   aktifMi: boolean;
   dogrulanmisSatici: boolean;
+  adminDogrulamaDurumu?: boolean | null;
   email: string;
   userName?: string | null;
   phoneNumber?: string | null;
+};
+
+export type BuyerProfileDto = {
+  kullaniciId: string;
+  userName?: string | null;
+  email: string;
+  phoneNumber?: string | null;
+  sehir?: string | null;
+  ilce?: string | null;
+  adres?: string | null;
+  favoriKategori?: string | null;
+};
+
+export type BuyerProfileUpdateValues = {
+  userName?: string;
+  phoneNumber?: string;
+  sehir?: string;
+  ilce?: string;
+  adres?: string;
+  favoriKategori?: string;
 };
 
 export type SellerTrustScoreDto = {
@@ -227,6 +262,7 @@ export type SellerTrustScoreDto = {
 };
 
 export type FeaturedSellerDto = SellerTrustScoreDto & {
+  aciklama?: string | null;
   sehir?: string | null;
   ilce?: string | null;
   kapakResimUrl?: string | null;
@@ -246,6 +282,8 @@ export type DevVerificationMessageDto = {
 
 export type ReviewEligibilityDto = {
   yorumYapabilir: boolean;
+  puanlayabilir?: boolean;
+  mevcutPuan?: number | null;
   sebep?: string | null;
 };
 
@@ -263,6 +301,7 @@ export type OfferDto = {
 export type DemandDto = {
   id: number;
   aliciId: string;
+  aliciAdi?: string | null;
   urunId: number;
   urunAdi: string;
   urunResimUrl?: string | null;
@@ -275,6 +314,7 @@ export type DemandDto = {
   not?: string | null;
   durum: "ACIK" | "ANLASILDI" | "IPTAL" | string;
   olusturmaTarihi: string;
+  guncellemeTarihi?: string | null;
   teklifler: OfferDto[];
 };
 
@@ -310,7 +350,7 @@ export type ChatConversationMessagesDto = {
 
 export type NotificationDto = {
   id: number;
-  tur: "MESAJ" | "TALEP" | "TEKLIF" | string;
+  tur: "MESAJ" | "TALEP" | "TEKLIF" | "DESTEK" | "SISTEM" | string;
   baslik: string;
   mesaj: string;
   ilgiliVarlikTuru?: string | null;
@@ -319,6 +359,63 @@ export type NotificationDto = {
   olusturmaTarihi: string;
   okunmaTarihi?: string | null;
   okunduMu: boolean;
+  okunmamisSayisi?: number | null;
+};
+
+export type AdminUserDto = {
+  id: string;
+  email?: string | null;
+  userName?: string | null;
+  phoneNumber?: string | null;
+  emailConfirmed: boolean;
+  kilitliMi: boolean;
+  roles: string[];
+  magazaAdi?: string | null;
+  vergiNo?: string | null;
+  sehir?: string | null;
+  ilce?: string | null;
+  saticiAktifMi?: boolean | null;
+  dogrulanmisSatici: boolean;
+  adminDogrulamaDurumu?: boolean | null;
+  urunSayisi: number;
+  kayitTarihi?: string | null;
+};
+
+export type AdminCommentDto = {
+  id: number;
+  urunId: number;
+  urunAdi?: string | null;
+  kullaniciId: string;
+  kullaniciAdi?: string | null;
+  kullaniciEmail?: string | null;
+  icerik: string;
+  tarih: string;
+  aktifMi: boolean;
+};
+
+export type AdminUsersQuery = {
+  q?: string;
+  rol?: string;
+  sadeceBekleyenSaticilar?: boolean;
+  page?: number;
+  pageSize?: number;
+};
+
+export type AdminProductsQuery = {
+  q?: string;
+  kategoriId?: number;
+  saticiId?: string;
+  aktifMi?: boolean;
+  page?: number;
+  pageSize?: number;
+};
+
+export type AdminCommentsQuery = {
+  urunId?: number;
+  q?: string;
+  aktifMi?: boolean;
+  page?: number;
+  pageSize?: number;
 };
 
 export type NotificationsPageDto = Paginated<NotificationDto> & {
@@ -354,6 +451,10 @@ function normalizeUnreadNotificationCount(value: UnreadNotificationCountResponse
 export type RegisterBuyerValues = {
   email: string;
   password: string;
+  userName?: string;
+  sehir?: string;
+  ilce?: string;
+  adres?: string;
 };
 
 export type RegisterSellerValues = RegisterBuyerValues & {
@@ -370,7 +471,9 @@ export type SellerProfileUpdateValues = {
   adres?: string;
   sehir?: string;
   ilce?: string;
+  aciklama?: string;
   phoneNumber?: string;
+  kapakResim?: File | null;
 };
 
 type ApiRequestInit = RequestInit & {
@@ -660,8 +763,36 @@ export const yoremioApi = {
     request<SellerProfileDto>("/api/Profil/satici", {
       token,
     }),
-  updateSellerProfile: (token: string, values: SellerProfileUpdateValues) =>
-    request<SellerProfileDto>("/api/Profil/satici", {
+  updateSellerProfile: (token: string, values: SellerProfileUpdateValues) => {
+    if (values.kapakResim) {
+      const formData = new FormData();
+      if (values.magazaAdi !== undefined) formData.append("magazaAdi", values.magazaAdi);
+      if (values.adres !== undefined) formData.append("adres", values.adres);
+      if (values.sehir !== undefined) formData.append("sehir", values.sehir);
+      if (values.ilce !== undefined) formData.append("ilce", values.ilce);
+      if (values.aciklama !== undefined) formData.append("aciklama", values.aciklama);
+      if (values.phoneNumber !== undefined) formData.append("phoneNumber", values.phoneNumber);
+      formData.append("kapakResim", values.kapakResim);
+      return request<SellerProfileDto>("/api/Profil/satici", {
+        method: "PUT",
+        token,
+        body: formData,
+      });
+    }
+    const payload = { ...values };
+    delete payload.kapakResim;
+    return request<SellerProfileDto>("/api/Profil/satici", {
+      method: "PUT",
+      token,
+      body: JSON.stringify(payload),
+    });
+  },
+  buyerProfile: (token: string) =>
+    request<BuyerProfileDto>("/api/Profil/alici", {
+      token,
+    }),
+  updateBuyerProfile: (token: string, values: BuyerProfileUpdateValues) =>
+    request<BuyerProfileDto>("/api/Profil/alici", {
       method: "PUT",
       token,
       body: JSON.stringify(values),
@@ -715,14 +846,16 @@ export const yoremioApi = {
       token,
       body: JSON.stringify({ urunId, miktar, not }),
     }),
-  buyerDemands: (token: string) =>
-    request<DemandDto[]>("/api/Talep/benim", {
-      token,
-    }),
-  sellerDemands: (token: string) =>
-    request<DemandDto[]>("/api/Talep/satici", {
-      token,
-    }),
+  buyerDemands: (token: string, durum?: string) =>
+    request<DemandDto[]>(
+      durum ? `/api/Talep/benim?${queryString({ durum })}` : "/api/Talep/benim",
+      { token },
+    ),
+  sellerDemands: (token: string, durum?: string) =>
+    request<DemandDto[]>(
+      durum ? `/api/Talep/satici?${queryString({ durum })}` : "/api/Talep/satici",
+      { token },
+    ),
   upsertOffer: (
     token: string,
     talepId: number,
@@ -808,5 +941,61 @@ export const yoremioApi = {
     request<SupportRequestResultDto>("/api/Destek/talep", {
       method: "POST",
       body: JSON.stringify(values),
+    }),
+
+  adminUsers: (token: string, query: AdminUsersQuery = {}) =>
+    request<Paginated<AdminUserDto>>(
+      `/api/Admin/kullanicilar?${queryString(query)}`,
+      { token },
+    ),
+  adminSetSellerVerification: (
+    token: string,
+    saticiId: string,
+    payload: { dogrulandiMi: boolean | null; not?: string },
+  ) =>
+    request<AdminUserDto>(`/api/Admin/saticilar/${saticiId}/dogrulama`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  adminSetSellerStatus: (
+    token: string,
+    saticiId: string,
+    payload: { aktifMi: boolean; sebep?: string },
+  ) =>
+    request<AdminUserDto>(`/api/Admin/saticilar/${saticiId}/durum`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  adminProducts: (token: string, query: AdminProductsQuery = {}) =>
+    request<Paginated<ProductDto>>(
+      `/api/Admin/urunler?${queryString(query)}`,
+      { token },
+    ),
+  adminSetProductStatus: (
+    token: string,
+    urunId: number,
+    payload: { aktifMi: boolean; sebep?: string },
+  ) =>
+    request<ProductDto>(`/api/Admin/urunler/${urunId}/durum`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  adminComments: (token: string, query: AdminCommentsQuery = {}) =>
+    request<Paginated<AdminCommentDto>>(
+      `/api/Admin/yorumlar?${queryString(query)}`,
+      { token },
+    ),
+  adminSetCommentStatus: (
+    token: string,
+    yorumId: number,
+    payload: { aktifMi: boolean; sebep?: string },
+  ) =>
+    request<AdminCommentDto>(`/api/Admin/yorumlar/${yorumId}/durum`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
     }),
 };

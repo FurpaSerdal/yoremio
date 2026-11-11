@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import {
   EmptyState,
   Field,
+  LocationFields,
   MobileBottomNav,
   PaginationBar,
   PublicHeader,
@@ -47,7 +48,13 @@ import {
   type Screen,
   type SortKey,
 } from "@/components/yoremio/types";
-import type { CategoryDto, Paginated, ProductDto, SellerProfileDto } from "@/lib/api";
+import type {
+  BootstrapLocationDto,
+  CategoryDto,
+  Paginated,
+  ProductDto,
+  SellerProfileDto,
+} from "@/lib/api";
 import { cn, formatPrice } from "@/lib/utils";
 
 export function DiscoveryScreen({
@@ -56,6 +63,8 @@ export function DiscoveryScreen({
   notificationUnreadCount,
   unreadMessageCount,
   categories,
+  locations = [],
+  cities = [],
   productsPage,
   productsState,
   selectedProduct,
@@ -102,6 +111,8 @@ export function DiscoveryScreen({
   notificationUnreadCount: number;
   unreadMessageCount?: number;
   categories: CategoryDto[];
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
   productsPage: Paginated<ProductDto>;
   productsState: LoadState;
   selectedProduct: ProductDto | null;
@@ -331,6 +342,8 @@ export function DiscoveryScreen({
             <div className="sticky top-24">
               <DiscoveryFilters
                 categories={categories}
+                locations={locations}
+                cities={cities}
                 query={query}
                 categoryId={categoryId}
                 city={city}
@@ -590,6 +603,8 @@ export function DiscoveryScreen({
             <div className="flex-1 overflow-y-auto p-4">
               <DiscoveryFilters
                 categories={categories}
+                locations={locations}
+                cities={cities}
                 query={query}
                 categoryId={categoryId}
                 city={city}
@@ -682,6 +697,8 @@ export function DiscoveryScreen({
 
 function DiscoveryFilters({
   categories,
+  locations = [],
+  cities = [],
   query,
   categoryId,
   city,
@@ -703,6 +720,8 @@ function DiscoveryFilters({
   onClear,
 }: {
   categories: CategoryDto[];
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
   query: string;
   categoryId: number | null;
   city: string;
@@ -776,30 +795,32 @@ function DiscoveryFilters({
               )}
             >
               <span className="truncate">{cat.adi}</span>
-              {categoryId === cat.id ? <Check className="size-3.5 shrink-0" aria-hidden /> : null}
+              <span className="flex shrink-0 items-center gap-1.5">
+                {typeof cat.urunSayisi === "number" ? (
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-extrabold text-muted-foreground tabular-nums">
+                    {cat.urunSayisi}
+                  </span>
+                ) : null}
+                {categoryId === cat.id ? <Check className="size-3.5 shrink-0" aria-hidden /> : null}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Şehir" htmlFor="filter-city">
-          <Input
-            id="filter-city"
-            value={city}
-            onChange={(event) => onCityChange(event.target.value)}
-            placeholder="İl"
-          />
-        </Field>
-        <Field label="İlçe" htmlFor="filter-district">
-          <Input
-            id="filter-district"
-            value={district}
-            onChange={(event) => onDistrictChange(event.target.value)}
-            placeholder="İlçe"
-          />
-        </Field>
-      </div>
+      <LocationFields
+        compact
+        city={city}
+        district={district}
+        onCityChange={onCityChange}
+        onDistrictChange={onDistrictChange}
+        locations={locations}
+        cities={cities}
+        cityPlaceholder="İl seç / ara"
+        districtPlaceholder="İlçe seç / ara"
+        cityId="filter-city"
+        districtId="filter-district"
+      />
 
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2">

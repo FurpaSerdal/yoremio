@@ -3,6 +3,7 @@
 import Image from "next/image";
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentProps,
@@ -48,6 +49,7 @@ import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/yoremio/brand-logo";
 import {
   yoremioApi,
+  type BootstrapLocationDto,
   type ChatConversationDto,
   type ChatMessageDto,
   type DemandDto,
@@ -1016,6 +1018,19 @@ export function SellerStorefrontModal({
           </div>
         ) : (
           <div className="space-y-5 p-4 sm:p-6">
+            {seller.kapakResimUrl ? (
+              <div className="relative h-36 w-full overflow-hidden rounded-2xl border border-border bg-muted sm:h-44">
+                <Image
+                  src={mediaImageSrc(seller.kapakResimUrl)}
+                  alt={`${seller.magazaAdi} mağaza kapağı`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 720px"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-4 rounded-xl border border-border bg-[#f9fbf8] p-4 sm:flex-row sm:items-center">
               <div className="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted">
                 <Image
@@ -1060,6 +1075,17 @@ export function SellerStorefrontModal({
                 </Button>
               </div>
             </div>
+
+            {seller.aciklama ? (
+              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-4">
+                <h4 className="text-xs font-black uppercase tracking-wider text-primary">
+                  Üretici Hikayesi
+                </h4>
+                <p className="mt-1.5 whitespace-pre-line text-sm leading-6 text-foreground">
+                  {seller.aciklama}
+                </p>
+              </div>
+            ) : null}
 
             <div>
               <h4 className="mb-3 text-sm font-black uppercase tracking-wider text-muted-foreground">
@@ -1224,8 +1250,16 @@ export function DemandDetailModal({
                     {demand.saticiSehir ? `(${demand.saticiSehir})` : ""}
                   </p>
                 ) : null}
+                {demand.aliciAdi ? (
+                  <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                    Alıcı: <span className="text-foreground">{demand.aliciAdi}</span>
+                  </p>
+                ) : null}
                 <p className="mt-1 text-xs text-muted-foreground">
                   Oluşturma: {shortDate(demand.olusturmaTarihi)}
+                  {demand.guncellemeTarihi
+                    ? ` · Son Güncelleme: ${shortDate(demand.guncellemeTarihi)}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -1930,6 +1964,92 @@ export function PaginationBar({
       <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
         Sonraki
       </Button>
+    </div>
+  );
+}
+
+export function LocationFields({
+  city,
+  district,
+  onCityChange,
+  onDistrictChange,
+  locations = [],
+  cities = [],
+  cityPlaceholder = "Ör: Ardahan",
+  districtPlaceholder = "Ör: Posof",
+  cityId,
+  districtId,
+  compact = false,
+}: {
+  city: string;
+  district: string;
+  onCityChange: (value: string) => void;
+  onDistrictChange: (value: string) => void;
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
+  cityPlaceholder?: string;
+  districtPlaceholder?: string;
+  cityId?: string;
+  districtId?: string;
+  compact?: boolean;
+}) {
+  const uid = useId();
+  const cityListId = `yoremio-cities-${uid}`;
+  const districtListId = `yoremio-districts-${uid}`;
+
+  const cityOptions =
+    cities.length > 0
+      ? cities
+      : locations.map((loc) => loc.sehir);
+
+  const normalizedCity = city.trim().toLocaleLowerCase("tr-TR");
+  const matchedLocation = normalizedCity
+    ? locations.find(
+        (loc) => loc.sehir.trim().toLocaleLowerCase("tr-TR") === normalizedCity,
+      )
+    : undefined;
+
+  const districtOptions = matchedLocation
+    ? matchedLocation.ilceler
+    : Array.from(new Set(locations.flatMap((loc) => loc.ilceler))).sort((a, b) =>
+        a.localeCompare(b, "tr-TR"),
+      );
+
+  return (
+    <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3")}>
+      <Field label="Şehir" htmlFor={cityId ?? `${uid}-city`}>
+        <Input
+          id={cityId ?? `${uid}-city`}
+          list={cityOptions.length > 0 ? cityListId : undefined}
+          value={city}
+          onChange={(event) => onCityChange(limitText(event.target.value, 40))}
+          placeholder={cityPlaceholder}
+        />
+        {cityOptions.length > 0 ? (
+          <datalist id={cityListId}>
+            {cityOptions.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        ) : null}
+      </Field>
+
+      <Field label="İlçe" htmlFor={districtId ?? `${uid}-district`}>
+        <Input
+          id={districtId ?? `${uid}-district`}
+          list={districtOptions.length > 0 ? districtListId : undefined}
+          value={district}
+          onChange={(event) => onDistrictChange(limitText(event.target.value, 40))}
+          placeholder={districtPlaceholder}
+        />
+        {districtOptions.length > 0 ? (
+          <datalist id={districtListId}>
+            {districtOptions.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+        ) : null}
+      </Field>
     </div>
   );
 }
