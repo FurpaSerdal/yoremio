@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   BellRing,
-  Check,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   Film,
   Heart,
@@ -206,7 +207,19 @@ export function DiscoveryScreen({
 }) {
   const [viewMode, setViewMode] = useState<ProductListMode>("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  useEffect(() => {
+    if (!detailOpen && !mobileFiltersOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDetailOpen(false);
+        setMobileFiltersOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [detailOpen, mobileFiltersOpen]);
 
   const activeFilterCount = [
     Boolean(query.trim()),
@@ -281,10 +294,17 @@ export function DiscoveryScreen({
 
   const handleSelectProduct = (product: ProductDto) => {
     onSelectProduct(product);
-    if (typeof window !== "undefined" && window.innerWidth < 1280) {
-      setMobileDetailOpen(true);
-    }
+    setDetailOpen(true);
   };
+
+  const currentIdx = selectedProduct
+    ? productsPage.items.findIndex((item) => item.id === selectedProduct.id)
+    : -1;
+  const prevProduct = currentIdx > 0 ? productsPage.items[currentIdx - 1] : null;
+  const nextProduct =
+    currentIdx >= 0 && currentIdx < productsPage.items.length - 1
+      ? productsPage.items[currentIdx + 1]
+      : null;
 
   return (
     <div className="min-h-screen bg-[#f6f8f5] pb-20 lg:pb-0">
@@ -547,51 +567,46 @@ export function DiscoveryScreen({
           </div>
         ) : null}
 
-        {/* Desktop 3-column layout */}
-        <div className="grid gap-6 lg:grid-cols-[268px_minmax(0,1fr)] xl:grid-cols-[268px_minmax(0,1fr)_400px]">
+        {/* Clean 2-column layout (Zero nested page scrollbars) */}
+        <div className="grid items-start gap-6 lg:grid-cols-[276px_minmax(0,1fr)]">
           <aside className="hidden lg:block">
-            <div className="thin-scrollbar overscroll-contain sticky top-24 max-h-[calc(100vh-6.75rem)] overflow-y-auto pr-1">
-              <DiscoveryFilters
-                categories={categories}
-                locations={locations}
-                cities={cities}
-                query={query}
-                categoryId={categoryId}
-                city={city}
-                district={district}
-                teslimatSehir={teslimatSehir}
-                uretimSehir={uretimSehir}
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                onlyInStock={onlyInStock}
-                verifiedOnly={verifiedOnly}
-                sadeceYeniHasat={sadeceYeniHasat}
-                sadeceEldenTeslim={sadeceEldenTeslim}
-                sadeceKargolu={sadeceKargolu}
-                minRating={minRating}
-                onQueryChange={onQueryChange}
-                onCategoryChange={onCategoryChange}
-                onCityChange={onCityChange}
-                onDistrictChange={onDistrictChange}
-                onTeslimatSehirChange={onTeslimatSehirChange}
-                onUretimSehirChange={onUretimSehirChange}
-                onMinPriceChange={onMinPriceChange}
-                onMaxPriceChange={onMaxPriceChange}
-                onOnlyInStockChange={onOnlyInStockChange}
-                onVerifiedOnlyChange={onVerifiedOnlyChange}
-                onSadeceYeniHasatChange={onSadeceYeniHasatChange}
-                onSadeceEldenTeslimChange={onSadeceEldenTeslimChange}
-                onSadeceKargoluChange={onSadeceKargoluChange}
-                onMinRatingChange={onMinRatingChange}
-                onClear={onClearFilters}
-              />
-            </div>
+            <DiscoveryFilters
+              locations={locations}
+              cities={cities}
+              query={query}
+              city={city}
+              district={district}
+              teslimatSehir={teslimatSehir}
+              uretimSehir={uretimSehir}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              onlyInStock={onlyInStock}
+              verifiedOnly={verifiedOnly}
+              sadeceYeniHasat={sadeceYeniHasat}
+              sadeceEldenTeslim={sadeceEldenTeslim}
+              sadeceKargolu={sadeceKargolu}
+              minRating={minRating}
+              onQueryChange={onQueryChange}
+              onCityChange={onCityChange}
+              onDistrictChange={onDistrictChange}
+              onTeslimatSehirChange={onTeslimatSehirChange}
+              onUretimSehirChange={onUretimSehirChange}
+              onMinPriceChange={onMinPriceChange}
+              onMaxPriceChange={onMaxPriceChange}
+              onOnlyInStockChange={onOnlyInStockChange}
+              onVerifiedOnlyChange={onVerifiedOnlyChange}
+              onSadeceYeniHasatChange={onSadeceYeniHasatChange}
+              onSadeceEldenTeslimChange={onSadeceEldenTeslimChange}
+              onSadeceKargoluChange={onSadeceKargoluChange}
+              onMinRatingChange={onMinRatingChange}
+              onClear={onClearFilters}
+            />
           </aside>
 
           {/* Product Results */}
           <section className="min-w-0">
             {productsState === "loading" && productsPage.items.length === 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, idx) => (
                   <div
                     key={idx}
@@ -641,7 +656,7 @@ export function DiscoveryScreen({
                 <div
                   className={cn(
                     viewMode === "grid"
-                      ? "grid gap-4 sm:grid-cols-2"
+                      ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
                       : "space-y-3",
                   )}
                 >
@@ -797,9 +812,9 @@ export function DiscoveryScreen({
                             ) : null}
                           </div>
 
-                          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3 mt-3">
-                            <div>
-                              <span className="text-lg font-black text-primary tabular-nums">
+                          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 mt-3">
+                            <div className="min-w-0">
+                              <span className="block truncate text-base font-black text-primary tabular-nums sm:text-lg">
                                 {formatPrice(product.fiyat)}
                               </span>
                               <div className="mt-0.5 flex items-center gap-1 text-xs font-bold text-amber-700">
@@ -813,11 +828,11 @@ export function DiscoveryScreen({
                             <Button
                               type="button"
                               size="sm"
-                              variant={selected ? "default" : "secondary"}
-                              className="rounded-xl px-3.5 font-extrabold"
+                              variant={selected && detailOpen ? "default" : "secondary"}
+                              className="shrink-0 rounded-xl px-3.5 font-extrabold"
                               onClick={() => handleSelectProduct(product)}
                             >
-                              {selected ? "İnceleniyor" : "İncele"}
+                              İncele
                             </Button>
                           </div>
                         </div>
@@ -849,42 +864,6 @@ export function DiscoveryScreen({
               </>
             )}
           </section>
-
-          {/* Desktop Product Detail Inspector */}
-          <aside className="hidden xl:block">
-            <div className="thin-scrollbar overscroll-contain sticky top-24 max-h-[calc(100vh-6.75rem)] overflow-y-auto pr-1">
-              {selectedProduct ? (
-                <ProductDetailPanel
-                  product={selectedProduct}
-                  favorite={favoriteIds.has(selectedProduct.id)}
-                  hasPriceAlarm={priceAlarmProductIds?.has(selectedProduct.id) ?? false}
-                  hasStockAlarm={stockAlarmProductIds?.has(selectedProduct.id) ?? false}
-                  isFollowingSeller={
-                    Boolean(selectedProduct.saticiId && followedSellerIds?.has(selectedProduct.saticiId))
-                  }
-                  actionStatus={actionStatus}
-                  demandFlowEnabled={demandFlowEnabled}
-                  favoritesEnabled={favoritesEnabled}
-                  chatEnabled={chatEnabled}
-                  onOpenStorefront={onOpenStorefront}
-                  onCreateDemand={onCreateDemand}
-                  onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
-                  onSavePriceAlert={onSavePriceAlert}
-                  onToggleStockAlarm={onToggleStockAlarm}
-                  onToggleFollowSeller={onToggleFollowSeller}
-                  onStartChat={() => onStartChat(selectedProduct)}
-                  onGoReviews={() => onGoReviews(selectedProduct)}
-                />
-              ) : (
-                <Card className="p-6 text-center">
-                  <p className="font-black text-brand-brown">Ürün Detayı Seç</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sol taraftan bir ürüne tıkla; galeri, üretici güven puanı ve talep oluşturma alanını burada gör.
-                  </p>
-                </Card>
-              )}
-            </div>
-          </aside>
         </div>
       </main>
 
@@ -913,11 +892,9 @@ export function DiscoveryScreen({
             </div>
             <div className="thin-scrollbar overscroll-contain flex-1 overflow-y-auto p-4">
               <DiscoveryFilters
-                categories={categories}
                 locations={locations}
                 cities={cities}
                 query={query}
-                categoryId={categoryId}
                 city={city}
                 district={district}
                 teslimatSehir={teslimatSehir}
@@ -931,7 +908,6 @@ export function DiscoveryScreen({
                 sadeceKargolu={sadeceKargolu}
                 minRating={minRating}
                 onQueryChange={onQueryChange}
-                onCategoryChange={onCategoryChange}
                 onCityChange={onCityChange}
                 onDistrictChange={onDistrictChange}
                 onTeslimatSehirChange={onTeslimatSehirChange}
@@ -947,7 +923,7 @@ export function DiscoveryScreen({
                 onClear={onClearFilters}
               />
             </div>
-            <div className="border-t border-border bg-white p-4">
+            <div className="border-t border-border bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Button
                 type="button"
                 className="w-full"
@@ -960,59 +936,94 @@ export function DiscoveryScreen({
         </div>
       ) : null}
 
-      {/* Mobile / Tablet Product Detail Bottom Sheet Modal */}
-      {mobileDetailOpen && selectedProduct ? (
+      {/* Spacious Slide-Over Product Detail Drawer (Desktop Right Drawer / Mobile Bottom Sheet) */}
+      {detailOpen && selectedProduct ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs xl:hidden"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-stretch sm:justify-end"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
-            if (event.target === event.currentTarget) setMobileDetailOpen(false);
+            if (event.target === event.currentTarget) setDetailOpen(false);
           }}
         >
-          <div className="animate-soft-reveal thin-scrollbar overscroll-contain max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#f6f8f5] p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl">
-            <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-border/90" aria-hidden />
-            <div className="mb-2 flex items-center justify-between px-2 pt-1">
-              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                Ürün İnceleme & Talep
-              </span>
+          <div className="animate-soft-reveal flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#f6f8f5] shadow-2xl sm:h-full sm:max-h-none sm:max-w-[500px] sm:rounded-none sm:rounded-l-3xl">
+            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-border/90 sm:hidden" aria-hidden />
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-white px-4 py-3 sm:px-5">
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 rounded-lg"
+                  disabled={!prevProduct}
+                  onClick={() => {
+                    if (prevProduct) onSelectProduct(prevProduct);
+                  }}
+                  aria-label="Önceki ürün"
+                  title="Önceki ürün"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 rounded-lg"
+                  disabled={!nextProduct}
+                  onClick={() => {
+                    if (nextProduct) onSelectProduct(nextProduct);
+                  }}
+                  aria-label="Sonraki ürün"
+                  title="Sonraki ürün"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <span className="ml-1.5 text-xs font-black uppercase tracking-wider text-muted-foreground">
+                  Ürün İnceleme & Talep
+                </span>
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setMobileDetailOpen(false)}
+                onClick={() => setDetailOpen(false)}
                 aria-label="Detayı kapat"
               >
                 <X className="size-5" />
               </Button>
             </div>
-            <ProductDetailPanel
-              product={selectedProduct}
-              favorite={favoriteIds.has(selectedProduct.id)}
-              hasPriceAlarm={priceAlarmProductIds?.has(selectedProduct.id) ?? false}
-              hasStockAlarm={stockAlarmProductIds?.has(selectedProduct.id) ?? false}
-              isFollowingSeller={
-                Boolean(selectedProduct.saticiId && followedSellerIds?.has(selectedProduct.saticiId))
-              }
-              actionStatus={actionStatus}
-              demandFlowEnabled={demandFlowEnabled}
-              favoritesEnabled={favoritesEnabled}
-              chatEnabled={chatEnabled}
-              onOpenStorefront={onOpenStorefront}
-              onCreateDemand={onCreateDemand}
-              onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
-              onSavePriceAlert={onSavePriceAlert}
-              onToggleStockAlarm={onToggleStockAlarm}
-              onToggleFollowSeller={onToggleFollowSeller}
-              onStartChat={() => {
-                setMobileDetailOpen(false);
-                onStartChat(selectedProduct);
-              }}
-              onGoReviews={() => {
-                setMobileDetailOpen(false);
-                onGoReviews(selectedProduct);
-              }}
-            />
+            <div className="thin-scrollbar overscroll-contain flex-1 overflow-y-auto p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-5">
+              <ProductDetailPanel
+                product={selectedProduct}
+                favorite={favoriteIds.has(selectedProduct.id)}
+                hasPriceAlarm={priceAlarmProductIds?.has(selectedProduct.id) ?? false}
+                hasStockAlarm={stockAlarmProductIds?.has(selectedProduct.id) ?? false}
+                isFollowingSeller={
+                  Boolean(selectedProduct.saticiId && followedSellerIds?.has(selectedProduct.saticiId))
+                }
+                actionStatus={actionStatus}
+                demandFlowEnabled={demandFlowEnabled}
+                favoritesEnabled={favoritesEnabled}
+                chatEnabled={chatEnabled}
+                onOpenStorefront={(sellerId) => {
+                  setDetailOpen(false);
+                  onOpenStorefront(sellerId);
+                }}
+                onCreateDemand={onCreateDemand}
+                onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
+                onSavePriceAlert={onSavePriceAlert}
+                onToggleStockAlarm={onToggleStockAlarm}
+                onToggleFollowSeller={onToggleFollowSeller}
+                onStartChat={() => {
+                  setDetailOpen(false);
+                  onStartChat(selectedProduct);
+                }}
+                onGoReviews={() => {
+                  setDetailOpen(false);
+                  onGoReviews(selectedProduct);
+                }}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -1029,11 +1040,9 @@ export function DiscoveryScreen({
 }
 
 function DiscoveryFilters({
-  categories,
   locations = [],
   cities = [],
   query,
-  categoryId,
   city,
   district,
   teslimatSehir = "",
@@ -1047,7 +1056,6 @@ function DiscoveryFilters({
   sadeceKargolu = false,
   minRating,
   onQueryChange,
-  onCategoryChange,
   onCityChange,
   onDistrictChange,
   onTeslimatSehirChange,
@@ -1062,11 +1070,9 @@ function DiscoveryFilters({
   onMinRatingChange,
   onClear,
 }: {
-  categories: CategoryDto[];
   locations?: BootstrapLocationDto[];
   cities?: string[];
   query: string;
-  categoryId: number | null;
   city: string;
   district: string;
   teslimatSehir?: string;
@@ -1080,7 +1086,6 @@ function DiscoveryFilters({
   sadeceKargolu?: boolean;
   minRating: number | null;
   onQueryChange: (value: string) => void;
-  onCategoryChange: (value: number | null) => void;
   onCityChange: (value: string) => void;
   onDistrictChange: (value: string) => void;
   onTeslimatSehirChange?: (value: string) => void;
@@ -1096,7 +1101,7 @@ function DiscoveryFilters({
   onClear: () => void;
 }) {
   return (
-    <Card className="space-y-5 rounded-2xl border-border/90 bg-white p-4 shadow-[0_10px_28px_rgba(16,24,40,0.04)]">
+    <Card className="space-y-4 rounded-2xl border-border/90 bg-white p-4 shadow-[0_10px_28px_rgba(16,24,40,0.04)]">
       <div className="flex items-center justify-between border-b border-border pb-3">
         <span className="inline-flex items-center gap-1.5 text-sm font-black text-brand-brown">
           <SlidersHorizontal className="size-4 text-primary" aria-hidden />
@@ -1120,60 +1125,17 @@ function DiscoveryFilters({
         />
       </Field>
 
-      <div>
-        <p className="mb-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-          Kategori
-        </p>
-        <div className="thin-scrollbar max-h-48 space-y-1 overflow-y-auto pr-1">
-          <button
-            type="button"
-            onClick={() => onCategoryChange(null)}
-            className={cn(
-              "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-bold transition",
-              categoryId === null
-                ? "bg-emerald-50 text-primary"
-                : "text-foreground hover:bg-muted",
-            )}
-          >
-            <span>Tüm Kategoriler</span>
-            {categoryId === null ? <Check className="size-3.5" aria-hidden /> : null}
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => onCategoryChange(categoryId === cat.id ? null : cat.id)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-bold transition",
-                categoryId === cat.id
-                  ? "bg-emerald-50 text-primary"
-                  : "text-foreground hover:bg-muted",
-              )}
-            >
-              <span className="truncate">{cat.adi}</span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                {typeof cat.urunSayisi === "number" ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-extrabold text-muted-foreground tabular-nums">
-                    {cat.urunSayisi}
-                  </span>
-                ) : null}
-                {categoryId === cat.id ? <Check className="size-3.5 shrink-0" aria-hidden /> : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       <LocationFields
         compact
+        stacked
         city={city}
         district={district}
         onCityChange={onCityChange}
         onDistrictChange={onDistrictChange}
         locations={locations}
         cities={cities}
-        cityPlaceholder="İl seç / ara"
-        districtPlaceholder="İlçe seç / ara"
+        cityPlaceholder="İl seç veya yaz"
+        districtPlaceholder="İlçe seç veya yaz"
         cityId="filter-city"
         districtId="filter-district"
       />

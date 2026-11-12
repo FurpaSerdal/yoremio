@@ -2230,6 +2230,7 @@ export function LocationFields({
   cityId,
   districtId,
   compact = false,
+  stacked = false,
 }: {
   city: string;
   district: string;
@@ -2242,6 +2243,7 @@ export function LocationFields({
   cityId?: string;
   districtId?: string;
   compact?: boolean;
+  stacked?: boolean;
 }) {
   const uid = useId();
   const cityListId = `yoremio-cities-${uid}`;
@@ -2266,7 +2268,13 @@ export function LocationFields({
       );
 
   return (
-    <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3")}>
+    <div
+      className={cn(
+        "grid",
+        stacked ? "grid-cols-1" : "grid-cols-2",
+        compact ? "gap-2.5" : "gap-3",
+      )}
+    >
       <Field label="Şehir" htmlFor={cityId ?? `${uid}-city`}>
         <Input
           id={cityId ?? `${uid}-city`}
