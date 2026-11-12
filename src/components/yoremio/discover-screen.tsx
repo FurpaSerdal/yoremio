@@ -10,6 +10,7 @@ import {
   Film,
   Heart,
   LayoutGrid,
+  Leaf,
   List,
   MapPin,
   MessageCircle,
@@ -300,83 +301,224 @@ export function DiscoveryScreen({
         onOpenStorefront={onOpenStorefront}
       />
 
-      <main className="mx-auto max-w-[1360px] px-4 py-5 sm:px-6 sm:py-7">
-        {/* Top Discovery Header & Controls */}
-        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-white p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-serif text-xl font-bold text-[#14271c] sm:text-2xl">
+      <main className="mx-auto max-w-[1440px] px-4 py-5 sm:px-6 sm:py-7">
+        {/* Editorial Discovery Header & Controls */}
+        <section className="relative mb-5 overflow-hidden rounded-3xl border border-emerald-200/75 bg-[linear-gradient(125deg,#eef7ef_0%,#ffffff_55%,#fffaf0_100%)] p-5 shadow-[0_12px_34px_rgba(0,107,53,0.06)] sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100/80 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-primary">
+                  <Sparkles className="size-3" aria-hidden />
+                  Yerel Üretici Pazarı
+                </span>
+                <Badge variant="secondary" className="bg-white/90 font-extrabold text-primary shadow-2xs tabular-nums">
+                  {productsPage.totalCount} ürün listeleniyor
+                </Badge>
+              </div>
+              <h1 className="font-serif text-2xl font-bold tracking-tight text-[#14271c] sm:text-3xl">
                 {activeCategoryName}
               </h1>
-              <Badge variant="secondary" className="tabular-nums">
-                {productsPage.totalCount} ürün
-              </Badge>
+              <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                Üreticiden doğrudan taze ürünler — kart seçip sağdaki inceleme panelinden anında talep aç veya üreticiyle sohbet başlat.
+              </p>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Üreticiden doğrudan ürünler — ürün seçip ihtiyacına göre talep ve mesaj başlatabilirsin.
-            </p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-xl lg:hidden"
-              onClick={() => setMobileFiltersOpen(true)}
-            >
-              <SlidersHorizontal className="size-4" aria-hidden />
-              Filtrele
-              {activeFilterCount > 0 ? (
-                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
-                  {activeFilterCount}
-                </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {onOpenOpenMarketModal ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 gap-1.5 rounded-xl border-emerald-300/80 bg-white/95 text-xs font-extrabold text-primary shadow-2xs hover:bg-emerald-50"
+                  onClick={onOpenOpenMarketModal}
+                >
+                  <Sparkles className="size-3.5" aria-hidden />
+                  Aradığın Yoksa Talep Aç
+                </Button>
               ) : null}
-            </Button>
 
-            <select
-              aria-label="Sıralama"
-              value={sort}
-              onChange={(event) => onSortChange(event.target.value)}
-              className="h-9 rounded-xl border border-border bg-white px-3 text-xs font-bold text-foreground outline-none focus:border-primary sm:text-sm"
-            >
-              {sortOptions.map((key) => (
-                <option key={key} value={key}>
-                  {sortLabels[key] ?? key}
-                </option>
-              ))}
-            </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 rounded-xl bg-white lg:hidden"
+                onClick={() => setMobileFiltersOpen(true)}
+              >
+                <SlidersHorizontal className="size-4" aria-hidden />
+                Filtrele
+                {activeFilterCount > 0 ? (
+                  <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black text-white">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </Button>
 
-            <div className="hidden items-center rounded-xl border border-border bg-[#f7faf6] p-1 sm:flex">
-              <button
-                type="button"
-                aria-label="Izgara görünümü"
-                onClick={() => setViewMode("grid")}
-                className={cn(
-                  "rounded-lg p-1.5 transition",
-                  viewMode === "grid"
-                    ? "bg-white text-primary shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+              <select
+                aria-label="Sıralama"
+                value={sort}
+                onChange={(event) => onSortChange(event.target.value)}
+                className="h-9 rounded-xl border border-border bg-white px-3 text-xs font-bold text-foreground shadow-2xs outline-none transition-[border-color,box-shadow] hover:border-primary/45 focus:border-primary focus:ring-2 focus:ring-primary/15 sm:text-sm"
               >
-                <LayoutGrid className="size-4" aria-hidden />
-              </button>
-              <button
-                type="button"
-                aria-label="Liste görünümü"
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "rounded-lg p-1.5 transition",
-                  viewMode === "list"
-                    ? "bg-white text-primary shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <List className="size-4" aria-hidden />
-              </button>
+                {sortOptions.map((key) => (
+                  <option key={key} value={key}>
+                    {sortLabels[key] ?? key}
+                  </option>
+                ))}
+              </select>
+
+              <div className="hidden items-center rounded-xl border border-border bg-white/90 p-1 shadow-2xs sm:flex">
+                <button
+                  type="button"
+                  aria-label="Izgara görünümü"
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "rounded-lg p-1.5 transition-[transform,background-color,color] duration-150 active:scale-95",
+                    viewMode === "grid"
+                      ? "bg-secondary text-primary shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <LayoutGrid className="size-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Liste görünümü"
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "rounded-lg p-1.5 transition-[transform,background-color,color] duration-150 active:scale-95",
+                    viewMode === "list"
+                      ? "bg-secondary text-primary shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <List className="size-4" aria-hidden />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* 1-Click Horizontal Category Ribbon */}
+          {categories.length > 0 ? (
+            <div className="scroll-shelf mt-4 flex items-center gap-2 overflow-x-auto border-t border-emerald-200/60 pt-3.5 pb-1">
+              <button
+                type="button"
+                onClick={() => onCategoryChange(null)}
+                className={cn(
+                  "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition-[transform,background-color,border-color,color,box-shadow] duration-150 active:scale-95",
+                  categoryId === null
+                    ? "border-primary bg-primary text-white shadow-xs"
+                    : "border-border/90 bg-white text-foreground hover:border-primary/45 hover:text-primary",
+                )}
+              >
+                <span>Tümü</span>
+              </button>
+              {categories.map((cat) => {
+                const isSelectedCat = categoryId === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => onCategoryChange(isSelectedCat ? null : cat.id)}
+                    className={cn(
+                      "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition-[transform,background-color,border-color,color,box-shadow] duration-150 active:scale-95",
+                      isSelectedCat
+                        ? "border-primary bg-primary text-white shadow-xs"
+                        : "border-border/90 bg-white text-foreground hover:border-primary/45 hover:text-primary",
+                    )}
+                  >
+                    <span>{cat.adi}</span>
+                    {typeof cat.urunSayisi === "number" ? (
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums",
+                          isSelectedCat
+                            ? "bg-white/20 text-white"
+                            : "bg-secondary text-primary",
+                        )}
+                      >
+                        {cat.urunSayisi}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Quick Attribute Pills */}
+          <div className="scroll-shelf mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            {onSadeceYeniHasatChange ? (
+              <button
+                type="button"
+                onClick={() => onSadeceYeniHasatChange(!sadeceYeniHasat)}
+                className={cn(
+                  "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-extrabold transition-[transform,background-color,border-color,color] duration-150 active:scale-95",
+                  sadeceYeniHasat
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs"
+                    : "border-border/80 bg-white/90 text-muted-foreground hover:border-emerald-300 hover:text-emerald-800",
+                )}
+              >
+                <Leaf className="size-3" aria-hidden />
+                Yeni Hasat
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onVerifiedOnlyChange(!verifiedOnly)}
+              className={cn(
+                "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-extrabold transition-[transform,background-color,border-color,color] duration-150 active:scale-95",
+                verifiedOnly
+                  ? "border-primary bg-primary text-white shadow-2xs"
+                  : "border-border/80 bg-white/90 text-muted-foreground hover:border-primary/45 hover:text-primary",
+              )}
+            >
+              <ShieldCheck className="size-3" aria-hidden />
+              Doğrulanmış Üretici
+            </button>
+            {onSadeceEldenTeslimChange ? (
+              <button
+                type="button"
+                onClick={() => onSadeceEldenTeslimChange(!sadeceEldenTeslim)}
+                className={cn(
+                  "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-extrabold transition-[transform,background-color,border-color,color] duration-150 active:scale-95",
+                  sadeceEldenTeslim
+                    ? "border-primary bg-secondary text-primary"
+                    : "border-border/80 bg-white/90 text-muted-foreground hover:border-primary/45 hover:text-primary",
+                )}
+              >
+                <MapPin className="size-3" aria-hidden />
+                Elden Teslim
+              </button>
+            ) : null}
+            {onSadeceKargoluChange ? (
+              <button
+                type="button"
+                onClick={() => onSadeceKargoluChange(!sadeceKargolu)}
+                className={cn(
+                  "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-extrabold transition-[transform,background-color,border-color,color] duration-150 active:scale-95",
+                  sadeceKargolu
+                    ? "border-sky-600 bg-sky-50 text-sky-900"
+                    : "border-border/80 bg-white/90 text-muted-foreground hover:border-sky-300 hover:text-sky-800",
+                )}
+              >
+                <Truck className="size-3" aria-hidden />
+                Kargolu
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onOnlyInStockChange(!onlyInStock)}
+              className={cn(
+                "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-extrabold transition-[transform,background-color,border-color,color] duration-150 active:scale-95",
+                onlyInStock
+                  ? "border-primary bg-secondary text-primary"
+                  : "border-border/80 bg-white/90 text-muted-foreground hover:border-primary/45 hover:text-primary",
+              )}
+            >
+              Stokta Olanlar
+            </button>
+          </div>
+        </section>
 
         {/* Active Filter Chips Bar */}
         {activeChips.length > 0 ? (
@@ -406,7 +548,7 @@ export function DiscoveryScreen({
         ) : null}
 
         {/* Desktop 3-column layout */}
-        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_395px]">
+        <div className="grid gap-6 lg:grid-cols-[268px_minmax(0,1fr)] xl:grid-cols-[268px_minmax(0,1fr)_400px]">
           <aside className="hidden lg:block">
             <div className="thin-scrollbar overscroll-contain sticky top-24 max-h-[calc(100vh-6.75rem)] overflow-y-auto pr-1">
               <DiscoveryFilters
@@ -510,16 +652,16 @@ export function DiscoveryScreen({
                       <Card
                         key={product.id}
                         className={cn(
-                          "group overflow-hidden rounded-2xl border bg-white transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.988]",
+                          "group flex flex-col overflow-hidden rounded-2xl border bg-white transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.988]",
                           selected
-                            ? "border-primary ring-2 ring-primary/15 shadow-sm"
-                            : "border-border hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
-                          viewMode === "list" && "sm:grid sm:grid-cols-[175px_1fr]",
+                            ? "border-primary ring-2 ring-primary/18 shadow-[0_14px_30px_rgba(0,107,53,0.1)]"
+                            : "border-border/90 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_14px_28px_rgba(16,24,40,0.08)]",
+                          viewMode === "list" && "sm:grid sm:grid-cols-[190px_1fr]",
                         )}
                       >
                         <div
                           className={cn(
-                            "relative bg-[#f2f5f0]",
+                            "relative overflow-hidden bg-[#f2f5f0]",
                             viewMode === "grid" ? "aspect-[4/3]" : "h-44 sm:h-full",
                           )}
                         >
@@ -532,12 +674,13 @@ export function DiscoveryScreen({
                               src={productImage(product)}
                               alt={product.adi}
                               fill
-                              sizes="(max-width: 640px) 100vw, 320px"
+                              sizes="(max-width: 640px) 100vw, 340px"
                               className="object-cover transition duration-300 group-hover:scale-105"
                             />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                           </button>
 
-                          <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
+                          <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-wrap items-start gap-1">
                             {product.saticiDogrulanmis ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-black text-primary shadow-xs">
                                 <ShieldCheck className="size-3" aria-hidden />
@@ -546,6 +689,7 @@ export function DiscoveryScreen({
                             ) : null}
                             {product.yeniHasatMi ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+                                <Leaf className="size-2.5" aria-hidden />
                                 Yeni Hasat
                               </span>
                             ) : null}
@@ -557,7 +701,20 @@ export function DiscoveryScreen({
                             ) : null}
                             {product.stokMiktari > 0 && product.stokMiktari <= 5 ? (
                               <span className="inline-flex items-center rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
-                                Son {product.stokMiktari} adet
+                                Son {product.stokMiktari}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {/* Location Overlay on Bottom Image Edge */}
+                          <div className="pointer-events-none absolute bottom-2 left-2.5 right-10 flex items-center justify-between gap-2 text-[11px] font-bold text-white/95 drop-shadow-xs">
+                            <span className="inline-flex items-center gap-1 truncate">
+                              <MapPin className="size-3 shrink-0 text-emerald-300" aria-hidden />
+                              <span className="truncate">{productLocation(product)}</span>
+                            </span>
+                            {selected ? (
+                              <span className="hidden shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-black text-white xl:inline-flex">
+                                Seçili
                               </span>
                             ) : null}
                           </div>
@@ -568,8 +725,8 @@ export function DiscoveryScreen({
                               aria-label={fav ? "Favoriden çıkar" : "Favorilere ekle"}
                               onClick={() => onToggleFavorite(product.id)}
                               className={cn(
-                                "absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-white/90 shadow-xs transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
-                                fav ? "text-red-500" : "text-muted-foreground",
+                                "absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-white/92 shadow-xs backdrop-blur-xs transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
+                                fav ? "text-red-500" : "text-muted-foreground hover:text-red-500",
                               )}
                             >
                               <Heart className={cn("size-4", fav && "fill-current")} aria-hidden />
@@ -577,20 +734,22 @@ export function DiscoveryScreen({
                           ) : null}
                         </div>
 
-                        <div className="flex flex-col p-4">
+                        <div className="flex flex-1 flex-col p-4">
                           <div className="flex items-start justify-between gap-2">
                             <button
                               type="button"
                               onClick={() => handleSelectProduct(product)}
                               className="text-left"
                             >
-                              <h3 className="line-clamp-2 text-base font-black text-brand-brown group-hover:text-primary">
+                              <h3 className="line-clamp-2 text-[15px] font-black leading-snug text-brand-brown transition-colors group-hover:text-primary sm:text-base">
                                 {product.adi}
                               </h3>
                             </button>
-                            <Badge variant="outline" className="shrink-0 text-[10px]">
-                              {product.kategoriAdi}
-                            </Badge>
+                            {product.kategoriAdi ? (
+                              <Badge variant="outline" className="shrink-0 bg-[#f9fbf8] text-[10px]">
+                                {product.kategoriAdi}
+                              </Badge>
+                            ) : null}
                           </div>
 
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -606,11 +765,12 @@ export function DiscoveryScreen({
                             ) : (
                               <span>{sellerName(product)}</span>
                             )}
-                            <span>·</span>
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="size-3" aria-hidden />
-                              {productLocation(product)}
-                            </span>
+                            {typeof product.goruntulenmeSayisi === "number" && product.goruntulenmeSayisi > 0 ? (
+                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-muted-foreground/85">
+                                · <Eye className="ml-0.5 size-3" aria-hidden />
+                                {product.goruntulenmeSayisi}
+                              </span>
+                            ) : null}
                           </div>
 
                           {product.aciklama ? (
@@ -619,26 +779,20 @@ export function DiscoveryScreen({
                             </p>
                           ) : null}
 
-                          <div className="mt-2 flex flex-wrap gap-1">
+                          <div className="mt-2.5 flex flex-wrap gap-1">
                             {product.birimMiktar ? (
-                              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                              <span className="rounded-md border border-border/70 bg-[#f8faf7] px-2 py-0.5 text-[10px] font-bold text-slate-700">
                                 {product.birimMiktar}
                               </span>
                             ) : null}
                             {product.eldenTeslimVarMi ? (
-                              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-primary">
                                 Elden Teslim
                               </span>
                             ) : null}
                             {product.kargoVarMi ? (
-                              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                              <span className="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800">
                                 Kargo
-                              </span>
-                            ) : null}
-                            {typeof product.goruntulenmeSayisi === "number" && product.goruntulenmeSayisi > 0 ? (
-                              <span className="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                <Eye className="size-2.5" aria-hidden />
-                                {product.goruntulenmeSayisi}
                               </span>
                             ) : null}
                           </div>
@@ -660,10 +814,10 @@ export function DiscoveryScreen({
                               type="button"
                               size="sm"
                               variant={selected ? "default" : "secondary"}
-                              className="rounded-xl font-extrabold"
+                              className="rounded-xl px-3.5 font-extrabold"
                               onClick={() => handleSelectProduct(product)}
                             >
-                              İncele
+                              {selected ? "İnceleniyor" : "İncele"}
                             </Button>
                           </div>
                         </div>
@@ -942,13 +1096,16 @@ function DiscoveryFilters({
   onClear: () => void;
 }) {
   return (
-    <Card className="space-y-5 rounded-2xl p-4">
+    <Card className="space-y-5 rounded-2xl border-border/90 bg-white p-4 shadow-[0_10px_28px_rgba(16,24,40,0.04)]">
       <div className="flex items-center justify-between border-b border-border pb-3">
-        <span className="text-sm font-black text-brand-brown">Detaylı Filtreler</span>
+        <span className="inline-flex items-center gap-1.5 text-sm font-black text-brand-brown">
+          <SlidersHorizontal className="size-4 text-primary" aria-hidden />
+          Detaylı Filtreler
+        </span>
         <button
           type="button"
           onClick={onClear}
-          className="text-xs font-bold text-primary hover:underline"
+          className="rounded-lg px-2 py-0.5 text-xs font-bold text-primary transition hover:bg-secondary hover:underline"
         >
           Sıfırla
         </button>
@@ -967,7 +1124,7 @@ function DiscoveryFilters({
         <p className="mb-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
           Kategori
         </p>
-        <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+        <div className="thin-scrollbar max-h-48 space-y-1 overflow-y-auto pr-1">
           <button
             type="button"
             onClick={() => onCategoryChange(null)}
@@ -1346,11 +1503,11 @@ export function ProductDetailPanel({
       ) : null}
 
         <div className="space-y-4 p-4 sm:p-5">
-        <div>
+        <div className="rounded-2xl border border-emerald-100/90 bg-[#f6fbf6] p-3.5">
           <h2 className="font-serif text-xl font-bold leading-snug text-[#14271c]">
             {product.adi}
           </h2>
-          <div className="mt-2 flex items-baseline justify-between gap-2">
+          <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-2">
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-black text-primary tabular-nums">
                 {formatPrice(product.fiyat)}
@@ -1361,12 +1518,21 @@ export function ProductDetailPanel({
                 </span>
               ) : null}
             </div>
-            <span className="text-xs font-bold text-muted-foreground">
-              Stok: {product.stokMiktari ?? 0} adet
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-[11px] font-extrabold tabular-nums",
+                outOfStock
+                  ? "bg-muted text-muted-foreground"
+                  : (product.stokMiktari ?? 0) <= 5
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-emerald-100 text-primary",
+              )}
+            >
+              {outOfStock ? "Stok Tükendi" : `Stokta: ${product.stokMiktari ?? 0} adet`}
             </span>
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {product.yeniHasatMi ? <Badge variant="green">Yeni Hasat</Badge> : null}
             {product.eldenTeslimVarMi ? <Badge variant="outline">Elden Teslim</Badge> : null}
             {product.kargoVarMi ? <Badge variant="secondary">Kargo Gönderim</Badge> : null}
@@ -1375,7 +1541,7 @@ export function ProductDetailPanel({
             ) : null}
           </div>
           {product.gonderimSehirleri ? (
-            <p className="mt-1.5 text-[11px] font-semibold text-muted-foreground">
+            <p className="mt-2 text-[11px] font-semibold text-muted-foreground">
               <Truck className="mr-1 inline size-3.5 text-primary" aria-hidden />
               Gönderim: {product.gonderimSehirleri}
             </p>
@@ -1473,13 +1639,13 @@ export function ProductDetailPanel({
 
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-foreground">Miktar</span>
-              <div className="inline-flex items-center rounded-xl border border-border bg-white">
+              <div className="inline-flex items-center rounded-xl border border-border bg-white shadow-2xs">
                 <button
                   type="button"
                   aria-label="Miktarı azalt"
                   disabled={amount <= 1}
                   onClick={() => setAmount((prev) => Math.max(1, prev - 1))}
-                  className="grid size-9 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-40"
+                  className="grid size-9 place-items-center text-muted-foreground transition-[transform,color] duration-150 hover:text-foreground active:scale-90 disabled:opacity-40"
                 >
                   <Minus className="size-4" />
                 </button>
@@ -1491,7 +1657,7 @@ export function ProductDetailPanel({
                   aria-label="Miktarı artır"
                   disabled={amount >= maxSelectable}
                   onClick={() => setAmount((prev) => Math.min(maxSelectable, prev + 1))}
-                  className="grid size-9 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-40"
+                  className="grid size-9 place-items-center text-muted-foreground transition-[transform,color] duration-150 hover:text-foreground active:scale-90 disabled:opacity-40"
                 >
                   <Plus className="size-4" />
                 </button>
