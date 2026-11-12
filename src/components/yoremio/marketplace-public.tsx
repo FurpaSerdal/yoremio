@@ -222,7 +222,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-[116px] shrink-0 snap-start flex-col items-center gap-2 rounded-[18px] border p-2.5 text-center outline-none transition-colors",
+        "tactile-press group flex w-[116px] shrink-0 snap-start flex-col items-center gap-2 rounded-[18px] border p-2.5 text-center outline-none transition-[transform,border-color,background-color,color,box-shadow] duration-150 active:scale-95",
         active
           ? "border-primary/25 bg-secondary text-primary shadow-sm"
           : "border-border/70 bg-white text-foreground hover:border-primary/30 hover:text-primary",
@@ -288,7 +288,7 @@ export function FeaturedSellerStrip({
               onClick={() => {
                 if (productId) onSelectProduct(productId);
               }}
-              className="group relative min-h-[148px] overflow-hidden rounded-[22px] border border-border bg-ink text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition hover:-translate-y-0.5 hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+              className="group relative min-h-[148px] overflow-hidden rounded-[22px] border border-border bg-ink text-left shadow-[0_10px_22px_rgba(16,24,40,0.08)] outline-none transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-primary/50 active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
             >
               <Image
                 src={image}

@@ -342,12 +342,12 @@ export function HomeScreen({
             ) : null}
           </div>
 
-          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+          <div className="scroll-shelf flex gap-3 overflow-x-auto pb-1.5 sm:grid sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             <button
               type="button"
               onClick={() => onSelectCategory(null)}
               className={cn(
-                "group flex w-20 shrink-0 flex-col items-center gap-2 rounded-xl border p-2.5 text-center transition sm:w-auto",
+                "tactile-press group flex w-20 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border p-2.5 text-center transition-[transform,border-color,background-color,box-shadow] duration-150 sm:w-auto",
                 selectedCategoryId === null
                   ? "border-primary bg-emerald-50/80 shadow-xs"
                   : "border-transparent bg-[#f7faf6] hover:border-border hover:bg-white",
@@ -369,7 +369,7 @@ export function HomeScreen({
                   type="button"
                   onClick={() => onSelectCategory(active ? null : category.id)}
                   className={cn(
-                    "group flex w-20 shrink-0 flex-col items-center gap-2 rounded-xl border p-2.5 text-center transition sm:w-auto",
+                    "tactile-press group flex w-20 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border p-2.5 text-center transition-[transform,border-color,background-color,box-shadow] duration-150 sm:w-auto",
                     active
                       ? "border-primary bg-emerald-50/80 shadow-xs"
                       : "border-transparent bg-[#f7faf6] hover:border-border hover:bg-white",
@@ -412,7 +412,7 @@ export function HomeScreen({
                 Gerçek üretici stokları, doğrulanmış değerlendirmeler ve doğrudan talep imkânı.
               </p>
             </div>
-            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="scroll-shelf flex items-center gap-2 overflow-x-auto pb-1.5">
               <button
                 type="button"
                 onClick={() => {
@@ -420,9 +420,9 @@ export function HomeScreen({
                   onSelectSort("newest");
                 }}
                 className={cn(
-                  "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition",
+                  "shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition-[transform,border-color,background-color,color] duration-150 active:scale-95",
                   !verifiedOnly && sort === "newest"
-                    ? "border-primary bg-primary text-white"
+                    ? "border-primary bg-primary text-white shadow-xs"
                     : "border-border bg-white text-muted-foreground hover:border-primary/40",
                 )}
               >
@@ -432,9 +432,9 @@ export function HomeScreen({
                 type="button"
                 onClick={() => onToggleVerifiedOnly(!verifiedOnly)}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition",
+                  "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-extrabold transition-[transform,border-color,background-color,color] duration-150 active:scale-95",
                   verifiedOnly
-                    ? "border-primary bg-primary text-white"
+                    ? "border-primary bg-primary text-white shadow-xs"
                     : "border-border bg-white text-muted-foreground hover:border-primary/40",
                 )}
               >
@@ -535,7 +535,7 @@ export function HomeScreen({
               {featuredSellers.map((seller) => (
                 <Card
                   key={seller.kullaniciId}
-                  className="group overflow-hidden rounded-2xl border-border/90 bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(16,24,40,0.08)]"
+                  className="hover-lift group overflow-hidden rounded-2xl border-border/90 bg-white"
                 >
                   <div className="relative h-28 bg-[#eef5ea]">
                     <Image
@@ -966,9 +966,9 @@ function HomeProductCard({
   onFavorite: () => void;
 }) {
   return (
-    <Card className="group flex h-full flex-col overflow-hidden rounded-2xl border-border/90 bg-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(16,24,40,0.08)]">
+    <Card className="hover-lift group flex h-full flex-col overflow-hidden rounded-2xl border-border/90 bg-white">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#f2f5f0]">
-        <button type="button" onClick={onOpen} className="block size-full text-left">
+        <button type="button" onClick={onOpen} className="block size-full text-left active:opacity-90">
           <Image
             src={productImage(product)}
             alt={product.adi}
@@ -1009,7 +1009,7 @@ function HomeProductCard({
             onClick={onFavorite}
             aria-label={favorite ? "Favorilerden çıkar" : "Favorilere ekle"}
             className={cn(
-              "absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/70 bg-white/90 shadow-xs backdrop-blur-xs transition hover:scale-105",
+              "absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/70 bg-white/90 shadow-xs backdrop-blur-xs transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
               favorite ? "text-red-500" : "text-muted-foreground hover:text-red-500",
             )}
           >

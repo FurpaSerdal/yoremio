@@ -204,6 +204,10 @@ export function YoremioMarketplace() {
     chatContextRef.current = chatContext;
   }, [chatContext]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [screen]);
+
   const showToast = useCallback(
     (message: string, kind: ToastKind = "info", traceId?: string | null) => {
       setToast({ kind, message, traceId });

@@ -68,13 +68,24 @@ body {
 }
 
 html {
+  scroll-behavior: smooth;
   scroll-padding-top: 96px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,
 input,
 select {
   font: inherit;
+}
+
+button:not(:disabled),
+a[href],
+select:not(:disabled),
+summary,
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 ::selection {
@@ -150,25 +161,40 @@ textarea {
 
   .hover-lift {
     transition:
-      transform 220ms ease,
-      box-shadow 220ms ease,
-      border-color 220ms ease,
-      background-color 220ms ease;
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease,
+      background-color 180ms ease;
   }
 
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 42px rgba(32, 39, 52, 0.1);
+    box-shadow: 0 16px 38px rgba(16, 24, 40, 0.09);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0) scale(0.99);
+    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.06);
+  }
+
+  .tactile-press {
+    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms ease, border-color 160ms ease;
+  }
+
+  .tactile-press:active {
+    transform: scale(0.975);
   }
 
   .scroll-shelf {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--primary) 35%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--primary) 30%, transparent) transparent;
     scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 
   .scroll-shelf::-webkit-scrollbar {
-    height: 8px;
+    height: 6px;
   }
 
   .scroll-shelf::-webkit-scrollbar-thumb {
@@ -176,9 +202,43 @@ textarea {
     background: rgba(10, 106, 68, 0.22);
   }
 
+  .scroll-shelf::-webkit-scrollbar-thumb:hover {
+    background: rgba(10, 106, 68, 0.38);
+  }
+
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(16, 24, 40, 0.16) transparent;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(16, 24, 40, 0.16);
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 107, 53, 0.35);
+  }
+
+  .overscroll-contain {
+    overscroll-behavior: contain;
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
   }
 
   .no-scrollbar::-webkit-scrollbar {

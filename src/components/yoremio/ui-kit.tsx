@@ -180,7 +180,7 @@ export function PublicHeader({
               ) : null}
               <button
                 type="submit"
-                className="absolute right-1.5 top-1/2 grid h-8 -translate-y-1/2 place-items-center rounded-full bg-primary px-3 text-xs font-bold text-white transition hover:bg-[#00592d]"
+                className="absolute right-1.5 top-1/2 grid h-8 -translate-y-1/2 place-items-center rounded-full bg-primary px-3 text-xs font-bold text-white transition-[transform,background-color] duration-150 hover:bg-[#00592d] active:scale-95"
               >
                 Ara
               </button>
@@ -266,7 +266,7 @@ export function PublicHeader({
           />
           <button
             type="submit"
-            className="absolute right-1.5 top-1/2 h-7 -translate-y-1/2 rounded-full bg-primary px-3 text-xs font-bold text-white"
+            className="absolute right-1.5 top-1/2 h-7 -translate-y-1/2 rounded-full bg-primary px-3 text-xs font-bold text-white transition-[transform,background-color] duration-150 hover:bg-[#00592d] active:scale-95"
           >
             Ara
           </button>
@@ -356,7 +356,7 @@ export function MobileBottomNav({
               type="button"
               onClick={item.onClick}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-bold transition-colors",
+                "relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-bold transition-[transform,color] duration-150 active:scale-95",
                 item.active ? "text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -522,7 +522,7 @@ export function DashboardFrame({
       <div className={cn("grid min-h-screen", dark ? "lg:grid-cols-[264px_1fr]" : "lg:grid-cols-[280px_1fr]")}>
         <aside
           className={cn(
-            "flex min-h-0 flex-col border-b border-border px-3 py-3 sm:px-4 sm:py-4 lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:py-5",
+            "thin-scrollbar overscroll-contain flex min-h-0 flex-col border-b border-border px-3 py-3 sm:px-4 sm:py-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r lg:py-5",
             dark
               ? "bg-[linear-gradient(170deg,#006b35,#00382b)] text-white"
               : "bg-white text-foreground",
@@ -554,7 +554,7 @@ export function DashboardFrame({
                   title={item.label}
                   onClick={item.onClick}
                   className={cn(
-                    "flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-3 text-left text-xs font-bold transition sm:h-11 sm:text-sm lg:w-full lg:justify-start lg:gap-3",
+                    "flex h-10 shrink-0 snap-start items-center justify-center gap-2 rounded-xl px-3 text-left text-xs font-bold transition-[transform,background-color,color,box-shadow] duration-150 active:scale-[0.97] sm:h-11 sm:text-sm lg:w-full lg:justify-start lg:gap-3",
                     item.active
                       ? dark
                         ? "bg-white/18 text-white shadow-sm"
@@ -762,7 +762,7 @@ export function ChatPanel({
         ) : null}
       </div>
 
-      <div ref={scrollContainerRef} className="space-y-3 overflow-y-auto bg-[#f9faf8] p-3 sm:p-4">
+      <div ref={scrollContainerRef} className="thin-scrollbar overscroll-contain space-y-3 overflow-y-auto scroll-smooth bg-[#f9faf8] p-3 sm:p-4">
         {conversations.length > 0 ? (
           <div className="scroll-shelf mb-2 flex gap-2 overflow-x-auto pb-1.5">
             {conversations.map((conversation) => {
@@ -778,7 +778,7 @@ export function ChatPanel({
                   type="button"
                   onClick={() => onTargetChange(conversation.userId)}
                   className={cn(
-                    "inline-flex max-w-[200px] shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition",
+                    "inline-flex max-w-[200px] shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-[transform,background-color,border-color,color,box-shadow] duration-150 active:scale-95",
                     isActive
                       ? "border-primary bg-primary text-white shadow-sm"
                       : "border-border bg-white text-foreground hover:border-primary/40",
@@ -972,8 +972,11 @@ export function ConfirmModal({
       className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !pending) onCancel();
+      }}
     >
-      <Card className="w-full max-w-md animate-soft-reveal p-5 shadow-2xl">
+      <Card className="overscroll-contain w-full max-w-md animate-soft-reveal p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-lg font-black text-brand-brown">{title}</h3>
           <Button type="button" variant="ghost" size="icon" onClick={onCancel} aria-label="Kapat">
@@ -1057,8 +1060,11 @@ export function SellerStorefrontModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <Card className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl p-0 shadow-2xl sm:rounded-2xl">
+      <Card className="animate-soft-reveal thin-scrollbar overscroll-contain max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center gap-2">
             <Store className="size-5 text-primary" aria-hidden />
@@ -1290,8 +1296,11 @@ export function DemandDetailModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl p-0 shadow-2xl sm:rounded-2xl">
+      <Card className="animate-soft-reveal thin-scrollbar overscroll-contain max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center gap-2">
             <ClipboardList className="size-5 text-primary" aria-hidden />
@@ -1902,7 +1911,7 @@ export function IconButton({
       title={label}
       aria-label={label}
       className={cn(
-        "relative grid size-10 shrink-0 place-items-center rounded-full text-foreground transition hover:bg-muted sm:size-11",
+        "relative grid size-10 shrink-0 place-items-center rounded-full text-foreground transition-[transform,background-color,color] duration-150 hover:bg-muted active:scale-90 sm:size-11",
         className,
       )}
     >
@@ -2338,8 +2347,11 @@ export function OpenMarketDemandModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-2xl p-0 shadow-2xl sm:rounded-2xl">
+      <Card className="animate-soft-reveal thin-scrollbar overscroll-contain max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-2xl p-0 pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
           <div className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" aria-hidden />

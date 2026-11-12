@@ -408,7 +408,7 @@ export function DiscoveryScreen({
         {/* Desktop 3-column layout */}
         <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_395px]">
           <aside className="hidden lg:block">
-            <div className="sticky top-24">
+            <div className="thin-scrollbar overscroll-contain sticky top-24 max-h-[calc(100vh-6.75rem)] overflow-y-auto pr-1">
               <DiscoveryFilters
                 categories={categories}
                 locations={locations}
@@ -510,10 +510,10 @@ export function DiscoveryScreen({
                       <Card
                         key={product.id}
                         className={cn(
-                          "group overflow-hidden rounded-2xl border bg-white transition",
+                          "group overflow-hidden rounded-2xl border bg-white transition-[transform,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.988]",
                           selected
-                            ? "border-primary ring-2 ring-primary/15"
-                            : "border-border hover:-translate-y-0.5 hover:shadow-md",
+                            ? "border-primary ring-2 ring-primary/15 shadow-sm"
+                            : "border-border hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
                           viewMode === "list" && "sm:grid sm:grid-cols-[175px_1fr]",
                         )}
                       >
@@ -568,7 +568,7 @@ export function DiscoveryScreen({
                               aria-label={fav ? "Favoriden çıkar" : "Favorilere ekle"}
                               onClick={() => onToggleFavorite(product.id)}
                               className={cn(
-                                "absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-white/90 shadow-xs transition hover:scale-105",
+                                "absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-white/90 shadow-xs transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
                                 fav ? "text-red-500" : "text-muted-foreground",
                               )}
                             >
@@ -675,7 +675,10 @@ export function DiscoveryScreen({
                 <PaginationBar
                   page={productsPage.page}
                   totalPages={productsPage.totalPages}
-                  onPageChange={onPageChange}
+                  onPageChange={(nextPage) => {
+                    onPageChange(nextPage);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                 />
 
                 {smartAlternatives ? (
@@ -695,7 +698,7 @@ export function DiscoveryScreen({
 
           {/* Desktop Product Detail Inspector */}
           <aside className="hidden xl:block">
-            <div className="sticky top-24">
+            <div className="thin-scrollbar overscroll-contain sticky top-24 max-h-[calc(100vh-6.75rem)] overflow-y-auto pr-1">
               {selectedProduct ? (
                 <ProductDetailPanel
                   product={selectedProduct}
@@ -737,8 +740,11 @@ export function DiscoveryScreen({
           className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-xs lg:hidden"
           role="dialog"
           aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setMobileFiltersOpen(false);
+          }}
         >
-          <div className="flex h-full w-full max-w-sm flex-col bg-[#f6f8f5] shadow-2xl">
+          <div className="animate-soft-reveal flex h-full w-full max-w-sm flex-col bg-[#f6f8f5] shadow-2xl">
             <div className="flex items-center justify-between border-b border-border bg-white px-4 py-3.5">
               <h2 className="text-base font-black text-brand-brown">Filtreler</h2>
               <Button
@@ -751,7 +757,7 @@ export function DiscoveryScreen({
                 <X className="size-5" />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="thin-scrollbar overscroll-contain flex-1 overflow-y-auto p-4">
               <DiscoveryFilters
                 categories={categories}
                 locations={locations}
@@ -806,8 +812,12 @@ export function DiscoveryScreen({
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs xl:hidden"
           role="dialog"
           aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setMobileDetailOpen(false);
+          }}
         >
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#f6f8f5] p-3 pb-6 shadow-2xl">
+          <div className="animate-soft-reveal thin-scrollbar overscroll-contain max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-[#f6f8f5] p-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-border/90" aria-hidden />
             <div className="mb-2 flex items-center justify-between px-2 pt-1">
               <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
                 Ürün İnceleme & Talep
@@ -1299,7 +1309,7 @@ export function ProductDetailPanel({
             onClick={onToggleFavorite}
             aria-label={favorite ? "Favoriden çıkar" : "Favorilere ekle"}
             className={cn(
-              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/95 shadow-sm transition",
+              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/95 shadow-sm transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
               favorite ? "text-red-500" : "text-muted-foreground hover:text-red-500",
             )}
           >
@@ -1310,14 +1320,14 @@ export function ProductDetailPanel({
 
       {/* Media Thumbnails (Images + Videos) */}
       {mediaItems.length > 1 ? (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto border-b border-border bg-[#f9fbf8] px-3 py-2.5">
+        <div className="scroll-shelf flex gap-2 overflow-x-auto border-b border-border bg-[#f9fbf8] px-3 py-2.5">
           {mediaItems.map((item, idx) => (
             <button
               key={`${item.kind}-${item.id}`}
               type="button"
               onClick={() => setSelectedIdx(idx)}
               className={cn(
-                "relative size-12 shrink-0 overflow-hidden rounded-lg border-2 transition",
+                "relative size-12 shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-[transform,border-color,opacity,box-shadow] duration-150 active:scale-95",
                 selectedIdx === idx
                   ? "border-primary ring-2 ring-primary/20"
                   : "border-transparent opacity-80 hover:opacity-100",
