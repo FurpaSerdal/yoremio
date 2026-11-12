@@ -936,19 +936,19 @@ export function DiscoveryScreen({
         </div>
       ) : null}
 
-      {/* Spacious Slide-Over Product Detail Drawer (Desktop Right Drawer / Mobile Bottom Sheet) */}
+      {/* Centered 2-Column Product Quick-View Modal (Bottom Sheet on Mobile) */}
       {detailOpen && selectedProduct ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-stretch sm:justify-end"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 backdrop-blur-xs md:items-center md:p-6"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
             if (event.target === event.currentTarget) setDetailOpen(false);
           }}
         >
-          <div className="animate-soft-reveal flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#f6f8f5] shadow-2xl sm:h-full sm:max-h-none sm:max-w-[500px] sm:rounded-none sm:rounded-l-3xl">
-            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-border/90 sm:hidden" aria-hidden />
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-white px-4 py-3 sm:px-5">
+          <div className="animate-soft-reveal flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#f6f8f5] shadow-2xl md:max-h-[88vh] md:max-w-4xl md:rounded-3xl">
+            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-border/90 md:hidden" aria-hidden />
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-white px-4 py-3 sm:px-6">
               <div className="flex items-center gap-1.5">
                 <Button
                   type="button"
@@ -1395,76 +1395,156 @@ export function ProductDetailPanel({
   const estimatedTotal = product.fiyat * amount;
 
   return (
-    <Card id="product-detail-panel" className="overflow-hidden rounded-2xl border-border bg-white shadow-sm">
-      {/* Main Media Stage */}
-      <div className="relative aspect-[4/3] bg-[#eff4ec]">
-        {activeMedia.kind === "video" ? (
-          <video
-            key={activeMedia.src}
-            src={activeMedia.src}
-            controls
-            playsInline
-            preload="metadata"
-            className="size-full bg-black object-contain"
-          />
-        ) : (
-          <Image
-            src={activeMedia.src}
-            alt={product.adi}
-            fill
-            sizes="(max-width: 1280px) 100vw, 400px"
-            className="object-cover"
-          />
-        )}
+    <Card
+      id="product-detail-panel"
+      className="overflow-hidden rounded-2xl border-border bg-white shadow-sm md:grid md:grid-cols-[1.02fr_1fr]"
+    >
+      {/* Left Column: Media Gallery + Producer + Reviews */}
+      <div className="flex flex-col border-b border-border bg-[#fcfdfb] md:border-b-0 md:border-r">
+        {/* Main Media Stage */}
+        <div className="relative aspect-[4/3] bg-[#eff4ec]">
+          {activeMedia.kind === "video" ? (
+            <video
+              key={activeMedia.src}
+              src={activeMedia.src}
+              controls
+              playsInline
+              preload="metadata"
+              className="size-full bg-black object-contain"
+            />
+          ) : (
+            <Image
+              src={activeMedia.src}
+              alt={product.adi}
+              fill
+              sizes="(max-width: 768px) 100vw, 440px"
+              className="object-cover"
+            />
+          )}
 
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <Badge variant="green">{product.kategoriAdi}</Badge>
-          {outOfStock ? <Badge variant="outline">Stok Tükendi</Badge> : null}
-        </div>
+          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+            <Badge variant="green">{product.kategoriAdi}</Badge>
+            {outOfStock ? <Badge variant="outline">Stok Tükendi</Badge> : null}
+          </div>
 
-        {favoritesEnabled ? (
-          <button
-            type="button"
-            onClick={onToggleFavorite}
-            aria-label={favorite ? "Favoriden çıkar" : "Favorilere ekle"}
-            className={cn(
-              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/95 shadow-sm transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
-              favorite ? "text-red-500" : "text-muted-foreground hover:text-red-500",
-            )}
-          >
-            <Heart className={cn("size-4", favorite && "fill-current")} aria-hidden />
-          </button>
-        ) : null}
-      </div>
-
-      {/* Media Thumbnails (Images + Videos) */}
-      {mediaItems.length > 1 ? (
-        <div className="scroll-shelf flex gap-2 overflow-x-auto border-b border-border bg-[#f9fbf8] px-3 py-2.5">
-          {mediaItems.map((item, idx) => (
+          {favoritesEnabled ? (
             <button
-              key={`${item.kind}-${item.id}`}
               type="button"
-              onClick={() => setSelectedIdx(idx)}
+              onClick={onToggleFavorite}
+              aria-label={favorite ? "Favoriden çıkar" : "Favorilere ekle"}
               className={cn(
-                "relative size-12 shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-[transform,border-color,opacity,box-shadow] duration-150 active:scale-95",
-                selectedIdx === idx
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-transparent opacity-80 hover:opacity-100",
+                "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white/95 shadow-sm transition-[transform,color] duration-150 hover:scale-105 active:scale-90",
+                favorite ? "text-red-500" : "text-muted-foreground hover:text-red-500",
               )}
             >
-              {item.kind === "video" ? (
-                <div className="grid size-full place-items-center bg-slate-900 text-white">
-                  <Film className="size-5" aria-hidden />
-                </div>
-              ) : (
-                <Image src={item.src} alt="" fill sizes="48px" className="object-cover" />
-              )}
+              <Heart className={cn("size-4", favorite && "fill-current")} aria-hidden />
             </button>
-          ))}
+          ) : null}
         </div>
-      ) : null}
 
-        <div className="space-y-4 p-4 sm:p-5">
+        {/* Media Thumbnails (Images + Videos) */}
+        {mediaItems.length > 1 ? (
+          <div className="scroll-shelf flex gap-2 overflow-x-auto border-b border-border bg-[#f9fbf8] px-3 py-2.5">
+            {mediaItems.map((item, idx) => (
+              <button
+                key={`${item.kind}-${item.id}`}
+                type="button"
+                onClick={() => setSelectedIdx(idx)}
+                className={cn(
+                  "relative size-12 shrink-0 snap-start overflow-hidden rounded-lg border-2 transition-[transform,border-color,opacity,box-shadow] duration-150 active:scale-95",
+                  selectedIdx === idx
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-transparent opacity-80 hover:opacity-100",
+                )}
+              >
+                {item.kind === "video" ? (
+                  <div className="grid size-full place-items-center bg-slate-900 text-white">
+                    <Film className="size-5" aria-hidden />
+                  </div>
+                ) : (
+                  <Image src={item.src} alt="" fill sizes="48px" className="object-cover" />
+                )}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-auto space-y-3 p-4">
+          {/* Producer Card */}
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-white p-3 shadow-2xs">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Store className="size-4 shrink-0 text-primary" aria-hidden />
+                <span className="truncate text-sm font-black text-brand-brown">
+                  {sellerName(product)}
+                </span>
+                {product.saticiDogrulanmis ? (
+                  <ShieldCheck className="size-4 shrink-0 text-primary" aria-label="Doğrulanmış satıcı" />
+                ) : null}
+              </div>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {productLocation(product)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {product.saticiId && onToggleFollowSeller ? (
+                <Button
+                  type="button"
+                  variant={isFollowingSeller ? "secondary" : "outline"}
+                  size="sm"
+                  className="rounded-xl bg-white text-xs font-bold"
+                  onClick={() => onToggleFollowSeller(product.saticiId!)}
+                  aria-label={isFollowingSeller ? "Takibi Bırak" : "Üreticiyi Takip Et"}
+                >
+                  {isFollowingSeller ? (
+                    <>
+                      <UserCheck className="size-3.5 text-primary" aria-hidden />
+                      Takip
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="size-3.5" aria-hidden />
+                      Takip Et
+                    </>
+                  )}
+                </Button>
+              ) : null}
+              {product.saticiId ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl bg-white text-xs font-bold"
+                  onClick={() => onOpenStorefront(product.saticiId!)}
+                >
+                  Mağaza
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Rating & Comments Trigger */}
+          <button
+            type="button"
+            onClick={onGoReviews}
+            className="flex w-full items-center justify-between rounded-xl border border-border bg-white px-3.5 py-2.5 text-left transition hover:bg-secondary/60"
+          >
+            <div className="flex items-center gap-2">
+              <Stars value={product.ortalamaPuan ?? 0} />
+              <span className="text-sm font-black tabular-nums">
+                {(product.ortalamaPuan ?? 0).toFixed(1)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({product.toplamYorum ?? 0} yorum)
+              </span>
+            </div>
+            <span className="text-xs font-extrabold text-primary">Yorumları Gör</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Right Column: Price, Details, Demand CTA & Alarms */}
+      <div className="flex flex-col space-y-4 p-4 sm:p-5">
         <div className="rounded-2xl border border-emerald-100/90 bg-[#f6fbf6] p-3.5">
           <h2 className="font-serif text-xl font-bold leading-snug text-[#14271c]">
             {product.adi}
@@ -1509,77 +1589,6 @@ export function ProductDetailPanel({
             </p>
           ) : null}
         </div>
-
-        {/* Producer Card */}
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-[#f8faf7] p-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <Store className="size-4 shrink-0 text-primary" aria-hidden />
-              <span className="truncate text-sm font-black text-brand-brown">
-                {sellerName(product)}
-              </span>
-              {product.saticiDogrulanmis ? (
-                <ShieldCheck className="size-4 shrink-0 text-primary" aria-label="Doğrulanmış satıcı" />
-              ) : null}
-            </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              {productLocation(product)}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {product.saticiId && onToggleFollowSeller ? (
-              <Button
-                type="button"
-                variant={isFollowingSeller ? "secondary" : "outline"}
-                size="sm"
-                className="rounded-xl bg-white text-xs font-bold"
-                onClick={() => onToggleFollowSeller(product.saticiId!)}
-                aria-label={isFollowingSeller ? "Takibi Bırak" : "Üreticiyi Takip Et"}
-              >
-                {isFollowingSeller ? (
-                  <>
-                    <UserCheck className="size-3.5 text-primary" aria-hidden />
-                    Takip
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="size-3.5" aria-hidden />
-                    Takip Et
-                  </>
-                )}
-              </Button>
-            ) : null}
-            {product.saticiId ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-xl bg-white text-xs font-bold"
-                onClick={() => onOpenStorefront(product.saticiId!)}
-              >
-                Mağaza
-              </Button>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Rating & Comments Trigger */}
-        <button
-          type="button"
-          onClick={onGoReviews}
-          className="flex w-full items-center justify-between rounded-xl border border-border px-3.5 py-2.5 text-left transition hover:bg-secondary/60"
-        >
-          <div className="flex items-center gap-2">
-            <Stars value={product.ortalamaPuan ?? 0} />
-            <span className="text-sm font-black tabular-nums">
-              {(product.ortalamaPuan ?? 0).toFixed(1)}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              ({product.toplamYorum ?? 0} yorum)
-            </span>
-          </div>
-          <span className="text-xs font-extrabold text-primary">Yorumları Gör</span>
-        </button>
 
         {product.aciklama ? (
           <p className="text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6">
