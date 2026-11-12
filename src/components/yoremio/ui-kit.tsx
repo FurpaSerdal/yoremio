@@ -50,9 +50,12 @@ import { BrandLogo } from "@/components/yoremio/brand-logo";
 import {
   yoremioApi,
   type BootstrapLocationDto,
+  type CategoryDto,
   type ChatConversationDto,
   type ChatMessageDto,
   type DemandDto,
+  type OfferSubmitValues,
+  type OpenMarketDemandValues,
   type ProductDto,
   type PublicSellerSummaryDto,
   type SellerProfileDto,
@@ -64,6 +67,7 @@ import {
   buyerScreenFor,
   dashboardScreenFor,
   demandImage,
+  demandTitle,
   hasRole,
   mediaImageSrc,
   productImage,
@@ -653,6 +657,12 @@ export function DashboardFrame({
   );
 }
 
+export type ChatContextSelection = {
+  urunId?: number | null;
+  talepId?: number | null;
+  label?: string | null;
+};
+
 export function ChatPanel({
   compact = false,
   conversations,
@@ -661,6 +671,8 @@ export function ChatPanel({
   actionStatus,
   signalrConnected = false,
   typingFromUserId = null,
+  chatContext = null,
+  onClearContext,
   onTargetChange,
   onSendMessage,
   onTyping,
@@ -672,6 +684,8 @@ export function ChatPanel({
   actionStatus: string | null;
   signalrConnected?: boolean;
   typingFromUserId?: string | null;
+  chatContext?: ChatContextSelection | null;
+  onClearContext?: () => void;
   onTargetChange: (value: string) => void;
   onSendMessage: (receiverId: string, message: string) => void;
   onTyping?: (receiverId: string) => void;
@@ -789,11 +803,23 @@ export function ChatPanel({
 
         {messages.length > 0 ? (
           <div className="space-y-2.5">
-            {messages.map((message) => (
-              <ChatBubble key={message.id} mine={message.isMine} read={Boolean(message.readAt)} time={shortDate(message.sentAt)}>
-                {message.message}
-              </ChatBubble>
-            ))}
+            {messages.map((message) => {
+              const ctxParts = [
+                message.urunAdi ? `Ürün: ${message.urunAdi}` : message.urunId ? `Ürün #${message.urunId}` : null,
+                message.talepId ? `Talep #${message.talepId}` : null,
+              ].filter(Boolean);
+              return (
+                <ChatBubble
+                  key={message.id}
+                  mine={message.isMine}
+                  read={Boolean(message.readAt)}
+                  time={shortDate(message.sentAt)}
+                  contextBadge={ctxParts.length > 0 ? ctxParts.join(" · ") : undefined}
+                >
+                  {message.message}
+                </ChatBubble>
+              );
+            })}
           </div>
         ) : (
           <div className="grid h-40 place-items-center rounded-lg border border-dashed border-border bg-white p-4 text-center text-sm text-muted-foreground">
@@ -810,37 +836,58 @@ export function ChatPanel({
         ) : null}
       </div>
 
-      <form
-        className="grid grid-cols-[1fr_auto] gap-2 border-t border-border bg-white p-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!draft.trim() || !currentTarget) return;
-          onSendMessage(currentTarget, draft.trim());
-          setDraft("");
-        }}
-      >
-        <Input
-          value={draft}
-          onChange={(event) => {
-            const val = limitText(event.target.value, 1000);
-            setDraft(val);
-            if (currentTarget && onTyping && Date.now() - lastTypingSentRef.current > 2000) {
-              lastTypingSentRef.current = Date.now();
-              onTyping(currentTarget);
-            }
+      <div className="border-t border-border bg-white">
+        {chatContext && (chatContext.urunId || chatContext.talepId) ? (
+          <div className="flex items-center justify-between gap-2 border-b border-emerald-200/70 bg-emerald-50/70 px-3 py-1.5 text-xs">
+            <span className="truncate font-bold text-primary">
+              Bağlam: {chatContext.label || ""}
+              {chatContext.urunId ? ` (Ürün #${chatContext.urunId})` : ""}
+              {chatContext.talepId ? ` (Talep #${chatContext.talepId})` : ""}
+            </span>
+            {onClearContext ? (
+              <button
+                type="button"
+                onClick={onClearContext}
+                className="shrink-0 font-extrabold text-muted-foreground hover:text-foreground"
+              >
+                Temizle
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <form
+          className="grid grid-cols-[1fr_auto] gap-2 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!draft.trim() || !currentTarget) return;
+            onSendMessage(currentTarget, draft.trim());
+            setDraft("");
           }}
-          maxLength={1000}
-          placeholder={currentTarget ? "Mesajını yaz (maks 1000 karakter)..." : "Konuşma seç"}
-          disabled={!currentTarget || actionStatus === "chat-send"}
-        />
-        <Button disabled={!canSend} aria-label="Mesaj gönder" title="Mesaj gönder">
-          {actionStatus === "chat-send" ? (
-            <Loader2 className="animate-spin" aria-hidden />
-          ) : (
-            <Send aria-hidden />
-          )}
-        </Button>
-      </form>
+        >
+          <Input
+            value={draft}
+            onChange={(event) => {
+              const val = limitText(event.target.value, 1000);
+              setDraft(val);
+              if (currentTarget && onTyping && Date.now() - lastTypingSentRef.current > 2000) {
+                lastTypingSentRef.current = Date.now();
+                onTyping(currentTarget);
+              }
+            }}
+            maxLength={1000}
+            placeholder={currentTarget ? "Mesajını yaz (maks 1000 karakter)..." : "Konuşma seç"}
+            disabled={!currentTarget || actionStatus === "chat-send"}
+          />
+          <Button disabled={!canSend} aria-label="Mesaj gönder" title="Mesaj gönder">
+            {actionStatus === "chat-send" ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <Send aria-hidden />
+            )}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -849,11 +896,13 @@ export function ChatBubble({
   mine,
   read,
   time,
+  contextBadge,
   children,
 }: {
   mine?: boolean;
   read?: boolean;
   time?: string;
+  contextBadge?: string;
   children: ReactNode;
 }) {
   return (
@@ -866,6 +915,16 @@ export function ChatBubble({
             : "rounded-bl-sm border border-border bg-white text-foreground",
         )}
       >
+        {contextBadge ? (
+          <p
+            className={cn(
+              "mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold",
+              mine ? "bg-white/20 text-white" : "bg-emerald-50 text-primary",
+            )}
+          >
+            {contextBadge}
+          </p>
+        ) : null}
         <p className="break-words">{children}</p>
         <div
           className={cn(
@@ -943,11 +1002,17 @@ export function ConfirmModal({
 
 export function SellerStorefrontModal({
   saticiId,
+  canFollow = false,
+  isFollowing = false,
+  onToggleFollow,
   onClose,
   onSelectProduct,
   onStartChat,
 }: {
   saticiId: string | null;
+  canFollow?: boolean;
+  isFollowing?: boolean;
+  onToggleFollow?: (saticiId: string) => void;
   onClose: () => void;
   onSelectProduct: (product: ProductDto) => void;
   onStartChat: (saticiId: string) => void;
@@ -1059,20 +1124,45 @@ export function SellerStorefrontModal({
                   <span>{seller.urunSayisi} Ürün</span>
                   <span>★ {seller.ortalamaPuan.toFixed(1)} ({seller.toplamYorum} yorum)</span>
                   <span>{seller.toplamFavori} Favori</span>
+                  {typeof seller.takipciSayisi === "number" ? (
+                    <span>{seller.takipciSayisi} Takipçi</span>
+                  ) : null}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                  {seller.epostaDogrulandi ? (
+                    <Badge variant="outline">E-posta Onaylı</Badge>
+                  ) : null}
+                  {seller.isletmeDogrulandi ? (
+                    <Badge variant="outline">İşletme Doğrulandı</Badge>
+                  ) : null}
+                  {seller.ureticiDogrulandi ? (
+                    <Badge variant="outline">Üretici Doğrulandı</Badge>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+              <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end">
                 <TrustDial score={seller.guvenSkoru} />
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    onStartChat(seller.kullaniciId);
-                  }}
-                >
-                  <MessageCircle className="size-4" aria-hidden />
-                  Satıcıya yaz
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {canFollow && onToggleFollow ? (
+                    <Button
+                      size="sm"
+                      variant={isFollowing ? "secondary" : "outline"}
+                      onClick={() => onToggleFollow(seller.kullaniciId)}
+                    >
+                      {isFollowing ? "Takip Ediliyor" : "Takip Et"}
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      onStartChat(seller.kullaniciId);
+                    }}
+                  >
+                    <MessageCircle className="size-4" aria-hidden />
+                    Satıcıya yaz
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -1128,6 +1218,7 @@ export function DemandDetailModal({
   onAcceptOffer,
   onRejectOffer,
   onCancelDemand,
+  onConfirmAgreement,
   onSubmitOffer,
   onStartChat,
   onGoReviews,
@@ -1140,14 +1231,19 @@ export function DemandDetailModal({
   onAcceptOffer?: (offerId: number) => Promise<void> | void;
   onRejectOffer?: (offerId: number) => Promise<void> | void;
   onCancelDemand?: (talepId: number) => Promise<void> | void;
-  onSubmitOffer?: (talepId: number, values: { birimFiyat?: number; mesaj: string }) => Promise<void> | void;
-  onStartChat?: (otherUserId: string) => void;
+  onConfirmAgreement?: (talepId: number, gerceklestiMi: boolean) => Promise<void> | void;
+  onSubmitOffer?: (talepId: number, values: OfferSubmitValues) => Promise<void> | void;
+  onStartChat?: (otherUserId: string, context?: ChatContextSelection) => void;
   onGoReviews?: (urunId: number) => void;
 }) {
   const [demand, setDemand] = useState<DemandDto | null>(null);
   const [loadedDemandId, setLoadedDemandId] = useState<number | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMsg, setOfferMsg] = useState("");
+  const [offerDays, setOfferDays] = useState("");
+  const [offerCargo, setOfferCargo] = useState(true);
+  const [offerCity, setOfferCity] = useState("");
+  const [offerExpired, setOfferExpired] = useState(false);
   const loading = Boolean(demandId && token && loadedDemandId !== demandId);
 
   useEffect(() => {
@@ -1158,13 +1254,22 @@ export function DemandDetailModal({
       .then((res) => {
         if (ignore) return;
         setDemand(res);
+        setOfferExpired(
+          Boolean(res.sonTeklifTarihi && new Date(res.sonTeklifTarihi).getTime() <= Date.now()),
+        );
         const existing = res.teklifler?.[0];
         if (existing) {
           setOfferPrice(existing.birimFiyat ? String(existing.birimFiyat) : "");
           setOfferMsg(existing.mesaj ?? "");
+          setOfferDays(existing.teslimatSuresiGun ? String(existing.teslimatSuresiGun) : "");
+          setOfferCargo(existing.kargoDahilMi ?? true);
+          setOfferCity(existing.gonderimSehir ?? "");
         } else {
-          setOfferPrice(res.urunFiyat ? String(res.urunFiyat) : "");
+          setOfferPrice(res.urunFiyat ? String(res.urunFiyat) : res.hedefBirimFiyat ? String(res.hedefBirimFiyat) : "");
           setOfferMsg("");
+          setOfferDays("");
+          setOfferCargo(true);
+          setOfferCity("");
         }
       })
       .catch(() => {
@@ -1215,7 +1320,7 @@ export function DemandDetailModal({
               <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
                 <Image
                   src={demandImage(demand)}
-                  alt={demand.urunAdi}
+                  alt={demandTitle(demand)}
                   fill
                   sizes="80px"
                   className="object-cover"
@@ -1223,7 +1328,7 @@ export function DemandDetailModal({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-black">{demand.urunAdi}</h3>
+                  <h3 className="text-lg font-black">{demandTitle(demand)}</h3>
                   <Badge
                     variant={
                       demand.durum === "ANLASILDI"
@@ -1239,11 +1344,30 @@ export function DemandDetailModal({
                         ? "Anlaşıldı"
                         : "İptal"}
                   </Badge>
+                  {demand.talepTuru === "ACIK_PAZAR" ? (
+                    <Badge variant="plum">Açık Pazar · Benim İçin Bul</Badge>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm font-semibold text-muted-foreground">
-                  Miktar: <span className="text-foreground">{demand.miktar}</span> · Liste fiyatı:{" "}
-                  <span className="text-primary">{formatPrice(demand.urunFiyat ?? 0)}</span>
+                  Miktar: <span className="text-foreground">{demand.miktar} {demand.birim || "adet"}</span>
+                  {demand.urunFiyat ? (
+                    <>
+                      {" "}· Liste fiyatı:{" "}
+                      <span className="text-primary">{formatPrice(demand.urunFiyat)}</span>
+                    </>
+                  ) : demand.hedefBirimFiyat ? (
+                    <>
+                      {" "}· Hedef fiyat:{" "}
+                      <span className="text-primary">{formatPrice(demand.hedefBirimFiyat)}</span>
+                    </>
+                  ) : null}
                 </p>
+                {demand.teslimatSehir ? (
+                  <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                    Teslimat Şehri: <span className="text-foreground">{demand.teslimatSehir}</span>
+                    {demand.tercihEdilenSehirler ? ` · Tercih yöre: ${demand.tercihEdilenSehirler}` : ""}
+                  </p>
+                ) : null}
                 {demand.saticiMagazaAdi ? (
                   <p className="mt-1 text-xs font-semibold text-muted-foreground">
                     Satıcı: {demand.saticiMagazaAdi}{" "}
@@ -1259,6 +1383,9 @@ export function DemandDetailModal({
                   Oluşturma: {shortDate(demand.olusturmaTarihi)}
                   {demand.guncellemeTarihi
                     ? ` · Son Güncelleme: ${shortDate(demand.guncellemeTarihi)}`
+                    : ""}
+                  {demand.sonTeklifTarihi
+                    ? ` · Son Teklif: ${shortDate(demand.sonTeklifTarihi)}`
                     : ""}
                 </p>
               </div>
@@ -1306,6 +1433,23 @@ export function DemandDetailModal({
                       </Badge>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-foreground">{offer.mesaj}</p>
+                    {(offer.teslimatSuresiGun || offer.gonderimSehir || offer.kargoDahilMi !== undefined) ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold text-muted-foreground">
+                        {offer.teslimatSuresiGun ? (
+                          <span className="rounded-full border border-border bg-[#f8fbf7] px-2.5 py-0.5">
+                            Teslimat: {offer.teslimatSuresiGun} gün
+                          </span>
+                        ) : null}
+                        {offer.gonderimSehir ? (
+                          <span className="rounded-full border border-border bg-[#f8fbf7] px-2.5 py-0.5">
+                            Gönderim: {offer.gonderimSehir}
+                          </span>
+                        ) : null}
+                        <span className="rounded-full border border-border bg-[#f8fbf7] px-2.5 py-0.5">
+                          {offer.kargoDahilMi === false ? "Kargo Hariç" : "Kargo Dahil"}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
                       <div>
                         <span className="block text-xs text-muted-foreground">
@@ -1358,59 +1502,152 @@ export function DemandDetailModal({
             </div>
 
             {mode === "seller" && demand.durum === "ACIK" && onSubmitOffer ? (
-              <form
-                className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  if (!offerMsg.trim()) return;
-                  await onSubmitOffer(demand.id, {
-                    birimFiyat: offerPrice ? Number(offerPrice) : undefined,
-                    mesaj: offerMsg.trim(),
-                  });
-                  onClose();
-                }}
-              >
-                <h4 className="font-black text-brand-brown">
-                  {demand.teklifler.length > 0 ? "Teklifi Güncelle" : "Teklif Ver"}
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Birim Fiyat (TL)" htmlFor="modal-offer-price">
-                    <Input
-                      id="modal-offer-price"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={offerPrice}
-                      onChange={(e) => setOfferPrice(e.target.value)}
-                      placeholder="Opsiyonel"
+              offerExpired ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-900">
+                  Bu talebin son teklif süresi ({shortDate(demand.sonTeklifTarihi)}) dolduğu için yeni teklif gönderilemiyor.
+                </div>
+              ) : (
+                <form
+                  className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (!offerMsg.trim()) return;
+                    await onSubmitOffer(demand.id, {
+                      birimFiyat: offerPrice ? Number(offerPrice) : undefined,
+                      mesaj: offerMsg.trim(),
+                      teslimatSuresiGun: offerDays ? Number(offerDays) : undefined,
+                      kargoDahilMi: offerCargo,
+                      gonderimSehir: offerCity.trim() || undefined,
+                    });
+                    onClose();
+                  }}
+                >
+                  <h4 className="font-black text-brand-brown">
+                    {demand.teklifler.length > 0 ? "Teklifi Güncelle" : "Teklif Ver"}
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Birim Fiyat (TL)" htmlFor="modal-offer-price">
+                      <Input
+                        id="modal-offer-price"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={offerPrice}
+                        onChange={(e) => setOfferPrice(e.target.value)}
+                        placeholder="Opsiyonel"
+                      />
+                    </Field>
+                    <div className="flex items-end pb-2 text-sm font-bold text-primary">
+                      {offerPrice
+                        ? `Toplam (${demand.miktar}): ${formatPrice(Number(offerPrice) * demand.miktar)}`
+                        : ""}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Teslimat Süresi (Gün)" htmlFor="modal-offer-days">
+                      <Input
+                        id="modal-offer-days"
+                        type="number"
+                        min="1"
+                        max="90"
+                        value={offerDays}
+                        onChange={(e) => setOfferDays(e.target.value)}
+                        placeholder="Ör: 2"
+                      />
+                    </Field>
+                    <Field label="Gönderim Şehri" htmlFor="modal-offer-city">
+                      <Input
+                        id="modal-offer-city"
+                        value={offerCity}
+                        onChange={(e) => setOfferCity(limitText(e.target.value, 60))}
+                        placeholder="Ör: Ardahan"
+                      />
+                    </Field>
+                    <div className="flex items-end pb-2">
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold text-brand-brown">
+                        <input
+                          type="checkbox"
+                          checked={offerCargo}
+                          onChange={(e) => setOfferCargo(e.target.checked)}
+                          className="accent-primary"
+                        />
+                        Kargo Dahil
+                      </label>
+                    </div>
+                  </div>
+                  <Field label="Teklif Mesajı *" htmlFor="modal-offer-msg">
+                    <textarea
+                      id="modal-offer-msg"
+                      value={offerMsg}
+                      onChange={(e) => setOfferMsg(limitText(e.target.value, 1000))}
+                      maxLength={1000}
+                      required
+                      placeholder="Örn: Toplu alımda birim fiyatımız budur, taze hasat hazır..."
+                      className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
                     />
                   </Field>
-                  <div className="flex items-end pb-2 text-sm font-bold text-primary">
-                    {offerPrice
-                      ? `Toplam (${demand.miktar} adet): ${formatPrice(Number(offerPrice) * demand.miktar)}`
-                      : ""}
-                  </div>
+                  <Button type="submit" disabled={actionStatus === `seller-offer-${demand.id}`}>
+                    {actionStatus === `seller-offer-${demand.id}` ? (
+                      <Loader2 className="animate-spin" aria-hidden />
+                    ) : (
+                      <Send className="size-4" aria-hidden />
+                    )}
+                    {demand.teklifler.length > 0 ? "Teklifi Güncelle" : "Teklif Gönder"}
+                  </Button>
+                </form>
+              )
+            ) : null}
+
+            {demand.durum === "ANLASILDI" && onConfirmAgreement ? (
+              <div className="rounded-xl border border-emerald-200 bg-[#f6fbf6] p-4">
+                <p className="text-sm font-black text-brand-brown">
+                  Dış Anlaşma Gerçekleşme Teyidi
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Alıcı onayı:{" "}
+                  <strong className="text-foreground">
+                    {demand.aliciGerceklestiOnayi === true
+                      ? "Gerçekleşti"
+                      : demand.aliciGerceklestiOnayi === false
+                        ? "Gerçekleşmedi"
+                        : "Bekleniyor"}
+                  </strong>{" "}
+                  · Satıcı onayı:{" "}
+                  <strong className="text-foreground">
+                    {demand.saticiGerceklestiOnayi === true
+                      ? "Gerçekleşti"
+                      : demand.saticiGerceklestiOnayi === false
+                        ? "Gerçekleşmedi"
+                        : "Bekleniyor"}
+                  </strong>
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={actionStatus === `agreement-${demand.id}`}
+                    onClick={async () => {
+                      await onConfirmAgreement(demand.id, true);
+                      onClose();
+                    }}
+                  >
+                    <Check className="size-4" aria-hidden />
+                    Alışveriş Gerçekleşti
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={actionStatus === `agreement-${demand.id}`}
+                    onClick={async () => {
+                      await onConfirmAgreement(demand.id, false);
+                      onClose();
+                    }}
+                  >
+                    Gerçekleşmedi
+                  </Button>
                 </div>
-                <Field label="Teklif Mesajı *" htmlFor="modal-offer-msg">
-                  <textarea
-                    id="modal-offer-msg"
-                    value={offerMsg}
-                    onChange={(e) => setOfferMsg(limitText(e.target.value, 1000))}
-                    maxLength={1000}
-                    required
-                    placeholder="Örn: Toplu alımda birim fiyatımız budur, taze hasat hazır..."
-                    className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/20"
-                  />
-                </Field>
-                <Button type="submit" disabled={actionStatus === `seller-offer-${demand.id}`}>
-                  {actionStatus === `seller-offer-${demand.id}` ? (
-                    <Loader2 className="animate-spin" aria-hidden />
-                  ) : (
-                    <Send className="size-4" aria-hidden />
-                  )}
-                  {demand.teklifler.length > 0 ? "Teklifi Güncelle" : "Teklif Gönder"}
-                </Button>
-              </form>
+              </div>
             ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
@@ -1422,20 +1659,24 @@ export function DemandDetailModal({
                     onClick={() => {
                       const target = mode === "buyer" ? demand.saticiId! : demand.aliciId;
                       onClose();
-                      onStartChat(target);
+                      onStartChat(target, {
+                        urunId: demand.urunId ?? undefined,
+                        talepId: demand.id,
+                        label: demandTitle(demand),
+                      });
                     }}
                   >
                     <MessageCircle className="size-4" aria-hidden />
                     {mode === "buyer" ? "Satıcıyla sohbet et" : "Alıcıya mesaj at"}
                   </Button>
                 ) : null}
-                {mode === "buyer" && demand.durum === "ANLASILDI" && onGoReviews ? (
+                {mode === "buyer" && demand.durum === "ANLASILDI" && demand.urunId && onGoReviews ? (
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={() => {
                       onClose();
-                      onGoReviews(demand.urunId);
+                      onGoReviews(demand.urunId!);
                     }}
                   >
                     <Star className="size-4" aria-hidden />
@@ -1822,9 +2063,9 @@ export function DemandMediaLine({
         <Image src={demandImage(demand)} alt="" fill sizes="52px" className="object-cover" />
       </div>
       <div className="min-w-0">
-        <p className="truncate font-black">{demand.urunAdi}</p>
+        <p className="truncate font-black">{demandTitle(demand)}</p>
         <p className="text-xs font-semibold text-muted-foreground">
-          Miktar: {demand.miktar} · {shortDate(demand.olusturmaTarihi)}
+          Miktar: {demand.miktar} {demand.birim || "adet"} · {shortDate(demand.olusturmaTarihi)}
         </p>
       </div>
       <Badge variant={demand.durum === "ACIK" ? "gold" : demand.durum === "ANLASILDI" ? "green" : "outline"}>
@@ -2050,6 +2291,212 @@ export function LocationFields({
           </datalist>
         ) : null}
       </Field>
+    </div>
+  );
+}
+
+export function OpenMarketDemandModal({
+  open,
+  categories,
+  locations = [],
+  cities = [],
+  initialProductName = "",
+  initialCategoryId = null,
+  initialCity = "",
+  pending = false,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  categories: CategoryDto[];
+  locations?: BootstrapLocationDto[];
+  cities?: string[];
+  initialProductName?: string;
+  initialCategoryId?: number | null;
+  initialCity?: string;
+  pending?: boolean;
+  onClose: () => void;
+  onSubmit: (values: OpenMarketDemandValues) => Promise<boolean>;
+}) {
+  const [arananUrunAdi, setArananUrunAdi] = useState(initialProductName);
+  const [kategoriId, setKategoriId] = useState(initialCategoryId ? String(initialCategoryId) : "");
+  const [miktar, setMiktar] = useState("5");
+  const [birim, setBirim] = useState("kg");
+  const [teslimatSehir, setTeslimatSehir] = useState(initialCity);
+  const [tercihEdilenSehirler, setTercihEdilenSehirler] = useState("");
+  const [hedefBirimFiyat, setHedefBirimFiyat] = useState("");
+  const [sonTeklifTarihi, setSonTeklifTarihi] = useState("");
+  const [not, setNot] = useState("");
+
+  if (!open) return null;
+
+  const cityOptions =
+    cities.length > 0 ? cities : locations.map((loc) => loc.sehir);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <Card className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-t-2xl p-0 shadow-2xl sm:rounded-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-5 text-primary" aria-hidden />
+            <h2 className="text-lg font-black text-brand-brown">
+              Benim İçin Bul · Açık Pazar Talebi
+            </h2>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Kapat">
+            <X className="size-5" />
+          </Button>
+        </div>
+
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (!arananUrunAdi.trim() || !teslimatSehir.trim()) return;
+            const ok = await onSubmit({
+              arananUrunAdi: arananUrunAdi.trim(),
+              kategoriId: kategoriId ? Number(kategoriId) : undefined,
+              miktar: Math.max(1, Number(miktar) || 1),
+              birim: birim.trim() || "kg",
+              teslimatSehir: teslimatSehir.trim(),
+              tercihEdilenSehirler: tercihEdilenSehirler.trim() || undefined,
+              hedefBirimFiyat: hedefBirimFiyat ? Number(hedefBirimFiyat) : undefined,
+              sonTeklifTarihi: sonTeklifTarihi
+                ? new Date(sonTeklifTarihi).toISOString()
+                : undefined,
+              not: not.trim() || undefined,
+            });
+            if (ok) onClose();
+          }}
+          className="space-y-4 p-4 sm:p-6"
+        >
+          <p className="rounded-xl border border-emerald-200/70 bg-[#f6fbf6] p-3 text-xs text-muted-foreground">
+            Aradığın yöresel ürünü bulamadıysan açık talep oluştur; eşleşen şehir ve kategorideki doğrulanmış üreticiler sana doğrudan teklif göndersin.
+          </p>
+
+          <Field label="Aradığın Ürün *" htmlFor="omd-name">
+            <Input
+              id="omd-name"
+              required
+              minLength={2}
+              value={arananUrunAdi}
+              onChange={(e) => setArananUrunAdi(limitText(e.target.value, 150))}
+              placeholder="Ör: Posof Göğermiş Peynir, Siirt Pervari Balı..."
+            />
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Kategori" htmlFor="omd-cat">
+              <select
+                id="omd-cat"
+                value={kategoriId}
+                onChange={(e) => setKategoriId(e.target.value)}
+                className="flex h-10 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary"
+              >
+                <option value="">Otomatik / Tümü</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.adi}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Teslimat Şehri *" htmlFor="omd-city">
+              <Input
+                id="omd-city"
+                required
+                list="omd-city-list"
+                value={teslimatSehir}
+                onChange={(e) => setTeslimatSehir(limitText(e.target.value, 60))}
+                placeholder="Ör: İstanbul"
+              />
+              {cityOptions.length > 0 ? (
+                <datalist id="omd-city-list">
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              ) : null}
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Miktar *" htmlFor="omd-qty">
+              <Input
+                id="omd-qty"
+                type="number"
+                min="1"
+                required
+                value={miktar}
+                onChange={(e) => setMiktar(e.target.value)}
+              />
+            </Field>
+            <Field label="Birim" htmlFor="omd-unit">
+              <Input
+                id="omd-unit"
+                value={birim}
+                onChange={(e) => setBirim(limitText(e.target.value, 30))}
+                placeholder="kg / kavanoz"
+              />
+            </Field>
+            <Field label="Hedef Fiyat (₺)" htmlFor="omd-price">
+              <Input
+                id="omd-price"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={hedefBirimFiyat}
+                onChange={(e) => setHedefBirimFiyat(e.target.value)}
+                placeholder="Opsiyonel"
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Tercih Edilen Üretim Yöreleri" htmlFor="omd-pref">
+              <Input
+                id="omd-pref"
+                value={tercihEdilenSehirler}
+                onChange={(e) => setTercihEdilenSehirler(limitText(e.target.value, 200))}
+                placeholder="Ör: Ardahan, Kars, Artvin"
+              />
+            </Field>
+            <Field label="Son Teklif Tarihi (Opsiyonel)" htmlFor="omd-deadline">
+              <Input
+                id="omd-deadline"
+                type="datetime-local"
+                value={sonTeklifTarihi}
+                onChange={(e) => setSonTeklifTarihi(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <Field label="Üreticilere Notun" htmlFor="omd-note">
+            <textarea
+              id="omd-note"
+              rows={3}
+              value={not}
+              onChange={(e) => setNot(limitText(e.target.value, 1000))}
+              placeholder="Paketleme, olgunlaşma veya teslimat tercihinizi belirtin..."
+              className="w-full rounded-xl border border-input bg-white p-3 text-sm outline-none focus:border-primary"
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Vazgeç
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? <Loader2 className="animate-spin" aria-hidden /> : <Sparkles className="size-4" aria-hidden />}
+              {pending ? "Eşleştiriliyor..." : "Açık Talep Yayınla"}
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }

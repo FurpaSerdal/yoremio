@@ -3,7 +3,10 @@
 import Image from "next/image";
 import { useState } from "react";
 import {
+  Bell,
+  BellRing,
   Check,
+  Eye,
   Film,
   Heart,
   LayoutGrid,
@@ -16,8 +19,13 @@ import {
   Send,
   ShieldCheck,
   SlidersHorizontal,
+  Snowflake,
+  Sparkles,
   Star,
   Store,
+  Truck,
+  UserCheck,
+  UserPlus,
   X,
 } from "lucide-react";
 
@@ -38,6 +46,7 @@ import {
 import {
   mediaImageSrc,
   mediaVideoSrc,
+  ortakAlimStatusMeta,
   productImage,
   productLocation,
   sellerName,
@@ -51,11 +60,13 @@ import {
 import type {
   BootstrapLocationDto,
   CategoryDto,
+  OrtakAlimDto,
   Paginated,
   ProductDto,
   SellerProfileDto,
+  SmartAlternativesDto,
 } from "@/lib/api";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, formatShortDate } from "@/lib/utils";
 
 export function DiscoveryScreen({
   authUser,
@@ -73,13 +84,22 @@ export function DiscoveryScreen({
   categoryId,
   city,
   district,
+  teslimatSehir = "",
+  uretimSehir = "",
   minPrice,
   maxPrice,
   onlyInStock,
   verifiedOnly,
+  sadeceYeniHasat = false,
+  sadeceEldenTeslim = false,
+  sadeceKargolu = false,
   minRating,
   sort,
   sortOptions,
+  smartAlternatives = null,
+  priceAlarmProductIds,
+  stockAlarmProductIds,
+  followedSellerIds,
   actionStatus,
   demandFlowEnabled = true,
   favoritesEnabled = true,
@@ -88,16 +108,26 @@ export function DiscoveryScreen({
   onCategoryChange,
   onCityChange,
   onDistrictChange,
+  onTeslimatSehirChange,
+  onUretimSehirChange,
   onMinPriceChange,
   onMaxPriceChange,
   onOnlyInStockChange,
   onVerifiedOnlyChange,
+  onSadeceYeniHasatChange,
+  onSadeceEldenTeslimChange,
+  onSadeceKargoluChange,
   onMinRatingChange,
   onSortChange,
   onPageChange,
   onSelectProduct,
   onOpenStorefront,
   onCreateDemand,
+  onOpenOpenMarketModal,
+  onSavePriceAlert,
+  onToggleStockAlarm,
+  onToggleFollowSeller,
+  onJoinOrtakAlim,
   onToggleFavorite,
   onStartChat,
   onGoReviews,
@@ -121,13 +151,22 @@ export function DiscoveryScreen({
   categoryId: number | null;
   city: string;
   district: string;
+  teslimatSehir?: string;
+  uretimSehir?: string;
   minPrice: string;
   maxPrice: string;
   onlyInStock: boolean;
   verifiedOnly: boolean;
+  sadeceYeniHasat?: boolean;
+  sadeceEldenTeslim?: boolean;
+  sadeceKargolu?: boolean;
   minRating: number | null;
   sort: SortKey;
   sortOptions: string[];
+  smartAlternatives?: SmartAlternativesDto | null;
+  priceAlarmProductIds?: Set<number>;
+  stockAlarmProductIds?: Set<number>;
+  followedSellerIds?: Set<string>;
   actionStatus: string | null;
   demandFlowEnabled?: boolean;
   favoritesEnabled?: boolean;
@@ -136,16 +175,26 @@ export function DiscoveryScreen({
   onCategoryChange: (value: number | null) => void;
   onCityChange: (value: string) => void;
   onDistrictChange: (value: string) => void;
+  onTeslimatSehirChange?: (value: string) => void;
+  onUretimSehirChange?: (value: string) => void;
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
   onOnlyInStockChange: (value: boolean) => void;
   onVerifiedOnlyChange: (value: boolean) => void;
+  onSadeceYeniHasatChange?: (value: boolean) => void;
+  onSadeceEldenTeslimChange?: (value: boolean) => void;
+  onSadeceKargoluChange?: (value: boolean) => void;
   onMinRatingChange: (value: number | null) => void;
   onSortChange: (value: SortKey) => void;
   onPageChange: (page: number) => void;
   onSelectProduct: (product: ProductDto) => void;
   onOpenStorefront: (saticiId: string) => void;
   onCreateDemand: (product: ProductDto, miktar: number, note?: string) => Promise<void> | void;
+  onOpenOpenMarketModal?: () => void;
+  onSavePriceAlert?: (product: ProductDto, hedefFiyat: number) => Promise<void> | void;
+  onToggleStockAlarm?: (product: ProductDto) => Promise<void> | void;
+  onToggleFollowSeller?: (saticiId: string) => Promise<void> | void;
+  onJoinOrtakAlim?: (campaign: OrtakAlimDto) => void;
   onToggleFavorite: (productId: number) => void;
   onStartChat: (product: ProductDto) => void;
   onGoReviews: (product: ProductDto) => void;
@@ -163,10 +212,15 @@ export function DiscoveryScreen({
     categoryId !== null,
     Boolean(city.trim()),
     Boolean(district.trim()),
+    Boolean(teslimatSehir.trim()),
+    Boolean(uretimSehir.trim()),
     Boolean(minPrice.trim()),
     Boolean(maxPrice.trim()),
     onlyInStock,
     verifiedOnly,
+    sadeceYeniHasat,
+    sadeceEldenTeslim,
+    sadeceKargolu,
     minRating !== null,
   ].filter(Boolean).length;
 
@@ -185,6 +239,12 @@ export function DiscoveryScreen({
       : []),
     ...(district.trim()
       ? [{ key: "dist", label: `İlçe: ${district.trim()}`, onClear: () => onDistrictChange("") }]
+      : []),
+    ...(teslimatSehir.trim() && onTeslimatSehirChange
+      ? [{ key: "delcity", label: `Teslimat: ${teslimatSehir.trim()}`, onClear: () => onTeslimatSehirChange("") }]
+      : []),
+    ...(uretimSehir.trim() && onUretimSehirChange
+      ? [{ key: "origcity", label: `Üretim: ${uretimSehir.trim()}`, onClear: () => onUretimSehirChange("") }]
       : []),
     ...(minPrice.trim() || maxPrice.trim()
       ? [
@@ -206,6 +266,15 @@ export function DiscoveryScreen({
       : []),
     ...(verifiedOnly
       ? [{ key: "verified", label: "Doğrulanmış Üretici", onClear: () => onVerifiedOnlyChange(false) }]
+      : []),
+    ...(sadeceYeniHasat && onSadeceYeniHasatChange
+      ? [{ key: "newharvest", label: "Yeni Hasat", onClear: () => onSadeceYeniHasatChange(false) }]
+      : []),
+    ...(sadeceEldenTeslim && onSadeceEldenTeslimChange
+      ? [{ key: "hand", label: "Elden Teslim", onClear: () => onSadeceEldenTeslimChange(false) }]
+      : []),
+    ...(sadeceKargolu && onSadeceKargoluChange
+      ? [{ key: "cargo", label: "Kargo Gönderim", onClear: () => onSadeceKargoluChange(false) }]
       : []),
   ];
 
@@ -348,19 +417,29 @@ export function DiscoveryScreen({
                 categoryId={categoryId}
                 city={city}
                 district={district}
+                teslimatSehir={teslimatSehir}
+                uretimSehir={uretimSehir}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
                 onlyInStock={onlyInStock}
                 verifiedOnly={verifiedOnly}
+                sadeceYeniHasat={sadeceYeniHasat}
+                sadeceEldenTeslim={sadeceEldenTeslim}
+                sadeceKargolu={sadeceKargolu}
                 minRating={minRating}
                 onQueryChange={onQueryChange}
                 onCategoryChange={onCategoryChange}
                 onCityChange={onCityChange}
                 onDistrictChange={onDistrictChange}
+                onTeslimatSehirChange={onTeslimatSehirChange}
+                onUretimSehirChange={onUretimSehirChange}
                 onMinPriceChange={onMinPriceChange}
                 onMaxPriceChange={onMaxPriceChange}
                 onOnlyInStockChange={onOnlyInStockChange}
                 onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onSadeceYeniHasatChange={onSadeceYeniHasatChange}
+                onSadeceEldenTeslimChange={onSadeceEldenTeslimChange}
+                onSadeceKargoluChange={onSadeceKargoluChange}
                 onMinRatingChange={onMinRatingChange}
                 onClear={onClearFilters}
               />
@@ -386,12 +465,35 @@ export function DiscoveryScreen({
                 action={<Button onClick={onRetry}>Yeniden Dene</Button>}
               />
             ) : productsPage.items.length === 0 ? (
-              <EmptyState
-                icon={Search}
-                title="Eşleşen ürün bulunamadı"
-                description="Arama kelimesini, il/ilçe bilgisini veya fiyat aralığını esnetebilirsin."
-                action={<Button onClick={onClearFilters}>Filtreleri Temizle</Button>}
-              />
+              <div className="space-y-4">
+                <EmptyState
+                  icon={Search}
+                  title="Eşleşen ürün bulunamadı"
+                  description="Arama kelimesini esnetebilir veya üreticilere açık 'Benim İçin Bul' talebi gönderebilirsin."
+                  action={
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button variant="outline" onClick={onClearFilters}>
+                        Filtreleri Temizle
+                      </Button>
+                      {onOpenOpenMarketModal ? (
+                        <Button onClick={onOpenOpenMarketModal}>
+                          <Sparkles className="size-4" aria-hidden />
+                          Benim İçin Bul (Açık Talep Aç)
+                        </Button>
+                      ) : null}
+                    </div>
+                  }
+                />
+                {smartAlternatives ? (
+                  <SmartAlternativesSection
+                    alternatives={smartAlternatives}
+                    onSelectProduct={handleSelectProduct}
+                    onOpenStorefront={onOpenStorefront}
+                    onOpenOpenMarketModal={onOpenOpenMarketModal}
+                    onJoinOrtakAlim={onJoinOrtakAlim}
+                  />
+                ) : null}
+              </div>
             ) : (
               <>
                 <div
@@ -440,6 +542,11 @@ export function DiscoveryScreen({
                               <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-black text-primary shadow-xs">
                                 <ShieldCheck className="size-3" aria-hidden />
                                 Doğrulanmış
+                              </span>
+                            ) : null}
+                            {product.yeniHasatMi ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+                                Yeni Hasat
                               </span>
                             ) : null}
                             {(product.videolar?.length ?? 0) > 0 ? (
@@ -512,6 +619,30 @@ export function DiscoveryScreen({
                             </p>
                           ) : null}
 
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {product.birimMiktar ? (
+                              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                                {product.birimMiktar}
+                              </span>
+                            ) : null}
+                            {product.eldenTeslimVarMi ? (
+                              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                                Elden Teslim
+                              </span>
+                            ) : null}
+                            {product.kargoVarMi ? (
+                              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                                Kargo
+                              </span>
+                            ) : null}
+                            {typeof product.goruntulenmeSayisi === "number" && product.goruntulenmeSayisi > 0 ? (
+                              <span className="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                <Eye className="size-2.5" aria-hidden />
+                                {product.goruntulenmeSayisi}
+                              </span>
+                            ) : null}
+                          </div>
+
                           <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3 mt-3">
                             <div>
                               <span className="text-lg font-black text-primary tabular-nums">
@@ -546,6 +677,18 @@ export function DiscoveryScreen({
                   totalPages={productsPage.totalPages}
                   onPageChange={onPageChange}
                 />
+
+                {smartAlternatives ? (
+                  <div className="mt-6">
+                    <SmartAlternativesSection
+                      alternatives={smartAlternatives}
+                      onSelectProduct={handleSelectProduct}
+                      onOpenStorefront={onOpenStorefront}
+                      onOpenOpenMarketModal={onOpenOpenMarketModal}
+                      onJoinOrtakAlim={onJoinOrtakAlim}
+                    />
+                  </div>
+                ) : null}
               </>
             )}
           </section>
@@ -557,6 +700,11 @@ export function DiscoveryScreen({
                 <ProductDetailPanel
                   product={selectedProduct}
                   favorite={favoriteIds.has(selectedProduct.id)}
+                  hasPriceAlarm={priceAlarmProductIds?.has(selectedProduct.id) ?? false}
+                  hasStockAlarm={stockAlarmProductIds?.has(selectedProduct.id) ?? false}
+                  isFollowingSeller={
+                    Boolean(selectedProduct.saticiId && followedSellerIds?.has(selectedProduct.saticiId))
+                  }
                   actionStatus={actionStatus}
                   demandFlowEnabled={demandFlowEnabled}
                   favoritesEnabled={favoritesEnabled}
@@ -564,6 +712,9 @@ export function DiscoveryScreen({
                   onOpenStorefront={onOpenStorefront}
                   onCreateDemand={onCreateDemand}
                   onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
+                  onSavePriceAlert={onSavePriceAlert}
+                  onToggleStockAlarm={onToggleStockAlarm}
+                  onToggleFollowSeller={onToggleFollowSeller}
                   onStartChat={() => onStartChat(selectedProduct)}
                   onGoReviews={() => onGoReviews(selectedProduct)}
                 />
@@ -609,19 +760,29 @@ export function DiscoveryScreen({
                 categoryId={categoryId}
                 city={city}
                 district={district}
+                teslimatSehir={teslimatSehir}
+                uretimSehir={uretimSehir}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
                 onlyInStock={onlyInStock}
                 verifiedOnly={verifiedOnly}
+                sadeceYeniHasat={sadeceYeniHasat}
+                sadeceEldenTeslim={sadeceEldenTeslim}
+                sadeceKargolu={sadeceKargolu}
                 minRating={minRating}
                 onQueryChange={onQueryChange}
                 onCategoryChange={onCategoryChange}
                 onCityChange={onCityChange}
                 onDistrictChange={onDistrictChange}
+                onTeslimatSehirChange={onTeslimatSehirChange}
+                onUretimSehirChange={onUretimSehirChange}
                 onMinPriceChange={onMinPriceChange}
                 onMaxPriceChange={onMaxPriceChange}
                 onOnlyInStockChange={onOnlyInStockChange}
                 onVerifiedOnlyChange={onVerifiedOnlyChange}
+                onSadeceYeniHasatChange={onSadeceYeniHasatChange}
+                onSadeceEldenTeslimChange={onSadeceEldenTeslimChange}
+                onSadeceKargoluChange={onSadeceKargoluChange}
                 onMinRatingChange={onMinRatingChange}
                 onClear={onClearFilters}
               />
@@ -664,6 +825,11 @@ export function DiscoveryScreen({
             <ProductDetailPanel
               product={selectedProduct}
               favorite={favoriteIds.has(selectedProduct.id)}
+              hasPriceAlarm={priceAlarmProductIds?.has(selectedProduct.id) ?? false}
+              hasStockAlarm={stockAlarmProductIds?.has(selectedProduct.id) ?? false}
+              isFollowingSeller={
+                Boolean(selectedProduct.saticiId && followedSellerIds?.has(selectedProduct.saticiId))
+              }
               actionStatus={actionStatus}
               demandFlowEnabled={demandFlowEnabled}
               favoritesEnabled={favoritesEnabled}
@@ -671,6 +837,9 @@ export function DiscoveryScreen({
               onOpenStorefront={onOpenStorefront}
               onCreateDemand={onCreateDemand}
               onToggleFavorite={() => onToggleFavorite(selectedProduct.id)}
+              onSavePriceAlert={onSavePriceAlert}
+              onToggleStockAlarm={onToggleStockAlarm}
+              onToggleFollowSeller={onToggleFollowSeller}
               onStartChat={() => {
                 setMobileDetailOpen(false);
                 onStartChat(selectedProduct);
@@ -703,19 +872,29 @@ function DiscoveryFilters({
   categoryId,
   city,
   district,
+  teslimatSehir = "",
+  uretimSehir = "",
   minPrice,
   maxPrice,
   onlyInStock,
   verifiedOnly,
+  sadeceYeniHasat = false,
+  sadeceEldenTeslim = false,
+  sadeceKargolu = false,
   minRating,
   onQueryChange,
   onCategoryChange,
   onCityChange,
   onDistrictChange,
+  onTeslimatSehirChange,
+  onUretimSehirChange,
   onMinPriceChange,
   onMaxPriceChange,
   onOnlyInStockChange,
   onVerifiedOnlyChange,
+  onSadeceYeniHasatChange,
+  onSadeceEldenTeslimChange,
+  onSadeceKargoluChange,
   onMinRatingChange,
   onClear,
 }: {
@@ -726,19 +905,29 @@ function DiscoveryFilters({
   categoryId: number | null;
   city: string;
   district: string;
+  teslimatSehir?: string;
+  uretimSehir?: string;
   minPrice: string;
   maxPrice: string;
   onlyInStock: boolean;
   verifiedOnly: boolean;
+  sadeceYeniHasat?: boolean;
+  sadeceEldenTeslim?: boolean;
+  sadeceKargolu?: boolean;
   minRating: number | null;
   onQueryChange: (value: string) => void;
   onCategoryChange: (value: number | null) => void;
   onCityChange: (value: string) => void;
   onDistrictChange: (value: string) => void;
+  onTeslimatSehirChange?: (value: string) => void;
+  onUretimSehirChange?: (value: string) => void;
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
   onOnlyInStockChange: (value: boolean) => void;
   onVerifiedOnlyChange: (value: boolean) => void;
+  onSadeceYeniHasatChange?: (value: boolean) => void;
+  onSadeceEldenTeslimChange?: (value: boolean) => void;
+  onSadeceKargoluChange?: (value: boolean) => void;
   onMinRatingChange: (value: number | null) => void;
   onClear: () => void;
 }) {
@@ -821,6 +1010,31 @@ function DiscoveryFilters({
         cityId="filter-city"
         districtId="filter-district"
       />
+
+      {onTeslimatSehirChange || onUretimSehirChange ? (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          {onTeslimatSehirChange ? (
+            <Field label="Teslimat Hedef Şehri" htmlFor="filter-del-city">
+              <Input
+                id="filter-del-city"
+                value={teslimatSehir}
+                onChange={(e) => onTeslimatSehirChange(e.target.value)}
+                placeholder="Ör: Ankara, İstanbul..."
+              />
+            </Field>
+          ) : null}
+          {onUretimSehirChange ? (
+            <Field label="Üretim (Yöre) Şehri" htmlFor="filter-orig-city">
+              <Input
+                id="filter-orig-city"
+                value={uretimSehir}
+                onChange={(e) => onUretimSehirChange(e.target.value)}
+                placeholder="Ör: Kars, Hatay..."
+              />
+            </Field>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2">
@@ -926,6 +1140,39 @@ function DiscoveryFilters({
           />
           <span>Sadece doğrulanmış üreticiler</span>
         </label>
+        {onSadeceYeniHasatChange ? (
+          <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+            <input
+              type="checkbox"
+              checked={sadeceYeniHasat}
+              onChange={(event) => onSadeceYeniHasatChange(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span>Sadece yeni hasat ürünler</span>
+          </label>
+        ) : null}
+        {onSadeceEldenTeslimChange ? (
+          <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+            <input
+              type="checkbox"
+              checked={sadeceEldenTeslim}
+              onChange={(event) => onSadeceEldenTeslimChange(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span>Sadece elden teslim uygun</span>
+          </label>
+        ) : null}
+        {onSadeceKargoluChange ? (
+          <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+            <input
+              type="checkbox"
+              checked={sadeceKargolu}
+              onChange={(event) => onSadeceKargoluChange(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            <span>Sadece kargo ile gönderim</span>
+          </label>
+        ) : null}
       </div>
     </Card>
   );
@@ -934,6 +1181,9 @@ function DiscoveryFilters({
 export function ProductDetailPanel({
   product,
   favorite,
+  hasPriceAlarm = false,
+  hasStockAlarm = false,
+  isFollowingSeller = false,
   actionStatus,
   demandFlowEnabled = true,
   favoritesEnabled = true,
@@ -941,11 +1191,17 @@ export function ProductDetailPanel({
   onOpenStorefront,
   onCreateDemand,
   onToggleFavorite,
+  onSavePriceAlert,
+  onToggleStockAlarm,
+  onToggleFollowSeller,
   onStartChat,
   onGoReviews,
 }: {
   product: ProductDto;
   favorite: boolean;
+  hasPriceAlarm?: boolean;
+  hasStockAlarm?: boolean;
+  isFollowingSeller?: boolean;
   actionStatus: string | null;
   demandFlowEnabled?: boolean;
   favoritesEnabled?: boolean;
@@ -953,6 +1209,9 @@ export function ProductDetailPanel({
   onOpenStorefront: (saticiId: string) => void;
   onCreateDemand: (product: ProductDto, miktar: number, note?: string) => Promise<void> | void;
   onToggleFavorite: () => void;
+  onSavePriceAlert?: (product: ProductDto, hedefFiyat: number) => Promise<void> | void;
+  onToggleStockAlarm?: (product: ProductDto) => Promise<void> | void;
+  onToggleFollowSeller?: (saticiId: string) => Promise<void> | void;
   onStartChat: () => void;
   onGoReviews: () => void;
 }) {
@@ -981,6 +1240,10 @@ export function ProductDetailPanel({
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [amount, setAmount] = useState(1);
   const [note, setNote] = useState("");
+  const [priceAlarmOpen, setPriceAlarmOpen] = useState(false);
+  const [priceAlarmTarget, setPriceAlarmTarget] = useState(() =>
+    String(Math.max(1, Math.round(product.fiyat * 0.9))),
+  );
   const [trackedProductId, setTrackedProductId] = useState(product.id);
 
   if (trackedProductId !== product.id) {
@@ -988,6 +1251,8 @@ export function ProductDetailPanel({
     setSelectedIdx(0);
     setAmount(1);
     setNote("");
+    setPriceAlarmOpen(false);
+    setPriceAlarmTarget(String(Math.max(1, Math.round(product.fiyat * 0.9))));
   }
 
   const activeMedia = mediaItems[selectedIdx] ?? {
@@ -1070,23 +1335,45 @@ export function ProductDetailPanel({
         </div>
       ) : null}
 
-      <div className="space-y-4 p-4 sm:p-5">
+        <div className="space-y-4 p-4 sm:p-5">
         <div>
           <h2 className="font-serif text-xl font-bold leading-snug text-[#14271c]">
             {product.adi}
           </h2>
           <div className="mt-2 flex items-baseline justify-between gap-2">
-            <span className="text-2xl font-black text-primary tabular-nums">
-              {formatPrice(product.fiyat)}
-            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-black text-primary tabular-nums">
+                {formatPrice(product.fiyat)}
+              </span>
+              {product.birimMiktar ? (
+                <span className="text-xs font-bold text-muted-foreground">
+                  / {product.birimMiktar}
+                </span>
+              ) : null}
+            </div>
             <span className="text-xs font-bold text-muted-foreground">
               Stok: {product.stokMiktari ?? 0} adet
             </span>
           </div>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {product.yeniHasatMi ? <Badge variant="green">Yeni Hasat</Badge> : null}
+            {product.eldenTeslimVarMi ? <Badge variant="outline">Elden Teslim</Badge> : null}
+            {product.kargoVarMi ? <Badge variant="secondary">Kargo Gönderim</Badge> : null}
+            {product.teslimatSecenekleri ? (
+              <Badge variant="outline">{product.teslimatSecenekleri}</Badge>
+            ) : null}
+          </div>
+          {product.gonderimSehirleri ? (
+            <p className="mt-1.5 text-[11px] font-semibold text-muted-foreground">
+              <Truck className="mr-1 inline size-3.5 text-primary" aria-hidden />
+              Gönderim: {product.gonderimSehirleri}
+            </p>
+          ) : null}
         </div>
 
         {/* Producer Card */}
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-[#f8faf7] p-3">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-[#f8faf7] p-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <Store className="size-4 shrink-0 text-primary" aria-hidden />
@@ -1101,17 +1388,41 @@ export function ProductDetailPanel({
               {productLocation(product)}
             </p>
           </div>
-          {product.saticiId ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0 rounded-xl bg-white text-xs font-bold"
-              onClick={() => onOpenStorefront(product.saticiId!)}
-            >
-              Mağaza
-            </Button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {product.saticiId && onToggleFollowSeller ? (
+              <Button
+                type="button"
+                variant={isFollowingSeller ? "secondary" : "outline"}
+                size="sm"
+                className="rounded-xl bg-white text-xs font-bold"
+                onClick={() => onToggleFollowSeller(product.saticiId!)}
+                aria-label={isFollowingSeller ? "Takibi Bırak" : "Üreticiyi Takip Et"}
+              >
+                {isFollowingSeller ? (
+                  <>
+                    <UserCheck className="size-3.5 text-primary" aria-hidden />
+                    Takip
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="size-3.5" aria-hidden />
+                    Takip Et
+                  </>
+                )}
+              </Button>
+            ) : null}
+            {product.saticiId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl bg-white text-xs font-bold"
+                onClick={() => onOpenStorefront(product.saticiId!)}
+              >
+                Mağaza
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {/* Rating & Comments Trigger */}
@@ -1217,7 +1528,250 @@ export function ProductDetailPanel({
             Üreticiyle Mesajlaş
           </Button>
         ) : null}
+
+        {onSavePriceAlert || onToggleStockAlarm ? (
+          <div className="space-y-2 rounded-xl border border-border/80 bg-[#f9fbf8] p-3">
+            <div className="flex flex-wrap gap-2">
+              {onSavePriceAlert ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={hasPriceAlarm ? "secondary" : "outline"}
+                  className="flex-1 rounded-xl text-xs font-bold"
+                  onClick={() => setPriceAlarmOpen((v) => !v)}
+                >
+                  {hasPriceAlarm ? (
+                    <BellRing className="size-3.5 text-primary" aria-hidden />
+                  ) : (
+                    <Bell className="size-3.5" aria-hidden />
+                  )}
+                  {hasPriceAlarm ? "Fiyat Alarmı Aktif" : "Fiyat Düşerse Haber Ver"}
+                </Button>
+              ) : null}
+              {onToggleStockAlarm ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={hasStockAlarm ? "secondary" : "outline"}
+                  className="flex-1 rounded-xl text-xs font-bold"
+                  onClick={() => onToggleStockAlarm(product)}
+                >
+                  {hasStockAlarm ? (
+                    <BellRing className="size-3.5 text-primary" aria-hidden />
+                  ) : (
+                    <Bell className="size-3.5" aria-hidden />
+                  )}
+                  {hasStockAlarm ? "Stok Alarmı Açık" : "Stok Gelince Bildir"}
+                </Button>
+              ) : null}
+            </div>
+
+            {priceAlarmOpen && onSavePriceAlert ? (
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  type="number"
+                  min={1}
+                  value={priceAlarmTarget}
+                  onChange={(e) => setPriceAlarmTarget(e.target.value)}
+                  className="h-8 bg-white text-xs"
+                  placeholder="Hedef fiyat (₺)"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 rounded-lg px-3 text-xs font-extrabold"
+                  onClick={() => {
+                    const num = Number(priceAlarmTarget);
+                    if (Number.isFinite(num) && num > 0) {
+                      onSavePriceAlert(product, num);
+                      setPriceAlarmOpen(false);
+                    }
+                  }}
+                >
+                  Kaydet
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+    </Card>
+  );
+}
+
+function SmartAlternativesSection({
+  alternatives,
+  onSelectProduct,
+  onOpenStorefront,
+  onOpenOpenMarketModal,
+  onJoinOrtakAlim,
+}: {
+  alternatives: SmartAlternativesDto;
+  onSelectProduct: (product: ProductDto) => void;
+  onOpenStorefront: (saticiId: string) => void;
+  onOpenOpenMarketModal?: () => void;
+  onJoinOrtakAlim?: (campaign: OrtakAlimDto) => void;
+}) {
+  const hasAny =
+    (alternatives.ayniYoredenUrunler?.length ?? 0) > 0 ||
+    (alternatives.sehreGonderimYapanlar?.length ?? 0) > 0 ||
+    (alternatives.stoguTukenenUrunler?.length ?? 0) > 0 ||
+    (alternatives.aktifOrtakAlimlar?.length ?? 0) > 0 ||
+    (alternatives.planliGonderimler?.length ?? 0) > 0 ||
+    Boolean(alternatives.benimIcinBulOnerisi?.urunBulunamadi);
+
+  if (!hasAny) {
+    return null;
+  }
+
+  return (
+    <Card className="space-y-4 rounded-2xl border-emerald-200/80 bg-[linear-gradient(135deg,#f6fbf4_0%,#ffffff_100%)] p-4 shadow-xs sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-black text-primary">
+            <Sparkles className="size-3.5" aria-hidden />
+            Akıllı Alternatifler & Öneriler
+          </span>
+          <h3 className="mt-1 text-base font-black text-brand-brown">
+            Bölgesel Seçenekler ve Yaklaşan Sevkiyatlar
+          </h3>
+        </div>
+        {alternatives.benimIcinBulOnerisi?.urunBulunamadi && onOpenOpenMarketModal ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={onOpenOpenMarketModal}
+            className="rounded-xl text-xs font-extrabold"
+          >
+            <Sparkles className="size-3.5" aria-hidden />
+            Benim İçin Bul Aç
+          </Button>
+        ) : null}
+      </div>
+
+      {alternatives.benimIcinBulOnerisi?.urunBulunamadi ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs font-semibold text-amber-950">
+          {alternatives.benimIcinBulOnerisi.arananUrunAdi
+            ? `"${alternatives.benimIcinBulOnerisi.arananUrunAdi}" için`
+            : "Aramanız için"}{" "}
+          {alternatives.benimIcinBulOnerisi.teslimatSehir
+            ? `${alternatives.benimIcinBulOnerisi.teslimatSehir} teslimatlı `
+            : ""}
+          uygun üreticilere açık talep gönderebilirsiniz.
+        </p>
+      ) : null}
+
+      {[
+        { title: "Aynı Yöreden Benzer Ürünler", list: alternatives.ayniYoredenUrunler },
+        { title: "Şehrine Gönderim Yapan Üreticiler", list: alternatives.sehreGonderimYapanlar },
+        { title: "Stoğu Tükenen / Alarm Kurabileceğin Ürünler", list: alternatives.stoguTukenenUrunler },
+      ]
+        .filter((group) => group.list.length > 0)
+        .map((group) => (
+          <div key={group.title} className="space-y-2">
+            <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+              {group.title}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {group.list.slice(0, 4).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectProduct(item)}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-2.5 text-left transition hover:border-primary/40 hover:bg-emerald-50/30"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-black text-brand-brown">{item.adi}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {sellerName(item)} · {productLocation(item)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-black text-primary tabular-nums">
+                    {formatPrice(item.fiyat)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+      {alternatives.planliGonderimler.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+            Şehrine Planlanan Üretici Sevkiyatları
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {alternatives.planliGonderimler.slice(0, 4).map((ship) => (
+              <div
+                key={ship.id}
+                className="flex items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50/40 p-2.5 text-xs"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-black text-brand-brown">{ship.baslik}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {ship.menseiSehir} → {ship.hedefSehir} · Sevk: {formatShortDate(ship.gonderimTarihi)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {ship.sogukZincirVarMi ? (
+                    <Snowflake className="size-3.5 text-sky-700" aria-label="Soğuk zincir" />
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 rounded-lg bg-white px-2 text-[11px] font-bold"
+                    onClick={() => onOpenStorefront(ship.saticiId)}
+                  >
+                    Mağaza
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {alternatives.aktifOrtakAlimlar.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+            Katılabileceğin Ortak Alımlar
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {alternatives.aktifOrtakAlimlar.slice(0, 4).map((camp) => {
+              const meta = ortakAlimStatusMeta(camp.durum);
+              return (
+                <div
+                  key={camp.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-white p-2.5 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant={meta.variant} className="text-[10px]">
+                        {meta.label}
+                      </Badge>
+                      <span className="truncate font-black text-brand-brown">{camp.baslik}</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {camp.mevcutKatilimci}/{camp.minimumKatilimci} katılımcı · {camp.toplamTalepMiktari} {camp.birim}
+                    </p>
+                  </div>
+                  {onJoinOrtakAlim ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 shrink-0 rounded-lg px-2.5 text-[11px] font-extrabold"
+                      onClick={() => onJoinOrtakAlim(camp)}
+                    >
+                      Katıl
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }

@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
+  Bell,
+  CalendarClock,
   CheckCircle2,
   ClipboardList,
   Compass,
@@ -11,9 +13,14 @@ import {
   Loader2,
   MapPin,
   MessageCircle,
+  RefreshCw,
+  Snowflake,
   Sparkles,
   Tag,
+  Trash2,
+  Truck,
   UserRound,
+  Users,
   XCircle,
 } from "lucide-react";
 
@@ -31,10 +38,13 @@ import {
   MiniProductButton,
   MobileBottomNav,
   Panel,
+  type ChatContextSelection,
   type DashboardNavItem,
 } from "@/components/yoremio/ui-kit";
 import {
   demandImage,
+  demandTitle,
+  ortakAlimStatusMeta,
   productImage,
   productLocation,
   shortDate,
@@ -50,9 +60,15 @@ import type {
   ChatConversationDto,
   ChatMessageDto,
   DemandDto,
+  OrtakAlimCreateValues,
+  OrtakAlimDto,
+  PlanliGonderimDto,
+  PriceAlertDto,
   ProductDto,
+  FeaturedSellerDto,
+  StockAlertDto,
 } from "@/lib/api";
-import { cn, formatPrice, limitText, phoneInput } from "@/lib/utils";
+import { cn, formatPrice, formatShortDate, limitText, phoneInput } from "@/lib/utils";
 
 type BuyerDemandFilter = "ALL" | "ACIK" | "ANLASILDI" | "IPTAL";
 
@@ -72,6 +88,11 @@ export function BuyerDashboard({
   favorites,
   recommended,
   demands,
+  priceAlerts = [],
+  stockAlerts = [],
+  followedSellers = [],
+  ortakAlimlar = [],
+  planliGonderimler = [],
   buyerProfile = null,
   categories = [],
   locations = [],
@@ -79,17 +100,27 @@ export function BuyerDashboard({
   conversations,
   messages,
   chatTargetId,
+  chatContext = null,
   actionStatus,
   signalrConnected,
   typingFromUserId,
   chatEnabled = true,
   favoritesEnabled = true,
   onSelectChatTarget,
+  onClearChatContext,
   onSendMessage,
   onTyping,
   onAcceptOffer,
   onRejectOffer,
   onCancelDemand,
+  onRepeatDemand,
+  onOpenOpenMarketModal,
+  onDeletePriceAlert,
+  onDeleteStockAlarm,
+  onUnfollowSeller,
+  onJoinOrtakAlim,
+  onLeaveOrtakAlim,
+  onSuggestOrtakAlim,
   onInspectDemand,
   onOpenProduct,
   onOpenStorefront,
@@ -106,6 +137,11 @@ export function BuyerDashboard({
   favorites: ProductDto[];
   recommended: ProductDto[];
   demands: DemandDto[];
+  priceAlerts?: PriceAlertDto[];
+  stockAlerts?: StockAlertDto[];
+  followedSellers?: FeaturedSellerDto[];
+  ortakAlimlar?: OrtakAlimDto[];
+  planliGonderimler?: PlanliGonderimDto[];
   buyerProfile?: BuyerProfileDto | null;
   categories?: CategoryDto[];
   locations?: BootstrapLocationDto[];
@@ -113,17 +149,27 @@ export function BuyerDashboard({
   conversations: ChatConversationDto[];
   messages: ChatMessageDto[];
   chatTargetId: string;
+  chatContext?: ChatContextSelection | null;
   actionStatus: string | null;
   signalrConnected: boolean;
   typingFromUserId: string | null;
   chatEnabled?: boolean;
   favoritesEnabled?: boolean;
-  onSelectChatTarget: (userId: string) => void;
+  onSelectChatTarget: (userId: string, context?: ChatContextSelection) => void;
+  onClearChatContext?: () => void;
   onSendMessage: (receiverId: string, message: string) => void;
   onTyping: (receiverId: string) => void;
   onAcceptOffer: (offerId: number) => void;
   onRejectOffer: (offerId: number) => void;
   onCancelDemand: (talepId: number) => void;
+  onRepeatDemand?: (talepId: number) => void;
+  onOpenOpenMarketModal?: () => void;
+  onDeletePriceAlert?: (productId: number) => void;
+  onDeleteStockAlarm?: (productId: number) => void;
+  onUnfollowSeller?: (sellerId: string) => void;
+  onJoinOrtakAlim?: (campaign: OrtakAlimDto) => void;
+  onLeaveOrtakAlim?: (campaignId: number) => void;
+  onSuggestOrtakAlim?: (values: OrtakAlimCreateValues) => Promise<boolean>;
   onInspectDemand: (demandId: number) => void;
   onOpenProduct: (product: ProductDto) => void;
   onOpenStorefront: (saticiId: string) => void;
@@ -185,6 +231,22 @@ export function BuyerDashboard({
       icon: Sparkles,
       active: activeTab === "recommended",
       onClick: () => onTabChange("recommended"),
+    },
+    {
+      id: "alarms",
+      label: "Alarmlar & Takip",
+      icon: Bell,
+      badge: priceAlerts.length + stockAlerts.length + followedSellers.length || undefined,
+      active: activeTab === "alarms",
+      onClick: () => onTabChange("alarms"),
+    },
+    {
+      id: "community",
+      label: "Ortak Alım & Sevkiyat",
+      icon: Users,
+      badge: ortakAlimlar.length || undefined,
+      active: activeTab === "community",
+      onClick: () => onTabChange("community"),
     },
     {
       id: "profile",
@@ -309,7 +371,7 @@ export function BuyerDashboard({
                         <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-white">
                           <Image
                             src={demandImage(demand)}
-                            alt={demand.urunAdi}
+                            alt={demandTitle(demand)}
                             fill
                             sizes="56px"
                             className="object-cover"
@@ -321,7 +383,7 @@ export function BuyerDashboard({
                             onClick={() => onInspectDemand(demand.id)}
                             className="truncate text-left text-sm font-black text-brand-brown hover:text-primary hover:underline"
                           >
-                            {demand.urunAdi}
+                            {demandTitle(demand)}
                           </button>
                           <p className="text-xs font-semibold text-muted-foreground">
                             Miktar: {demand.miktar} · Teklif:{" "}
@@ -380,6 +442,22 @@ export function BuyerDashboard({
               action="Yeni Talep Aç"
               onAction={() => onNavigate("discover")}
             >
+              {onOpenOpenMarketModal ? (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-2.5 text-xs">
+                  <div className="font-semibold text-amber-950">
+                    Aradığın ürünü katalogda bulamadın mı? Tüm uygun üreticilere açık talep gönderebilirsin.
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 rounded-lg text-xs font-extrabold"
+                    onClick={onOpenOpenMarketModal}
+                  >
+                    <Sparkles className="size-3.5" aria-hidden />
+                    Benim İçin Bul
+                  </Button>
+                </div>
+              ) : null}
               {demands.length > 0 ? (
                 <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto pb-1">
                   {(
@@ -451,7 +529,7 @@ export function BuyerDashboard({
                           <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
                             <Image
                               src={demandImage(demand)}
-                              alt={demand.urunAdi}
+                              alt={demandTitle(demand)}
                               fill
                               sizes="56px"
                               className="object-cover"
@@ -464,14 +542,18 @@ export function BuyerDashboard({
                                 onClick={() => onInspectDemand(demand.id)}
                                 className="truncate text-left text-sm font-black text-brand-brown hover:text-primary hover:underline"
                               >
-                                {demand.urunAdi}
+                                {demandTitle(demand)}
                               </button>
                               <Badge variant={st.variant}>{st.label}</Badge>
+                              {demand.talepTuru === "ACIK_PAZAR" ? (
+                                <Badge variant="secondary">Açık Pazar</Badge>
+                              ) : null}
                             </div>
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              Miktar: <strong>{demand.miktar}</strong> · Liste:{" "}
-                              {demand.urunFiyat ? formatPrice(demand.urunFiyat) : "—"} ·{" "}
+                              Miktar: <strong>{demand.miktar} {demand.birim || "adet"}</strong> · Liste:{" "}
+                              {demand.urunFiyat ? formatPrice(demand.urunFiyat) : demand.hedefBirimFiyat ? `Hedef ${formatPrice(demand.hedefBirimFiyat)}` : "—"} ·{" "}
                               {shortDate(demand.olusturmaTarihi)}
+                              {demand.teslimatSehir ? ` · ${demand.teslimatSehir}` : ""}
                             </p>
                             {demand.saticiMagazaAdi && demand.saticiId ? (
                               <button
@@ -507,12 +589,30 @@ export function BuyerDashboard({
                               className="h-8 rounded-lg text-xs font-bold"
                               onClick={() => {
                                 if (!demand.saticiId) return;
-                                onSelectChatTarget(demand.saticiId);
+                                onSelectChatTarget(demand.saticiId, {
+                                  urunId: demand.urunId,
+                                  label: demandTitle(demand),
+                                  talepId: demand.id,
+                                });
                                 onTabChange("chat");
                               }}
                             >
                               <MessageCircle className="size-3.5 text-primary" aria-hidden />
                               Mesaj
+                            </Button>
+                          ) : null}
+
+                          {onRepeatDemand ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 rounded-lg text-xs font-bold"
+                              disabled={actionStatus === `demand-repeat-${demand.id}`}
+                              onClick={() => onRepeatDemand(demand.id)}
+                            >
+                              <RefreshCw className="size-3.5 text-primary" aria-hidden />
+                              Tekrarla
                             </Button>
                           ) : null}
 
@@ -655,6 +755,287 @@ export function BuyerDashboard({
             </Panel>
           ) : null}
 
+          {/* Alarms & Followed Producers */}
+          {activeTab === "alarms" ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Panel title="Fiyat Alarmlarım" badge={priceAlerts.length || undefined}>
+                  {priceAlerts.length === 0 ? (
+                    <EmptyState
+                      icon={Bell}
+                      title="Aktif fiyat alarmın yok"
+                      description="Ürün detayından 'Fiyat Düşerse Haber Ver' alarmı kurabilirsin."
+                    />
+                  ) : (
+                    <div className="space-y-2.5">
+                      {priceAlerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-brand-brown">
+                              {alert.urunAdi}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Mevcut: <strong>{formatPrice(alert.urunFiyat)}</strong> · Hedef:{" "}
+                              <strong className="text-primary">{formatPrice(alert.hedefFiyat)}</strong>
+                            </p>
+                          </div>
+                          {onDeletePriceAlert ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 shrink-0 text-red-600 hover:bg-red-50"
+                              onClick={() => onDeletePriceAlert(alert.urunId)}
+                              aria-label="Fiyat alarmını kaldır"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel title="Stok Alarmlarım" badge={stockAlerts.length || undefined}>
+                  {stockAlerts.length === 0 ? (
+                    <EmptyState
+                      icon={Bell}
+                      title="Aktif stok alarmın yok"
+                      description="Stoğu tükenen ürünler için yeniden stoka girince bildirim alabilirsin."
+                    />
+                  ) : (
+                    <div className="space-y-2.5">
+                      {stockAlerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-brand-brown">
+                              {alert.urunAdi}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Stok: <strong>{alert.stokMiktari}</strong> · Fiyat: {formatPrice(alert.urunFiyat)}
+                            </p>
+                          </div>
+                          {onDeleteStockAlarm ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 shrink-0 text-red-600 hover:bg-red-50"
+                              onClick={() => onDeleteStockAlarm(alert.urunId)}
+                              aria-label="Stok alarmını kaldır"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+              </div>
+
+              <Panel title="Takip Ettiğim Üreticiler" badge={followedSellers.length || undefined}>
+                {followedSellers.length === 0 ? (
+                  <EmptyState
+                    icon={Users}
+                    title="Henüz takip ettiğin üretici yok"
+                    description="Mağaza vitrinlerinden veya ürün detayından üreticileri takip edebilirsin."
+                  />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {followedSellers.map((seller) => (
+                      <Card key={seller.kullaniciId} className="rounded-xl border-border p-3.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => onOpenStorefront(seller.kullaniciId)}
+                              className="truncate text-left text-sm font-black text-brand-brown hover:text-primary hover:underline"
+                            >
+                              {seller.magazaAdi}
+                            </button>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {[seller.sehir, seller.ilce].filter(Boolean).join(", ") || "Türkiye"} ·{" "}
+                              {seller.urunSayisi ?? 0} ürün
+                            </p>
+                          </div>
+                          {seller.dogrulanmisSatici ? <Badge variant="green">Doğrulanmış</Badge> : null}
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 rounded-lg text-xs font-bold"
+                            onClick={() => onOpenStorefront(seller.kullaniciId)}
+                          >
+                            Vitrini Aç
+                          </Button>
+                          {onUnfollowSeller ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50"
+                              onClick={() => onUnfollowSeller(seller.kullaniciId)}
+                            >
+                              Takibi Bırak
+                            </Button>
+                          ) : null}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+            </div>
+          ) : null}
+
+          {/* Community: Ortak Alım & Şehrime Gelen Sevkiyatlar */}
+          {activeTab === "community" ? (
+            <div className="space-y-4">
+              <Panel title="Yöremio Ortak Alım Kampanyaları" badge={ortakAlimlar.length || undefined}>
+                {ortakAlimlar.length === 0 ? (
+                  <EmptyState
+                    icon={Users}
+                    title="Aktif ortak alım kampanyası yok"
+                    description="Aşağıdaki formdan bulunduğun şehir için yeni bir ortak alım önerisi oluşturabilirsin."
+                  />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {ortakAlimlar.map((camp) => {
+                      const meta = ortakAlimStatusMeta(camp.durum);
+                      const progress =
+                        camp.minimumKatilimci > 0
+                          ? Math.min(100, Math.round((camp.mevcutKatilimci / camp.minimumKatilimci) * 100))
+                          : 0;
+                      const routeText = [camp.menseiSehir, camp.hedefSehir].filter(Boolean).join(" → ");
+                      const canJoin = camp.durum !== "IPTAL" && camp.durum !== "TAMAMLANDI";
+                      return (
+                        <Card key={camp.id} className="space-y-2.5 rounded-xl border-border p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge variant={meta.variant}>{meta.label}</Badge>
+                            <span className="text-[11px] font-bold text-muted-foreground">
+                              {routeText || "Türkiye"} · {formatShortDate(camp.sonKatilimTarihi)}
+                            </span>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-brand-brown">{camp.baslik}</h3>
+                            {camp.aciklama ? (
+                              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{camp.aciklama}</p>
+                            ) : null}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs font-bold">
+                              <span>
+                                {camp.mevcutKatilimci} / {camp.minimumKatilimci} Katılımcı
+                              </span>
+                              <span className="text-primary tabular-nums">
+                                {camp.toplamTalepMiktari} {camp.birim || "adet"}
+                              </span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
+                              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <span className="text-xs font-black text-primary">
+                              {camp.birimFiyat > 0
+                                ? `${formatPrice(camp.birimFiyat)} / ${camp.birim || "adet"}`
+                                : "Üretici Onayı Bekleniyor"}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {onLeaveOrtakAlim && canJoin ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 rounded-lg text-xs font-bold text-red-600"
+                                  onClick={() => onLeaveOrtakAlim(camp.id)}
+                                >
+                                  Ayrıl
+                                </Button>
+                              ) : null}
+                              {onJoinOrtakAlim && canJoin ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-7 rounded-lg text-xs font-extrabold"
+                                  onClick={() => onJoinOrtakAlim(camp)}
+                                >
+                                  Katıl
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {onSuggestOrtakAlim ? (
+                  <BuyerOrtakAlimSuggestForm
+                    defaultCity={buyerProfile?.sehir ?? authUser?.sehir ?? ""}
+                    saving={actionStatus === "ortak-alim-create"}
+                    onSuggest={onSuggestOrtakAlim}
+                  />
+                ) : null}
+              </Panel>
+
+              <Panel title="Şehrime Gelen Planlı Sevkiyatlar" badge={planliGonderimler.length || undefined}>
+                {planliGonderimler.length === 0 ? (
+                  <EmptyState
+                    icon={Truck}
+                    title="Planlı sevkiyat bulunmuyor"
+                    description="Üreticiler şehrine planlı sevkiyat eklediğinde burada tarih ve soğuk zincir bilgisiyle görünecek."
+                  />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {planliGonderimler.map((ship) => (
+                      <Card key={ship.id} className="space-y-2 rounded-xl border-sky-200 bg-sky-50/30 p-3.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge variant="secondary">
+                            {ship.menseiSehir || "Yöre"} → {ship.hedefSehir}
+                          </Badge>
+                          {ship.sogukZincirVarMi ? (
+                            <Badge variant="green">
+                              <Snowflake className="mr-1 size-3" aria-hidden />
+                              Soğuk Zincir
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-sm font-black text-brand-brown">{ship.baslik}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 font-bold text-slate-700">
+                            <CalendarClock className="size-3.5 text-primary" aria-hidden />
+                            Sevk: {formatShortDate(ship.gonderimTarihi)}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg bg-white text-xs font-bold"
+                            onClick={() => onOpenStorefront(ship.saticiId)}
+                          >
+                            {ship.saticiMagazaAdi || "Yöremio Üreticisi"}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+            </div>
+          ) : null}
+
           {/* Buyer Profile & Location Preferences */}
           {activeTab === "profile" && onSaveProfile ? (
             <BuyerProfilePanel
@@ -677,10 +1058,12 @@ export function BuyerDashboard({
                 conversations={conversations}
                 messages={messages}
                 targetId={chatTargetId}
+                chatContext={chatContext}
+                onClearContext={onClearChatContext}
                 actionStatus={actionStatus}
                 signalrConnected={signalrConnected}
                 typingFromUserId={typingFromUserId}
-                onTargetChange={onSelectChatTarget}
+                onTargetChange={(id) => onSelectChatTarget(id)}
                 onSendMessage={onSendMessage}
                 onTyping={onTyping}
               />
@@ -824,5 +1207,171 @@ function BuyerProfilePanel({
         </div>
       </form>
     </Panel>
+  );
+}
+
+function BuyerOrtakAlimSuggestForm({
+  defaultCity,
+  saving,
+  onSuggest,
+}: {
+  defaultCity: string;
+  saving: boolean;
+  onSuggest: (values: OrtakAlimCreateValues) => Promise<boolean>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [baslik, setBaslik] = useState("");
+  const [menseiSehir, setMenseiSehir] = useState("");
+  const [hedefSehir, setHedefSehir] = useState(defaultCity || "");
+  const [birim, setBirim] = useState("kg");
+  const [birimFiyat, setBirimFiyat] = useState("350");
+  const [minimumKatilimci, setMinimumKatilimci] = useState("5");
+  const [sogukZincirGerekliMi, setSogukZincirGerekliMi] = useState(false);
+  const [sonKatilimTarihi, setSonKatilimTarihi] = useState(() =>
+    new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10),
+  );
+  const [aciklama, setAciklama] = useState("");
+
+  if (!open) {
+    return (
+      <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 p-3 text-xs">
+        <span className="font-semibold text-emerald-950">
+          Belirli bir yöresel ürün için ortak alım önerisi başlatmak ister misin?
+        </span>
+        <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
+          Öneri Başlat
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!baslik.trim() || !menseiSehir.trim() || !hedefSehir.trim()) return;
+        const ok = await onSuggest({
+          baslik: baslik.trim(),
+          menseiSehir: menseiSehir.trim(),
+          hedefSehir: hedefSehir.trim(),
+          birim: birim.trim() || "kg",
+          birimFiyat: Math.max(1, Number(birimFiyat) || 100),
+          minimumKatilimci: Math.max(2, Number(minimumKatilimci) || 5),
+          sogukZincirGerekliMi,
+          sonKatilimTarihi: new Date(sonKatilimTarihi).toISOString(),
+          aciklama: aciklama.trim() || undefined,
+        });
+        if (ok) {
+          setBaslik("");
+          setAciklama("");
+          setOpen(false);
+        }
+      }}
+      className="mt-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-black uppercase tracking-wider text-primary">
+          Yeni Ortak Alım Önerisi
+        </p>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-xs font-bold text-muted-foreground hover:underline"
+        >
+          Vazgeç
+        </button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Kampanya Başlığı *" htmlFor="oa-suggest-title">
+          <Input
+            id="oa-suggest-title"
+            value={baslik}
+            onChange={(e) => setBaslik(e.target.value)}
+            placeholder="Ör: Ankara İçi Kars Kaşarı Ortak Alımı"
+            required
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Menşei Şehir *" htmlFor="oa-suggest-origin">
+            <Input
+              id="oa-suggest-origin"
+              value={menseiSehir}
+              onChange={(e) => setMenseiSehir(e.target.value)}
+              placeholder="Ör: Kars"
+              required
+            />
+          </Field>
+          <Field label="Hedef Şehir *" htmlFor="oa-suggest-city">
+            <Input
+              id="oa-suggest-city"
+              value={hedefSehir}
+              onChange={(e) => setHedefSehir(e.target.value)}
+              placeholder="Ör: Ankara"
+              required
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Field label="Min Katılımcı" htmlFor="oa-suggest-target">
+            <Input
+              id="oa-suggest-target"
+              type="number"
+              min={2}
+              value={minimumKatilimci}
+              onChange={(e) => setMinimumKatilimci(e.target.value)}
+            />
+          </Field>
+          <Field label="Hedef Fiyat (₺)" htmlFor="oa-suggest-price">
+            <Input
+              id="oa-suggest-price"
+              type="number"
+              min={1}
+              value={birimFiyat}
+              onChange={(e) => setBirimFiyat(e.target.value)}
+            />
+          </Field>
+          <Field label="Birim" htmlFor="oa-suggest-unit">
+            <Input
+              id="oa-suggest-unit"
+              value={birim}
+              onChange={(e) => setBirim(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Son Katılım Tarihi *" htmlFor="oa-suggest-date">
+          <Input
+            id="oa-suggest-date"
+            type="date"
+            value={sonKatilimTarihi}
+            onChange={(e) => setSonKatilimTarihi(e.target.value)}
+            required
+          />
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold">
+          <input
+            type="checkbox"
+            checked={sogukZincirGerekliMi}
+            onChange={(e) => setSogukZincirGerekliMi(e.target.checked)}
+            className="size-4 accent-primary"
+          />
+          Soğuk zincir teslimat gerekir
+        </label>
+        <div className="flex-1 sm:max-w-xs">
+          <Input
+            value={aciklama}
+            onChange={(e) => setAciklama(e.target.value)}
+            placeholder="Üretici notu / teslimat tercihi..."
+            className="bg-white"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Button type="submit" size="sm" disabled={saving}>
+          {saving ? "Oluşturuluyor..." : "Ortak Alım Önerisini Paylaş"}
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -43,15 +43,18 @@ export type BuyerTab =
   | "recommended"
   | "demands"
   | "offers"
+  | "alarms"
+  | "community"
   | "profile"
   | "chat";
-export type SellerTab = "overview" | "products" | "demands" | "chat";
+export type SellerTab = "overview" | "products" | "demands" | "logistics" | "chat";
 export type AdminTab =
   | "overview"
   | "users"
   | "products"
   | "comments"
   | "demands"
+  | "demand-gaps"
   | "categories";
 
 export type AuthState = SessionUser & Pick<LoginResponse, "token">;
@@ -77,21 +80,24 @@ export type ReviewTab = "comments" | "ratings" | "description";
 
 export const defaultProductSorts = [
   "newest",
+  "relevance",
   "price_asc",
   "price_desc",
   "top_rated",
-  "most_reviewed",
+  "most_viewed",
   "most_favorited",
 ];
 
 export const sortLabels: Record<string, string> = {
   newest: "En yeniler",
+  relevance: "En ilgili",
   oldest: "En eskiler",
   price_asc: "Fiyat artan",
   price_desc: "Fiyat azalan",
   name_asc: "İsim A-Z",
   name_desc: "İsim Z-A",
   top_rated: "En yüksek puan",
+  most_viewed: "En çok görüntülenen",
   most_reviewed: "En çok yorum",
   most_favorited: "En çok favori",
 };
@@ -202,6 +208,26 @@ export function demandImage(demand: DemandDto) {
   return mediaImageSrc(demand.urunResimUrl);
 }
 
+export function demandTitle(demand: DemandDto) {
+  return demand.urunAdi || demand.arananUrunAdi || `Talep #${demand.id}`;
+}
+
+export function ortakAlimStatusMeta(durum: string): {
+  label: string;
+  variant: "green" | "gold" | "outline" | "secondary" | "plum";
+} {
+  if (durum === "ONAYLANDI" || durum === "AKTIF") {
+    return { label: "Aktif Kampanya", variant: "green" };
+  }
+  if (durum === "TAMAMLANDI") {
+    return { label: "Tamamlandı", variant: "secondary" };
+  }
+  if (durum === "IPTAL") {
+    return { label: "İptal", variant: "plum" };
+  }
+  return { label: "Alıcı Önerisi", variant: "gold" };
+}
+
 export function sellerCoverImage(seller: FeaturedSellerDto) {
   return mediaImageSrc(seller.kapakResimUrl);
 }
@@ -211,7 +237,9 @@ export function sellerName(product: ProductDto) {
 }
 
 export function productLocation(product: ProductDto) {
-  const parts = [product.saticiSehir, product.saticiIlce].filter(Boolean);
+  const sehir = product.uretimSehir || product.saticiSehir;
+  const ilce = product.uretimIlce || product.saticiIlce;
+  const parts = [sehir, ilce].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "Konum belirtilmedi";
 }
 

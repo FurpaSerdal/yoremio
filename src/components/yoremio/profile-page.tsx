@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { BrandLogo } from "@/components/yoremio/brand-logo";
+import { demandTitle } from "@/components/yoremio/types";
 import {
   ApiClientError,
   yoremioApi,
@@ -410,7 +411,7 @@ export function YoremioProfilePage() {
               title="Alıcı talepleri"
               emptyTitle="Henüz talep yok."
               rows={buyerDemands.slice(0, 4).map((demand) =>
-                `${demand.urunAdi} · ${demand.durum} · ${formatShortDate(demand.olusturmaTarihi)}`,
+                `${demandTitle(demand)} · ${demand.durum} · ${formatShortDate(demand.olusturmaTarihi)}`,
               )}
             />
             <ProfileActivity

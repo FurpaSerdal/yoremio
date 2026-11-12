@@ -25,6 +25,7 @@ import {
   Star,
   Store,
   Trash2,
+  TrendingUp,
   Users,
 } from "lucide-react";
 
@@ -65,6 +66,7 @@ import {
   type AdminUserDto,
   type CategoryDto,
   type CommentDto,
+  type DemandGapDto,
   type NotificationDto,
   type Paginated,
   type ProductDto,
@@ -156,6 +158,13 @@ export function AdminDashboard({
       onClick: () => onTabChange("demands"),
     },
     {
+      id: "demand-gaps",
+      label: "Arz Boşlukları",
+      icon: TrendingUp,
+      active: activeTab === "demand-gaps",
+      onClick: () => onTabChange("demand-gaps"),
+    },
+    {
       id: "categories",
       label: "Kategori Yönetimi",
       icon: FolderKanban,
@@ -238,12 +247,64 @@ export function AdminDashboard({
                 />
               </div>
 
-              <Panel title="Platform Performans & Katalog Sağlığı">
+              <Panel title="Platform Performans & Büyüme Analitiği">
                 <div className="grid gap-4 md:grid-cols-3">
                   <ProgressLine label="Aktif Satıcı Oranı" value={sellerRatio} />
                   <ProgressLine label="Yayındaki Ürün Oranı" value={activeProductRatio} />
                   <ProgressLine label="Talep Anlaşma Oranı" value={demandAgreeRatio} />
                 </div>
+                {adminStats ? (
+                  <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <Card className="rounded-xl border-border p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Teklif & Anlaşma Dönüşümü
+                      </p>
+                      <p className="mt-1.5 text-lg font-black text-primary tabular-nums">
+                        %{(adminStats.offerConversionRatePercent ?? 0).toFixed(1)} / %
+                        {(adminStats.dealAgreementRatePercent ?? 0).toFixed(1)}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {adminStats.verifiedCompletedDeals ?? 0} çift onaylı işlem
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Tekrar Alıcı (60 Gün)
+                      </p>
+                      <p className="mt-1.5 text-lg font-black text-brand-brown tabular-nums">
+                        {adminStats.repeatBuyers60Days ?? 0} (%
+                        {(adminStats.repeatBuyerRatePercent ?? 0).toFixed(1)})
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        Açık pazar talebi: {adminStats.openMarketDemands ?? 0}
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Ortalama Satıcı Yanıtı
+                      </p>
+                      <p className="mt-1.5 text-lg font-black text-amber-700 tabular-nums">
+                        {adminStats.averageSellerResponseMinutes != null
+                          ? `${Math.round(adminStats.averageSellerResponseMinutes)} dk`
+                          : "—"}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        İlk teklif dönüş hızı
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border p-3.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Alarm & Üretici Takipleri
+                      </p>
+                      <p className="mt-1.5 text-lg font-black text-primary tabular-nums">
+                        {adminStats.activePriceAlerts ?? 0} alarm · {adminStats.totalSellerFollows ?? 0} takip
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        Alıcı etkileşim sinyalleri
+                      </p>
+                    </Card>
+                  </div>
+                ) : null}
               </Panel>
             </>
           ) : null}
@@ -354,6 +415,10 @@ export function AdminDashboard({
                 </Card>
               </div>
             </Panel>
+          ) : null}
+
+          {activeTab === "demand-gaps" && authUser?.token ? (
+            <AdminDemandGapsPanel token={authUser.token} showToast={showToast} />
           ) : null}
 
           {(showOverview || activeTab === "categories") ? (
@@ -529,11 +594,17 @@ function AdminUsersModerationPanel({
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const setVerification = async (user: AdminUserDto, dogrulandiMi: boolean | null) => {
+  const setVerification = async (
+    user: AdminUserDto,
+    dogrulandiMi: boolean | null,
+    subFlags?: { isletmeDogrulandiMi?: boolean; ureticiDogrulandiMi?: boolean },
+  ) => {
     setBusyKey(`verify-${user.id}`);
     try {
       const updated = await yoremioApi.adminSetSellerVerification(token, user.id, {
         dogrulandiMi,
+        isletmeDogrulandiMi: subFlags?.isletmeDogrulandiMi,
+        ureticiDogrulandiMi: subFlags?.ureticiDogrulandiMi,
         not: note.trim() || undefined,
       });
       setData((prev) => ({
@@ -541,11 +612,13 @@ function AdminUsersModerationPanel({
         items: prev.items.map((item) => (item.id === user.id ? updated : item)),
       }));
       showToast?.(
-        dogrulandiMi === true
-          ? `${user.magazaAdi || user.email} satıcısı doğrulandı.`
-          : dogrulandiMi === false
-            ? `${user.magazaAdi || user.email} doğrulaması reddedildi.`
-            : `${user.magazaAdi || user.email} otomatik doğrulama kuralına döndürüldü.`,
+        subFlags
+          ? `${user.magazaAdi || user.email} alt doğrulama statüsü güncellendi.`
+          : dogrulandiMi === true
+            ? `${user.magazaAdi || user.email} satıcısı doğrulandı.`
+            : dogrulandiMi === false
+              ? `${user.magazaAdi || user.email} doğrulaması reddedildi.`
+              : `${user.magazaAdi || user.email} otomatik doğrulama kuralına döndürüldü.`,
         "success",
       );
       onChanged?.();
@@ -700,6 +773,47 @@ function AdminUsersModerationPanel({
                     {user.sehir ? ` · ${[user.sehir, user.ilce].filter(Boolean).join("/")}` : ""}
                     {isSeller ? ` · ${user.urunSayisi} ürün` : ""}
                   </p>
+                  {isSeller ? (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                      <Badge variant={user.emailConfirmed ? "green" : "outline"} className="text-[10px]">
+                        E-posta: {user.emailConfirmed ? "OK" : "Eksik"}
+                      </Badge>
+                      <button
+                        type="button"
+                        disabled={busyKey === `verify-${user.id}`}
+                        onClick={() =>
+                          void setVerification(user, user.adminDogrulamaDurumu ?? null, {
+                            isletmeDogrulandiMi: !(user.isletmeDogrulandi ?? false),
+                          })
+                        }
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[10px] font-bold transition",
+                          user.isletmeDogrulandi
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                            : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                        )}
+                      >
+                        İşletme: {user.isletmeDogrulandi ? "Onaylı ✓" : "Onayla"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === `verify-${user.id}`}
+                        onClick={() =>
+                          void setVerification(user, user.adminDogrulamaDurumu ?? null, {
+                            ureticiDogrulandiMi: !(user.ureticiDogrulandi ?? false),
+                          })
+                        }
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[10px] font-bold transition",
+                          user.ureticiDogrulandi
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                            : "border-border bg-white text-muted-foreground hover:border-primary/40",
+                        )}
+                      >
+                        Üretici: {user.ureticiDogrulandi ? "Onaylı ✓" : "Onayla"}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
                 {isSeller ? (
@@ -761,6 +875,77 @@ function AdminUsersModerationPanel({
           })}
 
           <PaginationBar page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function AdminDemandGapsPanel({
+  token,
+  showToast,
+}: {
+  token: string;
+  showToast?: (message: string, kind: ToastKind, traceId?: string | null) => void;
+}) {
+  const [gaps, setGaps] = useState<DemandGapDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    yoremioApi
+      .adminDemandGaps(token)
+      .then((res) => {
+        if (active) setGaps(res);
+      })
+      .catch((err) => {
+        const info = apiErrorInfo(err);
+        showToast?.(info.message, "error", info.traceId);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [showToast, token]);
+
+  return (
+    <Panel title="Arz Boşlukları Analitiği (Şehir & Kategori Bazlı Açık Talepler)" badge={gaps.length || undefined}>
+      {loading ? (
+        <div className="flex items-center justify-center py-8 text-xs font-bold text-muted-foreground">
+          <Loader2 className="mr-2 size-4 animate-spin" />
+          Arz boşlukları analiz ediliyor...
+        </div>
+      ) : gaps.length === 0 ? (
+        <EmptyState
+          icon={TrendingUp}
+          title="Arz boşluğu tespit edilmedi"
+          description="Alıcıların açık pazar talepleri arttıkça burada öncelikli ürün-şehir boşlukları listelenecek."
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {gaps.map((gap, idx) => (
+            <Card key={idx} className="rounded-xl border-amber-200/80 bg-amber-50/30 p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <Badge variant="gold">{gap.acikTalepSayisi} açık talep</Badge>
+                {gap.teslimatSehir ? (
+                  <span className="text-xs font-bold text-muted-foreground">{gap.teslimatSehir}</span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-sm font-black text-brand-brown">
+                {gap.arananUrunAdi || gap.kategoriAdi || "Belirtilmemiş Ürün"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Kategori: {gap.kategoriAdi || "Genel"} · Ort. satıcı:{" "}
+                <strong>{gap.ortalamaEslesenSaticiSayisi.toFixed(1)}</strong>
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Toplam: {gap.talepSayisi} · Anlaşılan: {gap.anlasilanTalepSayisi}
+                {gap.yeterliSaticiYokMu ? " · Yeterli satıcı yok" : ""}
+              </p>
+            </Card>
+          ))}
         </div>
       )}
     </Panel>

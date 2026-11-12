@@ -65,3 +65,22 @@ export function bindChatEvents(
     connection.off("UnreadNotificationCountUpdated");
   };
 }
+
+export async function sendChatMessage(
+  connection: signalR.HubConnection,
+  toUserId: string,
+  message: string,
+  urunId?: number | null,
+  talepId?: number | null,
+) {
+  if (urunId || talepId) {
+    return connection.invoke(
+      "SendMessageWithContext",
+      toUserId,
+      message,
+      urunId ?? null,
+      talepId ?? null,
+    );
+  }
+  return connection.invoke("SendMessage", toUserId, message);
+}

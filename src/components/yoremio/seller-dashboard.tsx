@@ -4,8 +4,10 @@ import Image from "next/image";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
+  CalendarClock,
   CheckCircle2,
   ClipboardList,
+  Clock,
   CopyPlus,
   Film,
   ImagePlus,
@@ -17,8 +19,12 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Snowflake,
+  Sparkles,
   Store,
   Trash2,
+  Truck,
+  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,12 +43,15 @@ import {
   Panel,
   ProfileRow,
   TrustDial,
+  type ChatContextSelection,
   type DashboardNavItem,
 } from "@/components/yoremio/ui-kit";
 import {
+  demandTitle,
   formatBytes,
   mediaImageSrc,
   mediaVideoSrc,
+  ortakAlimStatusMeta,
   productImage,
   shortDate,
   type AuthState,
@@ -54,16 +63,21 @@ import {
 import type {
   AppBootstrapDto,
   BootstrapLocationDto,
+  BulkStockItemValues,
   CategoryDto,
   ChatConversationDto,
   ChatMessageDto,
   DemandDto,
+  OrtakAlimCreateValues,
+  OrtakAlimDto,
+  PlanliGonderimCreateValues,
+  PlanliGonderimDto,
   ProductDto,
   SellerDashboardDto,
   SellerProfileDto,
   SellerProfileUpdateValues,
 } from "@/lib/api";
-import { cn, formatPrice, limitText, phoneInput } from "@/lib/utils";
+import { cn, formatPrice, formatShortDate, limitText, phoneInput } from "@/lib/utils";
 
 type InventoryFilter = "all" | "active" | "passive" | "out_of_stock";
 type DemandStatusFilter = "ALL" | "ACIK" | "ANLASILDI" | "IPTAL";
@@ -77,9 +91,13 @@ export function SellerDashboard({
   trustScore: trustScoreProp,
   products,
   demands,
+  marketDemands = [],
+  sellerShipments = [],
+  ortakAlimlar = [],
   conversations,
   messages,
   chatTargetId,
+  chatContext = null,
   notificationUnreadCount,
   unreadMessageCount,
   actionStatus,
@@ -87,6 +105,7 @@ export function SellerDashboard({
   typingFromUserId,
   chatEnabled = true,
   onSelectChatTarget,
+  onClearChatContext,
   onSendMessage,
   onTyping,
   onCreateProduct,
@@ -94,6 +113,12 @@ export function SellerDashboard({
   onDuplicateProduct,
   onToggleProductStatus,
   onDeleteProduct,
+  onBulkUpdateStock,
+  onCreateShipment,
+  onCancelShipment,
+  onCreateOrtakAlim,
+  onApproveOrtakAlim,
+  onUpdateOrtakAlimStatus,
   onInspectDemand,
   onOpenStorefront,
   onNavigate,
@@ -107,16 +132,21 @@ export function SellerDashboard({
   trustScore?: number;
   products: ProductDto[];
   demands: DemandDto[];
+  marketDemands?: DemandDto[];
+  sellerShipments?: PlanliGonderimDto[];
+  ortakAlimlar?: OrtakAlimDto[];
   conversations: ChatConversationDto[];
   messages: ChatMessageDto[];
   chatTargetId: string;
+  chatContext?: ChatContextSelection | null;
   notificationUnreadCount: number;
   unreadMessageCount: number;
   actionStatus: string | null;
   signalrConnected: boolean;
   typingFromUserId: string | null;
   chatEnabled?: boolean;
-  onSelectChatTarget: (userId: string) => void;
+  onSelectChatTarget: (userId: string, context?: ChatContextSelection) => void;
+  onClearChatContext?: () => void;
   onSendMessage: (receiverId: string, message: string) => void;
   onTyping: (receiverId: string) => void;
   onCreateProduct: () => void;
@@ -124,6 +154,12 @@ export function SellerDashboard({
   onDuplicateProduct: (product: ProductDto) => void;
   onToggleProductStatus: (product: ProductDto) => void;
   onDeleteProduct: (product: ProductDto) => void;
+  onBulkUpdateStock?: (items: BulkStockItemValues[]) => Promise<boolean>;
+  onCreateShipment?: (values: PlanliGonderimCreateValues) => Promise<boolean>;
+  onCancelShipment?: (id: number) => Promise<void>;
+  onCreateOrtakAlim?: (values: OrtakAlimCreateValues) => Promise<boolean>;
+  onApproveOrtakAlim?: (id: number) => Promise<void>;
+  onUpdateOrtakAlimStatus?: (id: number, durum: string) => Promise<void>;
   onInspectDemand: (demandId: number) => void;
   onOpenStorefront?: (saticiId: string) => void;
   onNavigate: (screen: Screen) => void;
@@ -132,6 +168,7 @@ export function SellerDashboard({
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilter>("all");
   const [inventoryQuery, setInventoryQuery] = useState("");
   const [demandStatusFilter, setDemandStatusFilter] = useState<DemandStatusFilter>("ALL");
+  const [bulkMode, setBulkMode] = useState(false);
 
   const activeProductsCount =
     sellerStats?.activeProducts ?? products.filter((p) => p.aktifMi !== false).length;
@@ -184,9 +221,17 @@ export function SellerDashboard({
       id: "demands",
       label: "Gelen Talepler",
       icon: ClipboardList,
-      badge: pendingDemandsCount || undefined,
+      badge: pendingDemandsCount + marketDemands.length || undefined,
       active: activeTab === "demands",
       onClick: () => onTabChange("demands"),
+    },
+    {
+      id: "logistics",
+      label: "Sevkiyat & Ortak Alım",
+      icon: Truck,
+      badge: sellerShipments.length + ortakAlimlar.length || undefined,
+      active: activeTab === "logistics",
+      onClick: () => onTabChange("logistics"),
     },
     ...(chatEnabled
       ? [
@@ -322,40 +367,73 @@ export function SellerDashboard({
               </div>
 
               {sellerStats ? (
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Card className="rounded-xl border-border bg-white p-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Mağaza Ortalama Puanı
-                    </p>
-                    <p className="mt-2 text-2xl font-black text-amber-600 tabular-nums">
-                      {sellerStats.averageRating.toFixed(1)} ★
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {sellerStats.totalRatings} puan · {sellerStats.totalReviews} alıcı yorumu
-                    </p>
-                  </Card>
-                  <Card className="rounded-xl border-border bg-white p-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Toplam Favorilenme
-                    </p>
-                    <p className="mt-2 text-2xl font-black text-primary tabular-nums">
-                      {sellerStats.totalFavorites}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Alıcıların takip listelerindeki ürünler
-                    </p>
-                  </Card>
-                  <Card className="rounded-xl border-border bg-white p-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Teklif Dönüşüm Özeti
-                    </p>
-                    <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
-                      {sellerStats.acceptedOffers} Kabul / {sellerStats.rejectedOffers} Red
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Yanıt bekleyen: {sellerStats.pendingOffers} teklif
-                    </p>
-                  </Card>
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Card className="rounded-xl border-border bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Mağaza Ortalama Puanı
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-amber-600 tabular-nums">
+                        {sellerStats.averageRating.toFixed(1)} ★
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {sellerStats.totalRatings} puan · {sellerStats.totalReviews} alıcı yorumu
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Takipçi & Favori
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-primary tabular-nums">
+                        {sellerStats.followerCount ?? 0} takipçi
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {sellerStats.totalFavorites} favorilenme · {sellerStats.lowStockProducts ?? 0} azalan stok
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Yanıt Hızı & Eşleşmeler
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                        {sellerStats.averageResponseMinutes != null
+                          ? `${Math.round(sellerStats.averageResponseMinutes)} dk`
+                          : "—"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {sellerStats.unansweredDemands ?? 0} yanıtsız ·{" "}
+                        {sellerStats.matchedOpenMarketDemands ?? marketDemands.length} açık pazar
+                      </p>
+                    </Card>
+                    <Card className="rounded-xl border-border bg-white p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Teklif Dönüşüm Özeti
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-brand-brown tabular-nums">
+                        {sellerStats.acceptedOffers} Kabul / {sellerStats.rejectedOffers} Red
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Yanıt bekleyen: {sellerStats.pendingOffers} teklif
+                      </p>
+                    </Card>
+                  </div>
+
+                  {(sellerStats.actionSuggestions?.length ?? 0) > 0 ? (
+                    <Card className="rounded-xl border-amber-200 bg-amber-50/60 p-4">
+                      <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-900">
+                        <Sparkles className="size-3.5" aria-hidden />
+                        Önerilen Aksiyonlar
+                      </p>
+                      <ul className="mt-2 grid gap-1.5 text-xs font-semibold text-amber-950 sm:grid-cols-2">
+                        {sellerStats.actionSuggestions!.map((tip, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-amber-600" />
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  ) : null}
                 </div>
               ) : null}
             </>
@@ -433,6 +511,12 @@ export function SellerDashboard({
                               Alıcı: <strong className="text-foreground">{demand.aliciAdi}</strong>
                             </span>
                           ) : null}
+                          {demand.sonTeklifTarihi ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
+                              <Clock className="size-3" aria-hidden />
+                              Son teklif: {formatShortDate(demand.sonTeklifTarihi)}
+                            </span>
+                          ) : null}
                           {demand.guncellemeTarihi ? (
                             <span>Son güncelleme: {shortDate(demand.guncellemeTarihi)}</span>
                           ) : null}
@@ -452,7 +536,11 @@ export function SellerDashboard({
                             variant="outline"
                             className="h-8 rounded-lg text-xs font-bold"
                             onClick={() => {
-                              onSelectChatTarget(demand.aliciId);
+                              onSelectChatTarget(demand.aliciId, {
+                                urunId: demand.urunId,
+                                label: demandTitle(demand),
+                                talepId: demand.id,
+                              });
                               onTabChange("chat");
                             }}
                           >
@@ -473,6 +561,65 @@ export function SellerDashboard({
                   ))}
                 </div>
               )}
+            </Panel>
+          ) : null}
+
+          {/* Open Market ("Benim İçin Bul") Opportunities */}
+          {(showOverview || activeTab === "demands") && marketDemands.length > 0 ? (
+            <Panel
+              title="Açık Pazar Fırsatları (Benim İçin Bul Eşleşmeleri)"
+              badge={marketDemands.length}
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                {marketDemands.map((demand) => (
+                  <Card
+                    key={demand.id}
+                    className="flex flex-col justify-between gap-3 rounded-xl border-emerald-200/80 bg-[#f6fbf5] p-3.5"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Badge variant="secondary">Açık Pazar</Badge>
+                        {typeof demand.eslesmeSkoru === "number" ? (
+                          <Badge variant="green">Eşleşme %{demand.eslesmeSkoru}</Badge>
+                        ) : null}
+                      </div>
+                      <h3 className="mt-2 text-sm font-black text-brand-brown">
+                        {demandTitle(demand)}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Miktar: <strong>{demand.miktar} {demand.birim || "adet"}</strong>
+                        {demand.teslimatSehir ? ` · Teslimat: ${demand.teslimatSehir}` : ""}
+                        {demand.hedefBirimFiyat ? ` · Hedef: ${formatPrice(demand.hedefBirimFiyat)}` : ""}
+                      </p>
+                      {demand.eslesmeSebebi ? (
+                        <p className="mt-1 text-[11px] font-semibold text-primary">
+                          {demand.eslesmeSebebi}
+                        </p>
+                      ) : null}
+                      {demand.not ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          &ldquo;{demand.not}&rdquo;
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 border-t border-emerald-200/70 pt-2.5">
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        {demand.sonTeklifTarihi
+                          ? `Son teklif: ${formatShortDate(demand.sonTeklifTarihi)}`
+                          : shortDate(demand.olusturmaTarihi)}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 rounded-lg text-xs font-extrabold"
+                        onClick={() => onInspectDemand(demand.id)}
+                      >
+                        Teklif Gönder
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </Panel>
           ) : null}
 
@@ -510,19 +657,44 @@ export function SellerDashboard({
                   ))}
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <Input
-                    value={inventoryQuery}
-                    onChange={(event) => setInventoryQuery(event.target.value)}
-                    placeholder="Ürün veya kategori ara..."
-                    className="h-9 pl-9 text-xs"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
+                  {onBulkUpdateStock && products.length > 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={bulkMode ? "secondary" : "outline"}
+                      className="h-9 rounded-xl text-xs font-bold"
+                      onClick={() => setBulkMode((v) => !v)}
+                    >
+                      {bulkMode ? "Toplu Düzenlemeyi Kapat" : "Toplu Stok & Fiyat"}
+                    </Button>
+                  ) : null}
+                  <div className="relative w-full sm:w-64">
+                    <Search
+                      className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      value={inventoryQuery}
+                      onChange={(event) => setInventoryQuery(event.target.value)}
+                      placeholder="Ürün veya kategori ara..."
+                      className="h-9 pl-9 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {bulkMode && onBulkUpdateStock && products.length > 0 ? (
+                <SellerBulkStockPanel
+                  products={products}
+                  saving={actionStatus === "bulk-stock"}
+                  onSave={async (items) => {
+                    const ok = await onBulkUpdateStock(items);
+                    if (ok) setBulkMode(false);
+                    return ok;
+                  }}
+                />
+              ) : null}
 
               {filteredProducts.length === 0 ? (
                 <EmptyState
@@ -626,6 +798,22 @@ export function SellerDashboard({
             </Panel>
           ) : null}
 
+          {/* Logistics: Planned Shipments & Ortak Alım */}
+          {activeTab === "logistics" ? (
+            <SellerLogisticsSection
+              profile={profile}
+              products={products}
+              shipments={sellerShipments}
+              ortakAlimlar={ortakAlimlar}
+              actionStatus={actionStatus}
+              onCreateShipment={onCreateShipment}
+              onCancelShipment={onCancelShipment}
+              onCreateOrtakAlim={onCreateOrtakAlim}
+              onApproveOrtakAlim={onApproveOrtakAlim}
+              onUpdateOrtakAlimStatus={onUpdateOrtakAlimStatus}
+            />
+          ) : null}
+
           {/* Live SignalR Chat */}
           {(showOverview || activeTab === "chat") && chatEnabled ? (
             <Panel title="Alıcılarla Canlı Sohbet" badge={unreadMessageCount || undefined}>
@@ -634,10 +822,12 @@ export function SellerDashboard({
                 conversations={conversations}
                 messages={messages}
                 targetId={chatTargetId}
+                chatContext={chatContext}
+                onClearContext={onClearChatContext}
                 actionStatus={actionStatus}
                 signalrConnected={signalrConnected}
                 typingFromUserId={typingFromUserId}
-                onTargetChange={onSelectChatTarget}
+                onTargetChange={(id) => onSelectChatTarget(id)}
                 onSendMessage={onSendMessage}
                 onTyping={onTyping}
               />
@@ -690,6 +880,14 @@ export function SellerProductScreen({
     source?.kategoriId ?? categories[0]?.id ?? 1,
   );
   const [aktifMi, setAktifMi] = useState(source?.aktifMi ?? true);
+  const [birimMiktar, setBirimMiktar] = useState(source?.birimMiktar ?? "");
+  const [teslimatSecenekleri, setTeslimatSecenekleri] = useState(source?.teslimatSecenekleri ?? "");
+  const [yeniHasatMi, setYeniHasatMi] = useState(source?.yeniHasatMi ?? false);
+  const [uretimSehir, setUretimSehir] = useState(source?.uretimSehir ?? "");
+  const [uretimIlce, setUretimIlce] = useState(source?.uretimIlce ?? "");
+  const [eldenTeslimVarMi, setEldenTeslimVarMi] = useState(source?.eldenTeslimVarMi ?? false);
+  const [kargoVarMi, setKargoVarMi] = useState(source?.kargoVarMi ?? true);
+  const [gonderimSehirleri, setGonderimSehirleri] = useState(source?.gonderimSehirleri ?? "");
   const [resimler, setResimler] = useState<File[]>([]);
   const [videolar, setVideolar] = useState<File[]>([]);
 
@@ -776,6 +974,14 @@ export function SellerProductScreen({
         stokMiktari: Math.round(numericStock),
         kategoriId: Number(kategoriId),
         aktifMi,
+        birimMiktar: birimMiktar.trim() || undefined,
+        teslimatSecenekleri: teslimatSecenekleri.trim() || undefined,
+        yeniHasatMi,
+        uretimSehir: uretimSehir.trim() || undefined,
+        uretimIlce: uretimIlce.trim() || undefined,
+        eldenTeslimVarMi,
+        kargoVarMi,
+        gonderimSehirleri: gonderimSehirleri.trim() || undefined,
         resimler,
         videolar,
       },
@@ -872,6 +1078,80 @@ export function SellerProductScreen({
                   className="w-full rounded-xl border border-input bg-white p-3 text-sm outline-none focus:border-primary"
                 />
               </Field>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Birim / Paket Miktarı" htmlFor="prod-unit">
+                  <Input
+                    id="prod-unit"
+                    value={birimMiktar}
+                    onChange={(e) => setBirimMiktar(limitText(e.target.value, 60))}
+                    placeholder="Ör: 1 kg, 2 Lt cam şişe"
+                  />
+                </Field>
+                <Field label="Teslimat Seçenekleri Notu" htmlFor="prod-del-note">
+                  <Input
+                    id="prod-del-note"
+                    value={teslimatSecenekleri}
+                    onChange={(e) => setTeslimatSecenekleri(limitText(e.target.value, 160))}
+                    placeholder="Ör: Soğuk zincir, haftalık toplu kargo"
+                  />
+                </Field>
+                <Field label="Üretim İli (Yöre)" htmlFor="prod-orig-city">
+                  <Input
+                    id="prod-orig-city"
+                    value={uretimSehir}
+                    onChange={(e) => setUretimSehir(limitText(e.target.value, 60))}
+                    placeholder="Ör: Kars, Artvin, Hatay"
+                  />
+                </Field>
+                <Field label="Üretim İlçesi" htmlFor="prod-orig-dist">
+                  <Input
+                    id="prod-orig-dist"
+                    value={uretimIlce}
+                    onChange={(e) => setUretimIlce(limitText(e.target.value, 60))}
+                    placeholder="Ör: Boğatepe, Şavşat"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Gönderim Yapılan Şehirler (virgülle)" htmlFor="prod-ship-cities">
+                <Input
+                  id="prod-ship-cities"
+                  value={gonderimSehirleri}
+                  onChange={(e) => setGonderimSehirleri(limitText(e.target.value, 240))}
+                  placeholder="Ör: Ankara, İstanbul, İzmir veya Tüm Türkiye"
+                />
+              </Field>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-[#f8faf7] p-3 text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={yeniHasatMi}
+                    onChange={(e) => setYeniHasatMi(e.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  <span>Yeni Hasat Ürün</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-[#f8faf7] p-3 text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={eldenTeslimVarMi}
+                    onChange={(e) => setEldenTeslimVarMi(e.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  <span>Elden Teslim Uygun</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-[#f8faf7] p-3 text-xs font-bold">
+                  <input
+                    type="checkbox"
+                    checked={kargoVarMi}
+                    onChange={(e) => setKargoVarMi(e.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  <span>Kargo ile Gönderim</span>
+                </label>
+              </div>
 
               {editingProduct ? (
                 <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-[#f8faf7] p-3 text-sm font-bold">
@@ -1182,10 +1462,26 @@ export function SellerProfileScreen({
               <ProfileRow label="Vergi No">
                 <span className="font-mono font-bold">{profile?.vergiNo || "—"}</span>
               </ProfileRow>
+              <ProfileRow label="Mağaza Paketi">
+                <Badge variant="outline">{profile?.paketTuru || "STANDART"}</Badge>
+              </ProfileRow>
               <ProfileRow label="Durum">
                 <Badge variant={profile?.dogrulanmisSatici ? "green" : "outline"}>
-                  {profile?.dogrulanmisSatici ? "Onaylı" : "İncelemede"}
+                  {profile?.dogrulanmisSatici ? "Tam Doğrulamalı" : "Eksik Doğrulama"}
                 </Badge>
+              </ProfileRow>
+              <ProfileRow label="Alt Doğrulama">
+                <div className="flex flex-wrap justify-end gap-1">
+                  <Badge variant={profile?.epostaDogrulandi ? "green" : "outline"} className="text-[10px]">
+                    E-posta
+                  </Badge>
+                  <Badge variant={profile?.isletmeDogrulandi ? "green" : "outline"} className="text-[10px]">
+                    İşletme
+                  </Badge>
+                  <Badge variant={profile?.ureticiDogrulandi ? "green" : "outline"} className="text-[10px]">
+                    Üretici
+                  </Badge>
+                </div>
               </ProfileRow>
               <ProfileRow label="Admin Kararı">
                 <span className="font-semibold text-foreground">
@@ -1305,5 +1601,491 @@ export function SellerProfileScreen({
         </Card>
       </div>
     </main>
+  );
+}
+
+function SellerBulkStockPanel({
+  products,
+  saving,
+  onSave,
+}: {
+  products: ProductDto[];
+  saving: boolean;
+  onSave: (items: BulkStockItemValues[]) => Promise<boolean>;
+}) {
+  const [drafts, setDrafts] = useState<
+    Record<number, { fiyat: string; stok: string; yeniHasatMi: boolean }>
+  >(() =>
+    Object.fromEntries(
+      products.map((p) => [
+        p.id,
+        {
+          fiyat: String(p.fiyat),
+          stok: String(p.stokMiktari ?? 0),
+          yeniHasatMi: Boolean(p.yeniHasatMi),
+        },
+      ]),
+    ),
+  );
+
+  return (
+    <div className="mb-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-wider text-primary">
+          Toplu Stok, Fiyat & Yeni Hasat Güncelleme
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          disabled={saving}
+          onClick={() => {
+            const items: BulkStockItemValues[] = [];
+            for (const p of products) {
+              const d = drafts[p.id];
+              if (!d) continue;
+              items.push({
+                urunId: p.id,
+                fiyat: Math.max(0.01, Number(d.fiyat) || p.fiyat),
+                stokMiktari: Math.max(0, Math.round(Number(d.stok) || 0)),
+                yeniHasatMi: d.yeniHasatMi,
+              });
+            }
+            onSave(items);
+          }}
+        >
+          {saving ? "Kaydediliyor..." : "Değişiklikleri Toplu Kaydet"}
+        </Button>
+      </div>
+
+      <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+        {products.map((p) => {
+          const d = drafts[p.id] ?? {
+            fiyat: String(p.fiyat),
+            stok: String(p.stokMiktari ?? 0),
+            yeniHasatMi: Boolean(p.yeniHasatMi),
+          };
+          return (
+            <div
+              key={p.id}
+              className="grid grid-cols-1 items-center gap-2 rounded-lg border border-border bg-white p-2.5 text-xs sm:grid-cols-[1.5fr_90px_80px_auto]"
+            >
+              <span className="truncate font-bold text-brand-brown">{p.adi}</span>
+              <Input
+                type="number"
+                step="0.01"
+                min={0.01}
+                value={d.fiyat}
+                onChange={(e) =>
+                  setDrafts((prev) => ({ ...prev, [p.id]: { ...d, fiyat: e.target.value } }))
+                }
+                className="h-8 text-xs"
+                aria-label={`${p.adi} fiyat`}
+              />
+              <Input
+                type="number"
+                min={0}
+                value={d.stok}
+                onChange={(e) =>
+                  setDrafts((prev) => ({ ...prev, [p.id]: { ...d, stok: e.target.value } }))
+                }
+                className="h-8 text-xs"
+                aria-label={`${p.adi} stok`}
+              />
+              <label className="flex cursor-pointer items-center gap-1.5 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={d.yeniHasatMi}
+                  onChange={(e) =>
+                    setDrafts((prev) => ({
+                      ...prev,
+                      [p.id]: { ...d, yeniHasatMi: e.target.checked },
+                    }))
+                  }
+                  className="size-3.5 accent-primary"
+                />
+                Hasat
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SellerLogisticsSection({
+  profile,
+  products,
+  shipments,
+  ortakAlimlar,
+  actionStatus,
+  onCreateShipment,
+  onCancelShipment,
+  onCreateOrtakAlim,
+  onApproveOrtakAlim,
+  onUpdateOrtakAlimStatus,
+}: {
+  profile: SellerProfileDto | null;
+  products: ProductDto[];
+  shipments: PlanliGonderimDto[];
+  ortakAlimlar: OrtakAlimDto[];
+  actionStatus: string | null;
+  onCreateShipment?: (values: PlanliGonderimCreateValues) => Promise<boolean>;
+  onCancelShipment?: (id: number) => Promise<void>;
+  onCreateOrtakAlim?: (values: OrtakAlimCreateValues) => Promise<boolean>;
+  onApproveOrtakAlim?: (id: number) => Promise<void>;
+  onUpdateOrtakAlimStatus?: (id: number, durum: string) => Promise<void>;
+}) {
+  const [baslik, setBaslik] = useState("");
+  const [hedefSehir, setHedefSehir] = useState("");
+  const [menseiSehir, setMenseiSehir] = useState(profile?.sehir ?? "");
+  const [gonderimTarihi, setGonderimTarihi] = useState(() =>
+    new Date(Date.now() + 5 * 86400_000).toISOString().slice(0, 10),
+  );
+  const [sonTalepTarihi, setSonTalepTarihi] = useState(() =>
+    new Date(Date.now() + 3 * 86400_000).toISOString().slice(0, 10),
+  );
+  const [tahminiUrunNotu, setTahminiUrunNotu] = useState("");
+  const [sogukZincirVarMi, setSogukZincirVarMi] = useState(true);
+  const [aciklama, setAciklama] = useState("");
+
+  const [oaBaslik, setOaBaslik] = useState("");
+  const [oaProductId, setOaProductId] = useState<string>(products[0] ? String(products[0].id) : "");
+  const [oaMenseiSehir, setOaMenseiSehir] = useState(profile?.sehir ?? "");
+  const [oaHedefSehir, setOaHedefSehir] = useState("");
+  const [oaMinimumKatilimci, setOaMinimumKatilimci] = useState("5");
+  const [oaBirim, setOaBirim] = useState("kg");
+  const [oaBirimFiyat, setOaBirimFiyat] = useState("290");
+  const [oaSogukZincir, setOaSogukZincir] = useState(false);
+  const [oaSonKatilimTarihi, setOaSonKatilimTarihi] = useState(() =>
+    new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10),
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Planlı Sevkiyat ("Şehrime Gelen Ürünler") */}
+      <Panel title="Planlı Sevkiyatlar (Şehrime Gelen Ürünler)" badge={shipments.length || undefined}>
+        {onCreateShipment ? (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!baslik.trim() || !hedefSehir.trim()) return;
+              const ok = await onCreateShipment({
+                baslik: baslik.trim(),
+                hedefSehir: hedefSehir.trim(),
+                menseiSehir: menseiSehir.trim() || profile?.sehir || "Türkiye",
+                gonderimTarihi: new Date(gonderimTarihi).toISOString(),
+                sonTalepTarihi: new Date(sonTalepTarihi).toISOString(),
+                tahminiUrunNotu: tahminiUrunNotu.trim() || undefined,
+                sogukZincirVarMi,
+                aciklama: aciklama.trim() || undefined,
+              });
+              if (ok) {
+                setBaslik("");
+                setAciklama("");
+                setTahminiUrunNotu("");
+              }
+            }}
+            className="mb-4 space-y-3 rounded-xl border border-sky-200 bg-sky-50/40 p-4"
+          >
+            <p className="text-xs font-black uppercase tracking-wider text-sky-900">
+              Yeni Planlı Sevkiyat Duyur (Takipçilere Bildirim Gider)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Sevkiyat Başlığı *" htmlFor="ship-title">
+                <Input
+                  id="ship-title"
+                  required
+                  value={baslik}
+                  onChange={(e) => setBaslik(e.target.value)}
+                  placeholder="Ör: Ankara Cuma Taze Kars Kaşarı Sevkiyatı"
+                />
+              </Field>
+              <Field label="Hedef Teslimat Şehri *" htmlFor="ship-target">
+                <Input
+                  id="ship-target"
+                  required
+                  value={hedefSehir}
+                  onChange={(e) => setHedefSehir(e.target.value)}
+                  placeholder="Ör: Ankara"
+                />
+              </Field>
+              <Field label="Menşei / Üretim Şehri" htmlFor="ship-origin">
+                <Input
+                  id="ship-origin"
+                  value={menseiSehir}
+                  onChange={(e) => setMenseiSehir(e.target.value)}
+                  placeholder="Ör: Kars"
+                />
+              </Field>
+              <Field label="Planlanan Sevk Tarihi *" htmlFor="ship-date">
+                <Input
+                  id="ship-date"
+                  type="date"
+                  required
+                  value={gonderimTarihi}
+                  onChange={(e) => setGonderimTarihi(e.target.value)}
+                />
+              </Field>
+              <Field label="Son Talep Tarihi *" htmlFor="ship-last-date">
+                <Input
+                  id="ship-last-date"
+                  type="date"
+                  required
+                  value={sonTalepTarihi}
+                  onChange={(e) => setSonTalepTarihi(e.target.value)}
+                />
+              </Field>
+              <Field label="Tahmini Ürün & Fiyat Notu" htmlFor="ship-note">
+                <Input
+                  id="ship-note"
+                  value={tahminiUrunNotu}
+                  onChange={(e) => setTahminiUrunNotu(e.target.value)}
+                  placeholder="Ör: Eski kaşar ~380 ₺/kg, tereyağı"
+                />
+              </Field>
+            </div>
+            <Field label="Sevkiyat Açıklaması / Dağıtım Noktası" htmlFor="ship-desc">
+              <Input
+                id="ship-desc"
+                value={aciklama}
+                onChange={(e) => setAciklama(e.target.value)}
+                placeholder="Ör: Cuma akşamı teslim, soğutuculu araçla Çankaya dağıtım..."
+                className="bg-white"
+              />
+            </Field>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-bold">
+                <input
+                  type="checkbox"
+                  checked={sogukZincirVarMi}
+                  onChange={(e) => setSogukZincirVarMi(e.target.checked)}
+                  className="size-4 accent-primary"
+                />
+                <Snowflake className="size-3.5 text-sky-700" aria-hidden />
+                Soğuk zincir sevkiyat
+              </label>
+              <Button type="submit" size="sm" disabled={actionStatus === "shipment-create"}>
+                {actionStatus === "shipment-create" ? "Yayınlanıyor..." : "Sevkiyat Duyurusu Yayınla"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {shipments.length === 0 ? (
+          <EmptyState
+            icon={Truck}
+            title="Planlı sevkiyat yok"
+            description="Hedef şehirlere yapacağın toplu sevkiyatları buradan duyurabilirsin."
+          />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {shipments.map((s) => (
+              <Card key={s.id} className="flex items-start justify-between gap-3 rounded-xl border-border p-3.5">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary">
+                      {s.menseiSehir} → {s.hedefSehir}
+                    </Badge>
+                    {s.sogukZincirVarMi ? <Badge variant="green">Soğuk Zincir</Badge> : null}
+                  </div>
+                  <p className="mt-1.5 text-sm font-black text-brand-brown">{s.baslik}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    <CalendarClock className="mr-1 inline size-3.5" aria-hidden />
+                    Sevk: {formatShortDate(s.gonderimTarihi)} · Son Talep: {formatShortDate(s.sonTalepTarihi)}
+                  </p>
+                </div>
+                {onCancelShipment ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 shrink-0 text-xs font-bold text-red-600 hover:bg-red-50"
+                    onClick={() => onCancelShipment(s.id)}
+                  >
+                    İptal Et
+                  </Button>
+                ) : null}
+              </Card>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      {/* Yöremio Ortak Alım Kampanyaları Yönetimi */}
+      <Panel title="Yöremio Ortak Alım Yönetimi" badge={ortakAlimlar.length || undefined}>
+        {onCreateOrtakAlim ? (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!oaBaslik.trim()) return;
+              const ok = await onCreateOrtakAlim({
+                urunId: oaProductId ? Number(oaProductId) : undefined,
+                baslik: oaBaslik.trim(),
+                menseiSehir: oaMenseiSehir.trim() || profile?.sehir || "Türkiye",
+                hedefSehir: oaHedefSehir.trim() || profile?.sehir || "Türkiye",
+                birim: oaBirim.trim() || "kg",
+                birimFiyat: Math.max(1, Number(oaBirimFiyat) || 100),
+                minimumKatilimci: Math.max(2, Number(oaMinimumKatilimci) || 5),
+                sogukZincirGerekliMi: oaSogukZincir,
+                sonKatilimTarihi: new Date(oaSonKatilimTarihi).toISOString(),
+              });
+              if (ok) setOaBaslik("");
+            }}
+            className="mb-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4"
+          >
+            <p className="text-xs font-black uppercase tracking-wider text-primary">
+              Yeni Ortak Alım Kampanyası Başlat
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Kampanya Başlığı *" htmlFor="soa-title">
+                <Input
+                  id="soa-title"
+                  required
+                  value={oaBaslik}
+                  onChange={(e) => setOaBaslik(e.target.value)}
+                  placeholder="Ör: 25 Kg Taş Baskı Zeytinyağı Ortak Alımı"
+                />
+              </Field>
+              <Field label="İlgili Ürün" htmlFor="soa-prod">
+                <select
+                  id="soa-prod"
+                  value={oaProductId}
+                  onChange={(e) => setOaProductId(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm font-semibold"
+                >
+                  <option value="">Ürün Seçiniz (Opsiyonel)</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.adi}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Menşei Şehir" htmlFor="soa-origin">
+                  <Input
+                    id="soa-origin"
+                    value={oaMenseiSehir}
+                    onChange={(e) => setOaMenseiSehir(e.target.value)}
+                    placeholder="Ör: Ayvalık"
+                  />
+                </Field>
+                <Field label="Hedef Şehir" htmlFor="soa-city">
+                  <Input
+                    id="soa-city"
+                    value={oaHedefSehir}
+                    onChange={(e) => setOaHedefSehir(e.target.value)}
+                    placeholder="Ör: İstanbul"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Min Katılımcı" htmlFor="soa-target">
+                  <Input
+                    id="soa-target"
+                    type="number"
+                    min={2}
+                    value={oaMinimumKatilimci}
+                    onChange={(e) => setOaMinimumKatilimci(e.target.value)}
+                  />
+                </Field>
+                <Field label="Birim" htmlFor="soa-unit">
+                  <Input id="soa-unit" value={oaBirim} onChange={(e) => setOaBirim(e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Ortak Alım Birim Fiyatı (₺) *" htmlFor="soa-price">
+                <Input
+                  id="soa-price"
+                  type="number"
+                  min={1}
+                  required
+                  value={oaBirimFiyat}
+                  onChange={(e) => setOaBirimFiyat(e.target.value)}
+                  placeholder="290"
+                />
+              </Field>
+              <Field label="Son Katılım Tarihi *" htmlFor="soa-end">
+                <Input
+                  id="soa-end"
+                  type="date"
+                  required
+                  value={oaSonKatilimTarihi}
+                  onChange={(e) => setOaSonKatilimTarihi(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-bold">
+                <input
+                  type="checkbox"
+                  checked={oaSogukZincir}
+                  onChange={(e) => setOaSogukZincir(e.target.checked)}
+                  className="size-4 accent-primary"
+                />
+                Soğuk zincir gerekli
+              </label>
+              <Button type="submit" size="sm" disabled={actionStatus === "ortak-alim-create"}>
+                <Users className="size-3.5" aria-hidden />
+                {actionStatus === "ortak-alim-create" ? "Başlatılıyor..." : "Kampanya Aç"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {ortakAlimlar.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {ortakAlimlar.map((camp) => {
+              const meta = ortakAlimStatusMeta(camp.durum);
+              return (
+                <Card key={camp.id} className="space-y-2 rounded-xl border-border p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant={meta.variant}>{meta.label}</Badge>
+                    <span className="text-xs font-bold text-primary tabular-nums">
+                      {camp.toplamTalepMiktari} {camp.birim || "adet"} ({camp.mevcutKatilimci}/{camp.minimumKatilimci} kişi)
+                    </span>
+                  </div>
+                  <p className="text-sm font-black text-brand-brown">{camp.baslik}</p>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {camp.durum === "ONERI" && onApproveOrtakAlim ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 rounded-lg text-xs font-extrabold"
+                        onClick={() => onApproveOrtakAlim(camp.id)}
+                      >
+                        Üretici Olarak Onayla
+                      </Button>
+                    ) : null}
+                    {onUpdateOrtakAlimStatus && camp.durum !== "TAMAMLANDI" && camp.durum !== "IPTAL" ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-lg text-xs font-bold"
+                          onClick={() => onUpdateOrtakAlimStatus(camp.id, "TAMAMLANDI")}
+                        >
+                          Tamamla
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 rounded-lg text-xs font-bold text-red-600"
+                          onClick={() => onUpdateOrtakAlimStatus(camp.id, "IPTAL")}
+                        >
+                          İptal
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        ) : null}
+      </Panel>
+    </div>
   );
 }

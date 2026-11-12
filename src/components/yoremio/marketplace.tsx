@@ -7,6 +7,7 @@ import {
   yoremioApi,
   type AdminDashboardDto,
   type AppBootstrapDto,
+  type BulkStockItemValues,
   type BuyerProfileDto,
   type BuyerProfileUpdateValues,
   type CategoryDto,
@@ -17,17 +18,26 @@ import {
   type FeaturedSellerDto,
   type LoginResponse,
   type NotificationDto,
+  type OfferSubmitValues,
+  type OpenMarketDemandValues,
+  type OrtakAlimCreateValues,
+  type OrtakAlimDto,
   type Paginated,
+  type PlanliGonderimCreateValues,
+  type PlanliGonderimDto,
+  type PriceAlertDto,
   type ProductDto,
   type RatingDto,
   type ReviewEligibilityDto,
   type SellerDashboardDto,
   type SellerProfileDto,
   type SellerProfileUpdateValues,
+  type SmartAlternativesDto,
+  type StockAlertDto,
 } from "@/lib/api";
 
 type CategoryFormValues = Omit<CategoryDto, "id">;
-import { bindChatEvents, createChatConnection } from "@/lib/chat";
+import { bindChatEvents, createChatConnection, sendChatMessage } from "@/lib/chat";
 import {
   AccessRequiredScreen,
   AdminDashboard,
@@ -74,8 +84,10 @@ import {
 import {
   ConfirmModal,
   DemandDetailModal,
+  OpenMarketDemandModal,
   SellerStorefrontModal,
   Toast,
+  type ChatContextSelection,
 } from "@/components/yoremio/ui-kit";
 
 type ConfirmModalState = {
@@ -108,16 +120,25 @@ export function YoremioMarketplace() {
   );
   const [productsState, setProductsState] = useState<LoadState>("loading");
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
+  const [smartAlternatives, setSmartAlternatives] = useState<SmartAlternativesDto | null>(null);
+  const [planliGonderimler, setPlanliGonderimler] = useState<PlanliGonderimDto[]>([]);
+  const [ortakAlimlar, setOrtakAlimlar] = useState<OrtakAlimDto[]>([]);
+  const [selectedDeliveryCity, setSelectedDeliveryCity] = useState("");
 
   // Filters
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
+  const [teslimatSehir, setTeslimatSehir] = useState("");
+  const [uretimSehir, setUretimSehir] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [sadeceYeniHasat, setSadeceYeniHasat] = useState(false);
+  const [sadeceEldenTeslim, setSadeceEldenTeslim] = useState(false);
+  const [sadeceKargolu, setSadeceKargolu] = useState(false);
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sort, setSort] = useState<SortKey>("newest");
   const [page, setPage] = useState(1);
@@ -126,6 +147,9 @@ export function YoremioMarketplace() {
   const [favorites, setFavorites] = useState<ProductDto[]>([]);
   const [recommended, setRecommended] = useState<ProductDto[]>([]);
   const [buyerDemands, setBuyerDemands] = useState<DemandDto[]>([]);
+  const [priceAlerts, setPriceAlerts] = useState<PriceAlertDto[]>([]);
+  const [stockAlerts, setStockAlerts] = useState<StockAlertDto[]>([]);
+  const [followedSellers, setFollowedSellers] = useState<FeaturedSellerDto[]>([]);
   const [buyerProfile, setBuyerProfile] = useState<BuyerProfileDto | null>(null);
   const [sellerProfile, setSellerProfile] = useState<SellerProfileDto | null>(null);
   const [sellerStats, setSellerStats] = useState<SellerDashboardDto | null>(null);
@@ -133,6 +157,8 @@ export function YoremioMarketplace() {
   const [sellerTrustScore, setSellerTrustScore] = useState<number>(0);
   const [sellerProducts, setSellerProducts] = useState<ProductDto[]>([]);
   const [sellerDemands, setSellerDemands] = useState<DemandDto[]>([]);
+  const [marketDemands, setMarketDemands] = useState<DemandDto[]>([]);
+  const [sellerShipments, setSellerShipments] = useState<PlanliGonderimDto[]>([]);
   const [editingProduct, setEditingProduct] = useState<ProductDto | null>(null);
   const [productPrefillSource, setProductPrefillSource] = useState<ProductDto | null>(null);
 
@@ -148,6 +174,7 @@ export function YoremioMarketplace() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<ChatConversationDto[]>([]);
   const [chatTargetId, setChatTargetId] = useState("");
+  const [chatContext, setChatContext] = useState<ChatContextSelection | null>(null);
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [signalrConnected, setSignalrConnected] = useState(false);
   const [typingFromUserId, setTypingFromUserId] = useState<string | null>(null);
@@ -155,12 +182,14 @@ export function YoremioMarketplace() {
   // Modals
   const [storefrontSellerId, setStorefrontSellerId] = useState<string | null>(null);
   const [inspectedDemandId, setInspectedDemandId] = useState<number | null>(null);
+  const [openMarketOpen, setOpenMarketOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>(null);
   const [confirmPending, setConfirmPending] = useState(false);
 
   const hubRef = useRef<signalR.HubConnection | null>(null);
   const tokenRef = useRef<string>("");
   const chatTargetRef = useRef<string>("");
+  const chatContextRef = useRef<ChatContextSelection | null>(null);
   const typingTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -170,6 +199,10 @@ export function YoremioMarketplace() {
   useEffect(() => {
     chatTargetRef.current = chatTargetId;
   }, [chatTargetId]);
+
+  useEffect(() => {
+    chatContextRef.current = chatContext;
+  }, [chatContext]);
 
   const showToast = useCallback(
     (message: string, kind: ToastKind = "info", traceId?: string | null) => {
@@ -208,18 +241,32 @@ export function YoremioMarketplace() {
     () => new Set(favorites.map((item) => item.id)),
     [favorites],
   );
+  const priceAlarmProductIds = useMemo(
+    () => new Set(priceAlerts.map((item) => item.urunId)),
+    [priceAlerts],
+  );
+  const stockAlarmProductIds = useMemo(
+    () => new Set(stockAlerts.map((item) => item.urunId)),
+    [stockAlerts],
+  );
+  const followedSellerIds = useMemo(
+    () => new Set(followedSellers.map((item) => item.kullaniciId)),
+    [followedSellers],
+  );
 
   const unreadMessageCount = useMemo(
     () => conversations.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0),
     [conversations],
   );
 
-  // Public bootstrap + categories + featured sellers
-  const loadPublicBase = useCallback(async () => {
-    const [bootRes, catRes, sellerRes] = await Promise.allSettled([
+  // Public bootstrap + categories + featured sellers + planned shipments + ortak alim
+  const loadPublicBase = useCallback(async (deliveryCity?: string) => {
+    const [bootRes, catRes, sellerRes, shipRes, oaRes] = await Promise.allSettled([
       yoremioApi.bootstrap(),
       yoremioApi.categories(),
       yoremioApi.featuredSellers(8),
+      yoremioApi.planliGonderimler({ hedefSehir: deliveryCity || undefined }),
+      yoremioApi.ortakAlimlar({ hedefSehir: deliveryCity || undefined }),
     ]);
 
     if (bootRes.status === "fulfilled") {
@@ -234,36 +281,48 @@ export function YoremioMarketplace() {
     if (sellerRes.status === "fulfilled") {
       setFeaturedSellers(sellerRes.value);
     }
+    if (shipRes.status === "fulfilled") {
+      setPlanliGonderimler(shipRes.value);
+    }
+    if (oaRes.status === "fulfilled") {
+      setOrtakAlimlar(oaRes.value.items);
+    }
   }, []);
 
-  // Products loader
+  // Smart location-aware product discovery loader
   const loadProducts = useCallback(async () => {
     setProductsState("loading");
     try {
       const parsedMin = minPrice.trim() ? Number(minPrice) : undefined;
       const parsedMax = maxPrice.trim() ? Number(maxPrice) : undefined;
-      const result = await yoremioApi.products({
+      const discover = await yoremioApi.discoverProducts({
         page,
         pageSize: PAGE_SIZE,
         q: query.trim() || undefined,
         kategoriId: categoryId ?? undefined,
         sehir: city.trim() || undefined,
         ilce: district.trim() || undefined,
+        teslimatSehir: teslimatSehir.trim() || undefined,
+        uretimSehir: uretimSehir.trim() || undefined,
         minFiyat: Number.isFinite(parsedMin) ? parsedMin : undefined,
         maxFiyat: Number.isFinite(parsedMax) ? parsedMax : undefined,
         sadeceStoktaOlanlar: onlyInStock || undefined,
         sadeceDogrulanmisSatici: verifiedOnly || undefined,
+        sadeceYeniHasat: sadeceYeniHasat || undefined,
+        sadeceEldenTeslim: sadeceEldenTeslim || undefined,
+        sadeceKargolu: sadeceKargolu || undefined,
         minOrtalamaPuan: minRating ?? undefined,
         sort,
       });
 
-      setProductsPage(result);
+      setProductsPage(discover.sonuclar);
+      setSmartAlternatives(discover.alternatifler ?? null);
       setProductsState("idle");
       setSelectedProduct((prev) => {
-        if (prev && result.items.some((item) => item.id === prev.id)) {
-          return result.items.find((item) => item.id === prev.id) ?? prev;
+        if (prev && discover.sonuclar.items.some((item) => item.id === prev.id)) {
+          return discover.sonuclar.items.find((item) => item.id === prev.id) ?? prev;
         }
-        return result.items[0] ?? null;
+        return discover.sonuclar.items[0] ?? null;
       });
     } catch (error) {
       const info = apiErrorInfo(error);
@@ -276,10 +335,15 @@ export function YoremioMarketplace() {
     categoryId,
     city,
     district,
+    teslimatSehir,
+    uretimSehir,
     minPrice,
     maxPrice,
     onlyInStock,
     verifiedOnly,
+    sadeceYeniHasat,
+    sadeceEldenTeslim,
+    sadeceKargolu,
     minRating,
     sort,
     showToast,
@@ -337,6 +401,30 @@ export function YoremioMarketplace() {
             .then(setRecommended)
             .catch(() => {}),
         );
+        tasks.push(
+          yoremioApi
+            .priceAlerts(token)
+            .then(setPriceAlerts)
+            .catch(() => {}),
+        );
+        tasks.push(
+          yoremioApi
+            .stockAlerts(token)
+            .then(setStockAlerts)
+            .catch(() => {}),
+        );
+        tasks.push(
+          yoremioApi
+            .followedSellers(token)
+            .then(setFollowedSellers)
+            .catch(() => {}),
+        );
+        tasks.push(
+          yoremioApi
+            .ortakAlimlar()
+            .then((res) => setOrtakAlimlar(res.items))
+            .catch(() => {}),
+        );
         if (demandFlowEnabled) {
           tasks.push(
             yoremioApi
@@ -372,11 +460,23 @@ export function YoremioMarketplace() {
             .then(setSellerProducts)
             .catch(() => {}),
         );
+        tasks.push(
+          yoremioApi
+            .planliGonderimler({ saticiId: user.userId })
+            .then(setSellerShipments)
+            .catch(() => {}),
+        );
         if (demandFlowEnabled) {
           tasks.push(
             yoremioApi
               .sellerDemands(token)
               .then(setSellerDemands)
+              .catch(() => {}),
+          );
+          tasks.push(
+            yoremioApi
+              .openMarketDemands(token)
+              .then((res) => setMarketDemands(res.items))
               .catch(() => {}),
           );
         }
@@ -478,7 +578,7 @@ export function YoremioMarketplace() {
     return () => window.clearTimeout(timer);
   }, [loadProducts]);
 
-  // Load conversation messages when chat target changes
+  // Load conversation messages when chat target or context changes
   useEffect(() => {
     if (!authUser?.token || !chatTargetId || !chatEnabled) return;
     let cancelled = false;
@@ -486,7 +586,14 @@ export function YoremioMarketplace() {
 
     const loadChat = async () => {
       try {
-        const res = await yoremioApi.messages(token, chatTargetId, 1, 80);
+        const res = await yoremioApi.messages(
+          token,
+          chatTargetId,
+          1,
+          80,
+          chatContext?.urunId ?? undefined,
+          chatContext?.talepId ?? undefined,
+        );
         if (cancelled) return;
         setMessages(res.items);
         await yoremioApi.markConversationRead(token, chatTargetId).catch(() => {});
@@ -502,7 +609,7 @@ export function YoremioMarketplace() {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.token, chatEnabled, chatTargetId]);
+  }, [authUser?.token, chatContext?.talepId, chatContext?.urunId, chatEnabled, chatTargetId]);
 
   // Real-time SignalR ChatHub connection lifecycle
   useEffect(() => {
@@ -611,6 +718,9 @@ export function YoremioMarketplace() {
     setFavorites([]);
     setRecommended([]);
     setBuyerDemands([]);
+    setPriceAlerts([]);
+    setStockAlerts([]);
+    setFollowedSellers([]);
     setBuyerProfile(null);
     setSellerProfile(null);
     setSellerStats(null);
@@ -618,11 +728,14 @@ export function YoremioMarketplace() {
     setSellerTrustScore(0);
     setSellerProducts([]);
     setSellerDemands([]);
+    setMarketDemands([]);
+    setSellerShipments([]);
     setNotifications([]);
     setUnreadCount(0);
     setConversations([]);
     setMessages([]);
     setChatTargetId("");
+    setChatContext(null);
     setScreen("home");
     showToast("Çıkış yapıldı.", "info");
   };
@@ -763,17 +876,14 @@ export function YoremioMarketplace() {
     });
   };
 
-  const handleSubmitOffer = async (
-    talepId: number,
-    values: { birimFiyat?: number; mesaj: string },
-  ) => {
+  const handleSubmitOffer = async (talepId: number, values: OfferSubmitValues) => {
     if (!authUser) return;
     setActionStatus(`offer-submit-${talepId}`);
     try {
       await yoremioApi.upsertOffer(authUser.token, talepId, values);
       await loadAuthenticatedData(authUser);
       setInspectedDemandId(null);
-      showToast("Fiyat ve mesaj teklifin alıcıya iletildi!", "success");
+      showToast("Fiyat ve teslimat teklifin alıcıya iletildi!", "success");
     } catch (err) {
       const info = apiErrorInfo(err);
       showToast(info.message, "error", info.traceId);
@@ -782,7 +892,62 @@ export function YoremioMarketplace() {
     }
   };
 
-  const handleStartChatWithUser = (otherUserId: string, initialStoreName?: string) => {
+  const handleConfirmAgreement = async (talepId: number) => {
+    if (!authUser) return;
+    setActionStatus(`agreement-${talepId}`);
+    try {
+      await yoremioApi.confirmAgreement(authUser.token, talepId, true);
+      await loadAuthenticatedData(authUser);
+      showToast("Anlaşma/teslim onayınız kaydedildi!", "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleRepeatDemand = async (talepId: number) => {
+    if (!authUser) return;
+    setActionStatus(`demand-repeat-${talepId}`);
+    try {
+      const repeated = await yoremioApi.repeatDemand(authUser.token, talepId);
+      setBuyerDemands((prev) => [repeated, ...prev]);
+      showToast("Talebin yeniden açıldı!", "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleCreateOpenMarketDemand = async (values: OpenMarketDemandValues) => {
+    if (!authUser) {
+      showToast("Açık pazar talebi açmak için giriş yapmalısın.", "info");
+      setScreen("login");
+      return false;
+    }
+    setActionStatus("open-market-create");
+    try {
+      const created = await yoremioApi.createOpenMarketDemand(authUser.token, values);
+      setBuyerDemands((prev) => [created, ...prev]);
+      showToast("Açık pazar talebin uygun üreticilere iletildi!", "success");
+      return true;
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+      return false;
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleStartChatWithUser = (
+    otherUserId: string,
+    initialStoreName?: string,
+    context?: ChatContextSelection,
+  ) => {
     if (!authUser) {
       showToast("Mesajlaşmak için giriş yapmalısın.", "info");
       setScreen("login");
@@ -804,6 +969,7 @@ export function YoremioMarketplace() {
       ];
     });
     setChatTargetId(otherUserId);
+    setChatContext(context ?? null);
 
     if (hasRole(authUser, "SATICI")) {
       setSellerTab("chat");
@@ -819,17 +985,36 @@ export function YoremioMarketplace() {
   const handleSendMessage = async (receiverId: string, message: string) => {
     if (!authUser) return;
     setActionStatus("chat-send");
+    const activeCtx = chatContextRef.current;
     try {
       const hub = hubRef.current;
       if (hub && hub.state === signalR.HubConnectionState.Connected) {
-        await hub.invoke("SendMessage", receiverId, message);
+        await sendChatMessage(
+          hub,
+          receiverId,
+          message,
+          activeCtx?.urunId ?? undefined,
+          activeCtx?.talepId ?? undefined,
+        );
       } else {
-        const sent = await yoremioApi.sendMessage(authUser.token, receiverId, message);
+        const sent = await yoremioApi.sendMessage(
+          authUser.token,
+          receiverId,
+          message,
+          activeCtx?.urunId ?? undefined,
+          activeCtx?.talepId ?? undefined,
+        );
         setMessages((prev) => [...prev, sent]);
       }
     } catch {
       try {
-        const sent = await yoremioApi.sendMessage(authUser.token, receiverId, message);
+        const sent = await yoremioApi.sendMessage(
+          authUser.token,
+          receiverId,
+          message,
+          activeCtx?.urunId ?? undefined,
+          activeCtx?.talepId ?? undefined,
+        );
         setMessages((prev) => [...prev, sent]);
       } catch (err) {
         const info = apiErrorInfo(err);
@@ -837,6 +1022,209 @@ export function YoremioMarketplace() {
       }
     } finally {
       setActionStatus(null);
+    }
+  };
+
+  const handleSavePriceAlert = async (product: ProductDto, hedefFiyat: number) => {
+    if (!authUser || !hasRole(authUser, "ALICI")) {
+      showToast("Fiyat alarmı kurmak için alıcı olarak giriş yapmalısın.", "info");
+      if (!authUser) setScreen("login");
+      return;
+    }
+    try {
+      const saved = await yoremioApi.savePriceAlert(authUser.token, product.id, hedefFiyat);
+      setPriceAlerts((prev) => [saved, ...prev.filter((a) => a.urunId !== product.id)]);
+      showToast(`${product.adi} için fiyat alarmı kaydedildi!`, "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleDeletePriceAlert = async (urunId: number) => {
+    if (!authUser) return;
+    try {
+      await yoremioApi.deletePriceAlert(authUser.token, urunId);
+      setPriceAlerts((prev) => prev.filter((a) => a.urunId !== urunId));
+      showToast("Fiyat alarmı kaldırıldı.", "info");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleToggleStockAlarm = async (product: ProductDto) => {
+    if (!authUser || !hasRole(authUser, "ALICI")) {
+      showToast("Stok alarmı kurmak için alıcı olarak giriş yapmalısın.", "info");
+      if (!authUser) setScreen("login");
+      return;
+    }
+    try {
+      if (stockAlarmProductIds.has(product.id)) {
+        await yoremioApi.deleteStockAlert(authUser.token, product.id);
+        setStockAlerts((prev) => prev.filter((a) => a.urunId !== product.id));
+        showToast("Stok alarmı kaldırıldı.", "info");
+      } else {
+        const saved = await yoremioApi.saveStockAlert(authUser.token, product.id);
+        setStockAlerts((prev) => [saved, ...prev.filter((a) => a.urunId !== product.id)]);
+        showToast(`${product.adi} için stok alarmı aktif!`, "success");
+      }
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleToggleFollowSeller = async (saticiId: string) => {
+    if (!authUser || !hasRole(authUser, "ALICI")) {
+      showToast("Üretici takip etmek için alıcı hesabıyla giriş yapmalısın.", "info");
+      if (!authUser) setScreen("login");
+      return;
+    }
+    try {
+      if (followedSellerIds.has(saticiId)) {
+        await yoremioApi.unfollowSeller(authUser.token, saticiId);
+        setFollowedSellers((prev) => prev.filter((s) => s.kullaniciId !== saticiId));
+        showToast("Üretici takibi bırakıldı.", "info");
+      } else {
+        await yoremioApi.followSeller(authUser.token, saticiId);
+        const list = await yoremioApi.followedSellers(authUser.token);
+        setFollowedSellers(list);
+        showToast("Üretici takip edildi! Yeni ürün ve sevkiyatlarda bildirim alacaksın.", "success");
+      }
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleJoinOrtakAlim = async (campaign: OrtakAlimDto) => {
+    if (!authUser || !hasRole(authUser, "ALICI")) {
+      showToast("Ortak alıma katılmak için alıcı hesabıyla giriş yapmalısın.", "info");
+      if (!authUser) setScreen("login");
+      return;
+    }
+    try {
+      await yoremioApi.joinOrtakAlim(authUser.token, campaign.id, { katilimMiktari: 1 });
+      const fresh = await yoremioApi.ortakAlimlar();
+      setOrtakAlimlar(fresh.items);
+      showToast(`"${campaign.baslik}" kampanyasına katılımın alındı!`, "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleLeaveOrtakAlim = async (id: number) => {
+    if (!authUser) return;
+    try {
+      await yoremioApi.leaveOrtakAlim(authUser.token, id);
+      const fresh = await yoremioApi.ortakAlimlar();
+      setOrtakAlimlar(fresh.items);
+      showToast("Ortak alım kampanyasından ayrıldın.", "info");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleCreateOrtakAlim = async (values: OrtakAlimCreateValues) => {
+    if (!authUser) return false;
+    setActionStatus("ortak-alim-create");
+    try {
+      await yoremioApi.createOrtakAlim(authUser.token, values);
+      const fresh = await yoremioApi.ortakAlimlar();
+      setOrtakAlimlar(fresh.items);
+      showToast("Ortak alım kampanyası yayınlandı!", "success");
+      return true;
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+      return false;
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleApproveOrtakAlim = async (id: number) => {
+    if (!authUser) return;
+    try {
+      await yoremioApi.approveOrtakAlim(authUser.token, id);
+      const fresh = await yoremioApi.ortakAlimlar();
+      setOrtakAlimlar(fresh.items);
+      showToast("Ortak alım önerisi üretici tarafından onaylandı!", "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleUpdateOrtakAlimStatus = async (id: number, durum: string) => {
+    if (!authUser) return;
+    try {
+      await yoremioApi.updateOrtakAlimStatus(authUser.token, id, durum);
+      const fresh = await yoremioApi.ortakAlimlar();
+      setOrtakAlimlar(fresh.items);
+      showToast("Ortak alım durumu güncellendi.", "success");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+    }
+  };
+
+  const handleBulkUpdateStock = async (items: BulkStockItemValues[]) => {
+    if (!authUser) return false;
+    setActionStatus("bulk-stock");
+    try {
+      await yoremioApi.bulkUpdateStock(authUser.token, items);
+      await Promise.all([loadAuthenticatedData(authUser), loadProducts()]);
+      showToast("Ürün stok ve fiyatları toplu güncellendi!", "success");
+      return true;
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+      return false;
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleCreateShipment = async (values: PlanliGonderimCreateValues) => {
+    if (!authUser) return false;
+    setActionStatus("shipment-create");
+    try {
+      await yoremioApi.createPlanliGonderim(authUser.token, values);
+      const [allShips, myShips] = await Promise.all([
+        yoremioApi.planliGonderimler({ hedefSehir: selectedDeliveryCity || undefined }),
+        yoremioApi.planliGonderimler({ saticiId: authUser.userId }),
+      ]);
+      setPlanliGonderimler(allShips);
+      setSellerShipments(myShips);
+      showToast("Planlı sevkiyat duyurusu yayınlandı!", "success");
+      return true;
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
+      return false;
+    } finally {
+      setActionStatus(null);
+    }
+  };
+
+  const handleCancelShipment = async (id: number) => {
+    if (!authUser) return;
+    try {
+      await yoremioApi.cancelPlanliGonderim(authUser.token, id);
+      const [allShips, myShips] = await Promise.all([
+        yoremioApi.planliGonderimler({ hedefSehir: selectedDeliveryCity || undefined }),
+        yoremioApi.planliGonderimler({ saticiId: authUser.userId }),
+      ]);
+      setPlanliGonderimler(allShips);
+      setSellerShipments(myShips);
+      showToast("Planlı sevkiyat iptal edildi.", "info");
+    } catch (err) {
+      const info = apiErrorInfo(err);
+      showToast(info.message, "error", info.traceId);
     }
   };
 
@@ -956,10 +1344,15 @@ export function YoremioMarketplace() {
     setCategoryId(null);
     setCity("");
     setDistrict("");
+    setTeslimatSehir("");
+    setUretimSehir("");
     setMinPrice("");
     setMaxPrice("");
     setOnlyInStock(false);
     setVerifiedOnly(false);
+    setSadeceYeniHasat(false);
+    setSadeceEldenTeslim(false);
+    setSadeceKargolu(false);
     setMinRating(null);
     setSort("newest");
     setPage(1);
@@ -991,6 +1384,9 @@ export function YoremioMarketplace() {
 
       <SellerStorefrontModal
         saticiId={storefrontSellerId}
+        canFollow={hasRole(authUser, "ALICI")}
+        isFollowing={Boolean(storefrontSellerId && followedSellerIds.has(storefrontSellerId))}
+        onToggleFollow={handleToggleFollowSeller}
         onClose={() => setStorefrontSellerId(null)}
         onSelectProduct={(product) => {
           setStorefrontSellerId(null);
@@ -1012,10 +1408,11 @@ export function YoremioMarketplace() {
         onAcceptOffer={handleAcceptOffer}
         onRejectOffer={handleRejectOffer}
         onCancelDemand={handleCancelDemand}
+        onConfirmAgreement={handleConfirmAgreement}
         onSubmitOffer={handleSubmitOffer}
-        onStartChat={(otherUserId) => {
+        onStartChat={(otherUserId, context) => {
           setInspectedDemandId(null);
-          handleStartChatWithUser(otherUserId);
+          handleStartChatWithUser(otherUserId, undefined, context);
         }}
         onGoReviews={async (urunId) => {
           setInspectedDemandId(null);
@@ -1026,6 +1423,16 @@ export function YoremioMarketplace() {
             setScreen("discover");
           }
         }}
+      />
+
+      <OpenMarketDemandModal
+        open={openMarketOpen}
+        categories={categories}
+        initialProductName={query}
+        initialCity={teslimatSehir || buyerProfile?.sehir || authUser?.sehir || ""}
+        pending={actionStatus === "open-market-create"}
+        onClose={() => setOpenMarketOpen(false)}
+        onSubmit={handleCreateOpenMarketDemand}
       />
 
       {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
@@ -1044,6 +1451,10 @@ export function YoremioMarketplace() {
           categories={categories}
           products={productsPage.items}
           featuredSellers={featuredSellers}
+          planliGonderimler={planliGonderimler}
+          ortakAlimlar={ortakAlimlar}
+          cities={bootstrap?.cities}
+          selectedDeliveryCity={selectedDeliveryCity}
           productsState={productsState}
           favoriteIds={favoriteIds}
           selectedCategoryId={categoryId}
@@ -1054,6 +1465,13 @@ export function YoremioMarketplace() {
           onSelectCategory={(id) => {
             setCategoryId(id);
             setPage(1);
+          }}
+          onDeliveryCityChange={(val) => {
+            setSelectedDeliveryCity(val);
+            void yoremioApi
+              .planliGonderimler({ hedefSehir: val || undefined })
+              .then(setPlanliGonderimler)
+              .catch(() => {});
           }}
           onToggleVerifiedOnly={(val) => {
             setVerifiedOnly(val);
@@ -1073,6 +1491,15 @@ export function YoremioMarketplace() {
           }}
           onOpenStorefront={(id) => setStorefrontSellerId(id)}
           onToggleFavorite={handleToggleFavorite}
+          onOpenOpenMarketModal={() => {
+            if (!authUser) {
+              showToast("Açık talep açmak için giriş yapmalısın.", "info");
+              setScreen("login");
+              return;
+            }
+            setOpenMarketOpen(true);
+          }}
+          onJoinOrtakAlim={handleJoinOrtakAlim}
           onNavigate={setScreen}
           onLogout={handleLogout}
           onRetry={() => void loadProducts()}
@@ -1101,13 +1528,22 @@ export function YoremioMarketplace() {
           categoryId={categoryId}
           city={city}
           district={district}
+          teslimatSehir={teslimatSehir}
+          uretimSehir={uretimSehir}
           minPrice={minPrice}
           maxPrice={maxPrice}
           onlyInStock={onlyInStock}
           verifiedOnly={verifiedOnly}
+          sadeceYeniHasat={sadeceYeniHasat}
+          sadeceEldenTeslim={sadeceEldenTeslim}
+          sadeceKargolu={sadeceKargolu}
           minRating={minRating}
           sort={sort}
           sortOptions={sortOptions}
+          smartAlternatives={smartAlternatives}
+          priceAlarmProductIds={priceAlarmProductIds}
+          stockAlarmProductIds={stockAlarmProductIds}
+          followedSellerIds={followedSellerIds}
           actionStatus={actionStatus}
           demandFlowEnabled={demandFlowEnabled}
           favoritesEnabled={favoritesEnabled}
@@ -1128,6 +1564,14 @@ export function YoremioMarketplace() {
             setDistrict(val);
             setPage(1);
           }}
+          onTeslimatSehirChange={(val) => {
+            setTeslimatSehir(val);
+            setPage(1);
+          }}
+          onUretimSehirChange={(val) => {
+            setUretimSehir(val);
+            setPage(1);
+          }}
           onMinPriceChange={(val) => {
             setMinPrice(val);
             setPage(1);
@@ -1144,6 +1588,18 @@ export function YoremioMarketplace() {
             setVerifiedOnly(val);
             setPage(1);
           }}
+          onSadeceYeniHasatChange={(val) => {
+            setSadeceYeniHasat(val);
+            setPage(1);
+          }}
+          onSadeceEldenTeslimChange={(val) => {
+            setSadeceEldenTeslim(val);
+            setPage(1);
+          }}
+          onSadeceKargoluChange={(val) => {
+            setSadeceKargolu(val);
+            setPage(1);
+          }}
           onMinRatingChange={(val) => {
             setMinRating(val);
             setPage(1);
@@ -1156,10 +1612,25 @@ export function YoremioMarketplace() {
           onSelectProduct={setSelectedProduct}
           onOpenStorefront={(id) => setStorefrontSellerId(id)}
           onCreateDemand={handleCreateDemand}
+          onOpenOpenMarketModal={() => {
+            if (!authUser) {
+              showToast("Açık talep açmak için giriş yapmalısın.", "info");
+              setScreen("login");
+              return;
+            }
+            setOpenMarketOpen(true);
+          }}
+          onSavePriceAlert={handleSavePriceAlert}
+          onToggleStockAlarm={handleToggleStockAlarm}
+          onToggleFollowSeller={handleToggleFollowSeller}
+          onJoinOrtakAlim={handleJoinOrtakAlim}
           onToggleFavorite={handleToggleFavorite}
           onStartChat={(product) => {
             if (product.saticiId) {
-              handleStartChatWithUser(product.saticiId, product.saticiMagazaAdi ?? undefined);
+              handleStartChatWithUser(product.saticiId, product.saticiMagazaAdi ?? undefined, {
+                urunId: product.id,
+                label: product.adi,
+              });
             }
           }}
           onGoReviews={(product) => void openReviewsForProduct(product)}
@@ -1270,6 +1741,11 @@ export function YoremioMarketplace() {
           favorites={favorites}
           recommended={recommended}
           demands={buyerDemands}
+          priceAlerts={priceAlerts}
+          stockAlerts={stockAlerts}
+          followedSellers={followedSellers}
+          ortakAlimlar={ortakAlimlar}
+          planliGonderimler={planliGonderimler}
           buyerProfile={buyerProfile}
           categories={categories}
           locations={bootstrap?.locations}
@@ -1277,17 +1753,41 @@ export function YoremioMarketplace() {
           conversations={conversations}
           messages={messages}
           chatTargetId={chatTargetId}
+          chatContext={chatContext}
           actionStatus={actionStatus}
           signalrConnected={effectiveSignalrConnected}
           typingFromUserId={typingFromUserId}
           chatEnabled={chatEnabled}
           favoritesEnabled={favoritesEnabled}
-          onSelectChatTarget={setChatTargetId}
+          onSelectChatTarget={(id, ctx) => {
+            setChatTargetId(id);
+            if (ctx) setChatContext(ctx);
+          }}
+          onClearChatContext={() => setChatContext(null)}
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
           onAcceptOffer={handleAcceptOffer}
           onRejectOffer={handleRejectOffer}
           onCancelDemand={handleCancelDemand}
+          onRepeatDemand={handleRepeatDemand}
+          onOpenOpenMarketModal={() => setOpenMarketOpen(true)}
+          onDeletePriceAlert={handleDeletePriceAlert}
+          onDeleteStockAlarm={(urunId) => {
+            const found = stockAlerts.find((a) => a.urunId === urunId);
+            if (found) {
+              void yoremioApi
+                .deleteStockAlert(authUser.token, urunId)
+                .then(() => {
+                  setStockAlerts((prev) => prev.filter((a) => a.urunId !== urunId));
+                  showToast("Stok alarmı kaldırıldı.", "info");
+                })
+                .catch(() => {});
+            }
+          }}
+          onUnfollowSeller={handleToggleFollowSeller}
+          onJoinOrtakAlim={handleJoinOrtakAlim}
+          onLeaveOrtakAlim={handleLeaveOrtakAlim}
+          onSuggestOrtakAlim={handleCreateOrtakAlim}
           onInspectDemand={(id) => setInspectedDemandId(id)}
           onOpenProduct={(product) => {
             setSelectedProduct(product);
@@ -1330,16 +1830,24 @@ export function YoremioMarketplace() {
           trustScore={sellerTrustScore}
           products={sellerProducts}
           demands={sellerDemands}
+          marketDemands={marketDemands}
+          sellerShipments={sellerShipments}
+          ortakAlimlar={ortakAlimlar}
           conversations={conversations}
           messages={messages}
           chatTargetId={chatTargetId}
+          chatContext={chatContext}
           notificationUnreadCount={unreadCount}
           unreadMessageCount={unreadMessageCount}
           actionStatus={actionStatus}
           signalrConnected={effectiveSignalrConnected}
           typingFromUserId={typingFromUserId}
           chatEnabled={chatEnabled}
-          onSelectChatTarget={setChatTargetId}
+          onSelectChatTarget={(id, ctx) => {
+            setChatTargetId(id);
+            if (ctx) setChatContext(ctx);
+          }}
+          onClearChatContext={() => setChatContext(null)}
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
           onCreateProduct={() => {
@@ -1375,6 +1883,12 @@ export function YoremioMarketplace() {
             }
           }}
           onDeleteProduct={handleDeleteProduct}
+          onBulkUpdateStock={handleBulkUpdateStock}
+          onCreateShipment={handleCreateShipment}
+          onCancelShipment={handleCancelShipment}
+          onCreateOrtakAlim={handleCreateOrtakAlim}
+          onApproveOrtakAlim={handleApproveOrtakAlim}
+          onUpdateOrtakAlimStatus={handleUpdateOrtakAlimStatus}
           onInspectDemand={(id) => setInspectedDemandId(id)}
           onOpenStorefront={(id) => setStorefrontSellerId(id)}
           onNavigate={setScreen}

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   Award,
+  CalendarClock,
   CheckCircle2,
   ClipboardList,
   Compass,
@@ -14,10 +15,13 @@ import {
   MessageCircle,
   Search,
   ShieldCheck,
+  Snowflake,
   Sparkles,
   Star,
   Store,
+  Truck,
   UserRound,
+  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +39,7 @@ import {
   accountName,
   getCategoryImage,
   hasRole,
+  ortakAlimStatusMeta,
   productImage,
   productLocation,
   sellerCoverImage,
@@ -47,10 +52,12 @@ import {
 import type {
   CategoryDto,
   FeaturedSellerDto,
+  OrtakAlimDto,
+  PlanliGonderimDto,
   ProductDto,
   SellerProfileDto,
 } from "@/lib/api";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, formatShortDate } from "@/lib/utils";
 
 const workflowSteps = [
   {
@@ -91,6 +98,10 @@ export function HomeScreen({
   categories,
   products,
   featuredSellers,
+  planliGonderimler = [],
+  ortakAlimlar = [],
+  cities = [],
+  selectedDeliveryCity = "",
   productsState,
   favoriteIds,
   selectedCategoryId,
@@ -99,12 +110,15 @@ export function HomeScreen({
   query,
   favoritesEnabled = true,
   onSelectCategory,
+  onDeliveryCityChange,
   onToggleVerifiedOnly,
   onSelectSort,
   onQueryChange,
   onOpenProduct,
   onOpenStorefront,
   onToggleFavorite,
+  onOpenOpenMarketModal,
+  onJoinOrtakAlim,
   onNavigate,
   onLogout,
   onRetry,
@@ -116,6 +130,10 @@ export function HomeScreen({
   categories: CategoryDto[];
   products: ProductDto[];
   featuredSellers: FeaturedSellerDto[];
+  planliGonderimler?: PlanliGonderimDto[];
+  ortakAlimlar?: OrtakAlimDto[];
+  cities?: string[];
+  selectedDeliveryCity?: string;
   productsState: LoadState;
   favoriteIds: Set<number>;
   selectedCategoryId: number | null;
@@ -124,12 +142,15 @@ export function HomeScreen({
   query: string;
   favoritesEnabled?: boolean;
   onSelectCategory: (categoryId: number | null) => void;
+  onDeliveryCityChange?: (city: string) => void;
   onToggleVerifiedOnly: (value: boolean) => void;
   onSelectSort: (value: SortKey) => void;
   onQueryChange: (value: string) => void;
   onOpenProduct: (product: ProductDto) => void;
   onOpenStorefront: (saticiId: string) => void;
   onToggleFavorite: (productId: number) => void;
+  onOpenOpenMarketModal?: () => void;
+  onJoinOrtakAlim?: (campaign: OrtakAlimDto) => void;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
   onRetry: () => void;
@@ -236,6 +257,18 @@ export function HomeScreen({
                 <Compass className="size-4 text-primary" aria-hidden />
                 Tüm Ürün Vitrini
               </Button>
+              {onOpenOpenMarketModal ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-full bg-amber-100/95 font-extrabold text-amber-950 hover:bg-amber-200/80"
+                  onClick={onOpenOpenMarketModal}
+                >
+                  <Sparkles className="size-4 text-amber-700" aria-hidden />
+                  Benim İçin Bul (Açık Talep)
+                </Button>
+              ) : null}
               {!authUser ? (
                 <>
                   <Button
@@ -554,6 +587,224 @@ export function HomeScreen({
           </section>
         ) : null}
 
+        {/* Planned Shipments to City ("Şehrime Gelen Ürünler") */}
+        {planliGonderimler.length > 0 || cities.length > 0 ? (
+          <section className="rounded-3xl border border-sky-200/80 bg-[linear-gradient(135deg,#f4faff_0%,#ffffff_60%,#f5faf5_100%)] p-5 shadow-xs sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-900">
+                  <Truck className="size-3.5" aria-hidden />
+                  Şehrime Gelen Ürünler
+                </span>
+                <h2 className="mt-2 font-serif text-xl font-bold text-[#14271c] sm:text-2xl">
+                  Planlı Üretici Sevkiyatları
+                </h2>
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  Yöreden doğrudan şehrine çıkacak taze sevkiyatları gör; son talep tarihinden önce üreticiye ulaş.
+                </p>
+              </div>
+              {onDeliveryCityChange && cities.length > 0 ? (
+                <select
+                  value={selectedDeliveryCity}
+                  onChange={(e) => onDeliveryCityChange(e.target.value)}
+                  className="h-9 rounded-xl border border-border bg-white px-3 text-xs font-bold text-foreground shadow-xs"
+                  aria-label="Hedef şehir filtresi"
+                >
+                  <option value="">Tüm Hedef Şehirler</option>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
+
+            {planliGonderimler.length > 0 ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {planliGonderimler.slice(0, 6).map((item) => (
+                  <Card
+                    key={item.id}
+                    className="flex flex-col justify-between rounded-2xl border-border/80 bg-white p-4 shadow-xs"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Badge variant="secondary">
+                          <MapPin className="mr-1 size-3" aria-hidden />
+                          {item.menseiSehir || "Yöre"} → {item.hedefSehir}
+                        </Badge>
+                        {item.sogukZincirVarMi ? (
+                          <Badge variant="green">
+                            <Snowflake className="mr-1 size-3" aria-hidden />
+                            Soğuk Zincir
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <h3 className="mt-2.5 text-sm font-black text-brand-brown">
+                        {item.baslik}
+                      </h3>
+                      {item.aciklama ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {item.aciklama}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-xs font-semibold text-muted-foreground">
+                        Üretici:{" "}
+                        <button
+                          type="button"
+                          onClick={() => onOpenStorefront(item.saticiId)}
+                          className="font-extrabold text-primary hover:underline"
+                        >
+                          {item.saticiMagazaAdi || "Yöremio Üreticisi"}
+                        </button>
+                      </p>
+                    </div>
+
+                    <div className="mt-3 border-t border-border/70 pt-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="inline-flex items-center gap-1 font-bold text-slate-700">
+                          <CalendarClock className="size-3.5 text-primary" aria-hidden />
+                          Sevk: {formatShortDate(item.gonderimTarihi)}
+                        </span>
+                        {item.tahminiUrunNotu ? (
+                          <span className="truncate text-[11px] font-bold text-primary">
+                            {item.tahminiUrunNotu}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-amber-700">
+                          Son Talep: {formatShortDate(item.sonTalepTarihi)}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 rounded-lg px-2.5 text-[11px] font-extrabold"
+                          onClick={() => onOpenStorefront(item.saticiId)}
+                        >
+                          Vitrini Gör
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-2xl border border-dashed border-border bg-white/80 p-4 text-center text-xs font-semibold text-muted-foreground">
+                Seçili şehir için henüz planlı üretici sevkiyatı görünmüyor.{" "}
+                {onOpenOpenMarketModal ? (
+                  <button
+                    type="button"
+                    onClick={onOpenOpenMarketModal}
+                    className="font-black text-primary underline"
+                  >
+                    Benim İçin Bul ile talep açabilirsin.
+                  </button>
+                ) : null}
+              </p>
+            )}
+          </section>
+        ) : null}
+
+        {/* Yöremio Ortak Alım Campaigns */}
+        {ortakAlimlar.length > 0 ? (
+          <section>
+            <PanelHeader
+              title="Yöremio Ortak Alım Kampanyaları"
+              action={hasRole(authUser, "ALICI") ? "Tüm Kampanyalar & Katılımım" : undefined}
+              onAction={hasRole(authUser, "ALICI") ? () => onNavigate("buyer") : undefined}
+            />
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Aynı üründe bir araya gelerek üreticiden toptan avantajlı birim fiyatla ortak alım oluşturun.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ortakAlimlar.slice(0, 6).map((campaign) => {
+                const status = ortakAlimStatusMeta(campaign.durum);
+                const progress =
+                  campaign.minimumKatilimci > 0
+                    ? Math.min(100, Math.round((campaign.mevcutKatilimci / campaign.minimumKatilimci) * 100))
+                    : 0;
+                const routeText = [campaign.menseiSehir, campaign.hedefSehir].filter(Boolean).join(" → ");
+                const canJoin = campaign.durum !== "IPTAL" && campaign.durum !== "TAMAMLANDI";
+                return (
+                  <Card
+                    key={campaign.id}
+                    className="flex flex-col justify-between rounded-2xl border-emerald-200/80 bg-white p-4 shadow-xs"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                        {routeText ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+                            <MapPin className="size-3 text-primary" aria-hidden />
+                            {routeText}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h3 className="mt-2.5 text-sm font-black text-brand-brown">
+                        {campaign.baslik}
+                      </h3>
+                      {campaign.urunAdi ? (
+                        <p className="mt-0.5 text-xs font-semibold text-primary">
+                          Ürün: {campaign.urunAdi}
+                        </p>
+                      ) : null}
+                      {campaign.aciklama ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {campaign.aciklama}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span className="inline-flex items-center gap-1 text-slate-700">
+                            <Users className="size-3.5 text-primary" aria-hidden />
+                            {campaign.mevcutKatilimci} / {campaign.minimumKatilimci} Katılımcı
+                          </span>
+                          <span className="tabular-nums text-primary">
+                            {campaign.toplamTalepMiktari} {campaign.birim || "adet"}
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3">
+                      <div>
+                        <span className="text-sm font-black text-primary tabular-nums">
+                          {campaign.birimFiyat > 0
+                            ? `${formatPrice(campaign.birimFiyat)} / ${campaign.birim || "adet"}`
+                            : "Teklif Bekleniyor"}
+                        </span>
+                        <p className="text-[10px] font-semibold text-muted-foreground">
+                          Son Katılım: {formatShortDate(campaign.sonKatilimTarihi)}
+                        </p>
+                      </div>
+                      {onJoinOrtakAlim && canJoin ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="default"
+                          className="h-8 rounded-lg px-3 text-xs font-extrabold"
+                          onClick={() => onJoinOrtakAlim(campaign)}
+                        >
+                          Katıl
+                        </Button>
+                      ) : null}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
         {/* How It Works Presentation Strip */}
         <section className="rounded-3xl border border-emerald-200/70 bg-[linear-gradient(135deg,#f4faf2_0%,#ffffff_55%,#fffaf0_100%)] p-5 shadow-[0_14px_34px_rgba(0,107,53,0.05)] sm:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -732,6 +983,11 @@ function HomeProductCard({
             <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-black text-primary shadow-xs">
               <ShieldCheck className="size-3" aria-hidden />
               Doğrulanmış
+            </span>
+          ) : null}
+          {product.yeniHasatMi ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/95 px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+              Yeni Hasat
             </span>
           ) : null}
           {(product.videolar?.length ?? 0) > 0 ? (

@@ -88,22 +88,39 @@ export type DashboardSummaryDto = {
   sellerPendingOffers: number;
 };
 
+export type TopRequestedProductDto = {
+  urunId: number;
+  urunAdi: string;
+  talepSayisi: number;
+  goruntulenmeSayisi: number;
+  stokMiktari: number;
+};
+
 export type SellerDashboardDto = {
   totalProducts: number;
   activeProducts: number;
   inactiveProducts: number;
   outOfStockProducts: number;
+  lowStockProducts?: number;
+  totalProductViews?: number;
   totalFavorites: number;
+  followerCount?: number;
   totalReviews: number;
   totalRatings: number;
   averageRating: number;
   trustScore: number;
   openDemands: number;
+  unansweredDemands?: number;
+  matchedOpenMarketDemands?: number;
   agreedDemands: number;
+  verifiedCompletedDeals?: number;
   pendingOffers: number;
   acceptedOffers: number;
   rejectedOffers: number;
+  averageResponseMinutes?: number;
   unreadMessages: number;
+  topRequestedProducts?: TopRequestedProductDto[];
+  actionSuggestions?: string[];
 };
 
 export type AdminDashboardDto = {
@@ -116,7 +133,16 @@ export type AdminDashboardDto = {
   inactiveProducts: number;
   totalDemands: number;
   openDemands: number;
+  openMarketDemands?: number;
   agreedDemands: number;
+  verifiedCompletedDeals?: number;
+  offerConversionRatePercent?: number;
+  dealAgreementRatePercent?: number;
+  averageSellerResponseMinutes?: number;
+  repeatBuyers60Days?: number;
+  repeatBuyerRatePercent?: number;
+  activePriceAlerts?: number;
+  totalSellerFollows?: number;
   totalReviews: number;
   totalMessages: number;
   unreadMessages: number;
@@ -158,6 +184,17 @@ export type ProductDto = {
   aciklama?: string | null;
   fiyat: number;
   stokMiktari: number;
+  birimMiktar?: string | null;
+  teslimatSecenekleri?: string | null;
+  yeniHasatMi?: boolean;
+  uretimSehir?: string | null;
+  uretimIlce?: string | null;
+  eldenTeslimVarMi?: boolean;
+  kargoVarMi?: boolean;
+  gonderimSehirleri?: string | null;
+  goruntulenmeSayisi?: number;
+  slug?: string | null;
+  olusturmaTarihi?: string | null;
   aktifMi?: boolean;
   kategoriId: number;
   kategoriAdi?: string | null;
@@ -194,9 +231,14 @@ export type ProductQuery = {
   saticiId?: string;
   sehir?: string;
   ilce?: string;
+  teslimatSehir?: string;
+  uretimSehir?: string;
   sadeceStoktaOlanlar?: boolean;
   sadeceAktif?: boolean;
   sadeceDogrulanmisSatici?: boolean;
+  sadeceYeniHasat?: boolean;
+  sadeceEldenTeslim?: boolean;
+  sadeceKargolu?: boolean;
   minOrtalamaPuan?: number;
   sort?: string;
 };
@@ -206,9 +248,150 @@ export type ProductFormValues = {
   aciklama?: string;
   fiyat?: number;
   stokMiktari?: number;
+  birimMiktar?: string;
+  teslimatSecenekleri?: string;
+  yeniHasatMi?: boolean;
+  uretimSehir?: string;
+  uretimIlce?: string;
+  eldenTeslimVarMi?: boolean;
+  kargoVarMi?: boolean;
+  gonderimSehirleri?: string;
   kategoriId?: number;
   resimler?: File[];
   videolar?: File[];
+};
+
+export type BulkStockItemValues = {
+  urunId: number;
+  stokMiktari: number;
+  fiyat?: number;
+  yeniHasatMi?: boolean;
+};
+
+export type PriceAlertDto = {
+  id: number;
+  urunId: number;
+  urunAdi: string;
+  urunResimUrl?: string | null;
+  urunFiyat: number;
+  hedefFiyat: number;
+  aktifMi: boolean;
+  tetiklendiMi: boolean;
+  sonTetiklenenFiyat?: number | null;
+  sonTetiklemeTarihi?: string | null;
+  olusturmaTarihi: string;
+};
+
+export type StockAlertDto = {
+  id: number;
+  urunId: number;
+  urunAdi: string;
+  urunResimUrl?: string | null;
+  urunFiyat: number;
+  stokMiktari: number;
+  aktifMi: boolean;
+  sonTetiklemeTarihi?: string | null;
+  olusturmaTarihi: string;
+};
+
+export type PlanliGonderimDto = {
+  id: number;
+  saticiId: string;
+  saticiMagazaAdi?: string | null;
+  saticiDogrulanmis: boolean;
+  baslik: string;
+  aciklama?: string | null;
+  menseiSehir: string;
+  hedefSehir: string;
+  tahminiUrunNotu?: string | null;
+  gonderimTarihi: string;
+  sonTalepTarihi: string;
+  sogukZincirVarMi: boolean;
+  aktifMi: boolean;
+  olusturmaTarihi: string;
+};
+
+export type PlanliGonderimCreateValues = {
+  baslik: string;
+  aciklama?: string;
+  menseiSehir: string;
+  hedefSehir: string;
+  tahminiUrunNotu?: string;
+  gonderimTarihi: string;
+  sonTalepTarihi: string;
+  sogukZincirVarMi: boolean;
+};
+
+export type OrtakAlimDto = {
+  id: number;
+  saticiId: string;
+  saticiMagazaAdi?: string | null;
+  saticiDogrulanmis: boolean;
+  olusturanKullaniciId?: string | null;
+  urunId?: number | null;
+  urunAdi?: string | null;
+  urunResimUrl?: string | null;
+  kategoriId?: number | null;
+  kategoriAdi?: string | null;
+  baslik: string;
+  aciklama?: string | null;
+  menseiSehir: string;
+  hedefSehir: string;
+  birimFiyat: number;
+  birim: string;
+  minimumKatilimci: number;
+  mevcutKatilimci: number;
+  toplamTalepMiktari: number;
+  sogukZincirGerekliMi: boolean;
+  teslimatKosullari?: string | null;
+  iptalKosullari?: string | null;
+  durum: string;
+  sonKatilimTarihi: string;
+  olusturmaTarihi: string;
+};
+
+export type OrtakAlimCreateValues = {
+  saticiId?: string;
+  urunId?: number;
+  kategoriId?: number;
+  baslik: string;
+  aciklama?: string;
+  menseiSehir: string;
+  hedefSehir: string;
+  birimFiyat: number;
+  birim?: string;
+  minimumKatilimci: number;
+  sogukZincirGerekliMi: boolean;
+  teslimatKosullari?: string;
+  iptalKosullari?: string;
+  sonKatilimTarihi: string;
+};
+
+export type OrtakAlimJoinValues = {
+  katilimMiktari: number;
+  not?: string;
+};
+
+export type BenimIcinBulOneriDto = {
+  urunBulunamadi: boolean;
+  arananUrunAdi?: string | null;
+  teslimatSehir?: string | null;
+  kategoriId?: number | null;
+  acikTalepEndpoint?: string | null;
+};
+
+export type SmartAlternativesDto = {
+  ayniYoredenUrunler: ProductDto[];
+  sehreGonderimYapanlar: ProductDto[];
+  stoguTukenenUrunler: ProductDto[];
+  aktifOrtakAlimlar: OrtakAlimDto[];
+  planliGonderimler: PlanliGonderimDto[];
+  benimIcinBulOnerisi: BenimIcinBulOneriDto;
+};
+
+export type SmartDiscoverResultDto = {
+  sonuclar: Paginated<ProductDto>;
+  alternatifler?: SmartAlternativesDto | null;
 };
 
 export type SellerProfileDto = {
@@ -222,7 +405,11 @@ export type SellerProfileDto = {
   kapakResimUrl?: string | null;
   kayitTarihi?: string | null;
   aktifMi: boolean;
+  paketTuru?: string | null;
   dogrulanmisSatici: boolean;
+  epostaDogrulandi?: boolean;
+  isletmeDogrulandi?: boolean;
+  ureticiDogrulandi?: boolean;
   adminDogrulamaDurumu?: boolean | null;
   email: string;
   userName?: string | null;
@@ -253,6 +440,9 @@ export type SellerTrustScoreDto = {
   kullaniciId: string;
   magazaAdi: string;
   dogrulanmisSatici: boolean;
+  epostaDogrulandi?: boolean;
+  isletmeDogrulandi?: boolean;
+  ureticiDogrulandi?: boolean;
   urunSayisi: number;
   ortalamaPuan: number;
   toplamPuan: number;
@@ -265,6 +455,7 @@ export type FeaturedSellerDto = SellerTrustScoreDto & {
   aciklama?: string | null;
   sehir?: string | null;
   ilce?: string | null;
+  takipciSayisi?: number;
   kapakResimUrl?: string | null;
   vitrinUrunId?: number | null;
 };
@@ -292,20 +483,57 @@ export type OfferDto = {
   talepId: number;
   saticiId: string;
   saticiMagazaAdi?: string | null;
+  saticiSehir?: string | null;
+  saticiDogrulanmis?: boolean;
   birimFiyat?: number | null;
   mesaj: string;
+  teslimatSuresiGun?: number | null;
+  kargoDahilMi?: boolean;
+  gonderimSehir?: string | null;
   durum: "BEKLEMEDE" | "KABUL" | "RED" | string;
   olusturmaTarihi: string;
+  guncellemeTarihi?: string | null;
+};
+
+export type OfferSubmitValues = {
+  birimFiyat?: number;
+  mesaj: string;
+  teslimatSuresiGun?: number;
+  kargoDahilMi?: boolean;
+  gonderimSehir?: string;
+};
+
+export type OpenMarketDemandValues = {
+  arananUrunAdi: string;
+  kategoriId?: number;
+  miktar: number;
+  birim?: string;
+  teslimatSehir: string;
+  tercihEdilenSehirler?: string;
+  hedefBirimFiyat?: number;
+  sonTeklifTarihi?: string;
+  talepTipi?: string;
+  not?: string;
 };
 
 export type DemandDto = {
   id: number;
   aliciId: string;
   aliciAdi?: string | null;
-  urunId: number;
-  urunAdi: string;
+  talepTuru?: "URUN" | "ACIK_PAZAR" | string;
+  talepTipi?: "BIREYSEL" | "TOPLU_TALEP" | string;
+  urunId?: number | null;
+  urunAdi?: string | null;
   urunResimUrl?: string | null;
   urunFiyat?: number | null;
+  kategoriId?: number | null;
+  kategoriAdi?: string | null;
+  arananUrunAdi?: string | null;
+  birim?: string | null;
+  teslimatSehir?: string | null;
+  tercihEdilenSehirler?: string | null;
+  hedefBirimFiyat?: number | null;
+  sonTeklifTarihi?: string | null;
   saticiId?: string | null;
   saticiMagazaAdi?: string | null;
   saticiSehir?: string | null;
@@ -313,6 +541,11 @@ export type DemandDto = {
   miktar: number;
   not?: string | null;
   durum: "ACIK" | "ANLASILDI" | "IPTAL" | string;
+  aliciGerceklestiOnayi?: boolean | null;
+  saticiGerceklestiOnayi?: boolean | null;
+  eslesmeSkoru?: number | null;
+  eslesmeSebebi?: string | null;
+  eslesenSaticiSayisi?: number;
   olusturmaTarihi: string;
   guncellemeTarihi?: string | null;
   teklifler: OfferDto[];
@@ -326,6 +559,9 @@ export type ChatConversationDto = {
   lastMessage?: string | null;
   lastSenderId?: string | null;
   lastMessageAt?: string | null;
+  lastUrunId?: number | null;
+  lastUrunAdi?: string | null;
+  lastTalepId?: number | null;
   unreadCount: number;
 };
 
@@ -333,6 +569,9 @@ export type ChatMessageDto = {
   id: number;
   senderId: string;
   receiverId: string;
+  urunId?: number | null;
+  urunAdi?: string | null;
+  talepId?: number | null;
   message: string;
   sentAt: string;
   readAt: string | null;
@@ -376,9 +615,22 @@ export type AdminUserDto = {
   ilce?: string | null;
   saticiAktifMi?: boolean | null;
   dogrulanmisSatici: boolean;
+  isletmeDogrulandi: boolean;
+  ureticiDogrulandi: boolean;
   adminDogrulamaDurumu?: boolean | null;
   urunSayisi: number;
   kayitTarihi?: string | null;
+};
+
+export type DemandGapDto = {
+  teslimatSehir: string;
+  arananUrunAdi: string;
+  kategoriAdi?: string | null;
+  talepSayisi: number;
+  acikTalepSayisi: number;
+  anlasilanTalepSayisi: number;
+  ortalamaEslesenSaticiSayisi: number;
+  yeterliSaticiYokMu: boolean;
 };
 
 export type AdminCommentDto = {
@@ -611,6 +863,30 @@ export function createProductFormData(values: ProductFormValues) {
   if (values.stokMiktari !== undefined) {
     form.append("StokMiktari", String(values.stokMiktari));
   }
+  if (values.birimMiktar !== undefined) {
+    form.append("BirimMiktar", values.birimMiktar);
+  }
+  if (values.teslimatSecenekleri !== undefined) {
+    form.append("TeslimatSecenekleri", values.teslimatSecenekleri);
+  }
+  if (values.yeniHasatMi !== undefined) {
+    form.append("YeniHasatMi", String(values.yeniHasatMi));
+  }
+  if (values.uretimSehir !== undefined) {
+    form.append("UretimSehir", values.uretimSehir);
+  }
+  if (values.uretimIlce !== undefined) {
+    form.append("UretimIlce", values.uretimIlce);
+  }
+  if (values.eldenTeslimVarMi !== undefined) {
+    form.append("EldenTeslimVarMi", String(values.eldenTeslimVarMi));
+  }
+  if (values.kargoVarMi !== undefined) {
+    form.append("KargoVarMi", String(values.kargoVarMi));
+  }
+  if (values.gonderimSehirleri !== undefined) {
+    form.append("GonderimSehirleri", values.gonderimSehirleri);
+  }
   if (values.kategoriId !== undefined) {
     form.append("KategoriId", String(values.kategoriId));
   }
@@ -707,13 +983,86 @@ export const yoremioApi = {
         saticiId: query.saticiId,
         sehir: query.sehir,
         ilce: query.ilce,
+        teslimatSehir: query.teslimatSehir,
+        uretimSehir: query.uretimSehir,
         sadeceStoktaOlanlar: query.sadeceStoktaOlanlar,
         sadeceAktif: query.sadeceAktif,
         sadeceDogrulanmisSatici: query.sadeceDogrulanmisSatici,
+        sadeceYeniHasat: query.sadeceYeniHasat,
+        sadeceEldenTeslim: query.sadeceEldenTeslim,
+        sadeceKargolu: query.sadeceKargolu,
         minOrtalamaPuan: query.minOrtalamaPuan,
         sort: query.sort ?? "newest",
       })}`,
     ),
+  discoverProducts: (query: ProductQuery = {}) =>
+    request<SmartDiscoverResultDto>(
+      `/api/Urun/kesfet?${queryString({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 12,
+        q: query.q,
+        kategoriId: query.kategoriId,
+        minFiyat: query.minFiyat,
+        maxFiyat: query.maxFiyat,
+        saticiId: query.saticiId,
+        sehir: query.sehir,
+        ilce: query.ilce,
+        teslimatSehir: query.teslimatSehir,
+        uretimSehir: query.uretimSehir,
+        sadeceStoktaOlanlar: query.sadeceStoktaOlanlar,
+        sadeceAktif: query.sadeceAktif,
+        sadeceDogrulanmisSatici: query.sadeceDogrulanmisSatici,
+        sadeceYeniHasat: query.sadeceYeniHasat,
+        sadeceEldenTeslim: query.sadeceEldenTeslim,
+        sadeceKargolu: query.sadeceKargolu,
+        minOrtalamaPuan: query.minOrtalamaPuan,
+        sort: query.sort ?? "newest",
+      })}`,
+    ),
+  bulkUpdateStock: (token: string, kalemler: BulkStockItemValues[]) =>
+    request<ProductDto[]>("/api/Urun/toplu-stok", {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ kalemler }),
+    }),
+  priceAlerts: (token: string) =>
+    request<PriceAlertDto[]>("/api/Urun/fiyat-alarmlarim", { token }),
+  savePriceAlert: (token: string, urunId: number, hedefFiyat: number) =>
+    request<PriceAlertDto>(`/api/Urun/${urunId}/fiyat-alarmi`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ hedefFiyat }),
+    }),
+  deletePriceAlert: (token: string, urunId: number) =>
+    request<null>(`/api/Urun/${urunId}/fiyat-alarmi`, {
+      method: "DELETE",
+      token,
+    }),
+  stockAlerts: (token: string) =>
+    request<StockAlertDto[]>("/api/Urun/stok-alarmlarim", { token }),
+  saveStockAlert: (token: string, urunId: number) =>
+    request<StockAlertDto>(`/api/Urun/${urunId}/stok-alarmi`, {
+      method: "POST",
+      token,
+    }),
+  deleteStockAlert: (token: string, urunId: number) =>
+    request<null>(`/api/Urun/${urunId}/stok-alarmi`, {
+      method: "DELETE",
+      token,
+    }),
+  followedSellers: (token: string) =>
+    request<FeaturedSellerDto[]>("/api/Profil/takip-edilenler", { token }),
+  followSeller: (token: string, saticiId: string, bildirimAcikMi = true) =>
+    request<null>(`/api/Profil/satici/${saticiId}/takip`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ bildirimAcikMi }),
+    }),
+  unfollowSeller: (token: string, saticiId: string) =>
+    request<null>(`/api/Profil/satici/${saticiId}/takip`, {
+      method: "DELETE",
+      token,
+    }),
   product: (id: number) => request<ProductDto>(`/api/Urun/${id}`),
   recommendedProducts: (token: string) =>
     request<ProductDto[]>("/api/Urun/onerilen", {
@@ -846,6 +1195,33 @@ export const yoremioApi = {
       token,
       body: JSON.stringify({ urunId, miktar, not }),
     }),
+  createOpenMarketDemand: (token: string, values: OpenMarketDemandValues) =>
+    request<DemandDto>("/api/Talep/pazar", {
+      method: "POST",
+      token,
+      body: JSON.stringify(values),
+    }),
+  openMarketDemands: (token: string, durum?: string, page = 1, pageSize = 12) =>
+    request<Paginated<DemandDto>>(
+      `/api/Talep/pazar?${queryString({ durum, page, pageSize })}`,
+      { token },
+    ),
+  repeatDemand: (
+    token: string,
+    talepId: number,
+    values?: { miktar?: number; not?: string },
+  ) =>
+    request<DemandDto>(`/api/Talep/${talepId}/tekrarla`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(values ?? {}),
+    }),
+  confirmAgreement: (token: string, talepId: number, gerceklestiMi: boolean) =>
+    request<DemandDto>(`/api/Talep/${talepId}/anlasma-onayi`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ gerceklestiMi }),
+    }),
   buyerDemands: (token: string, durum?: string) =>
     request<DemandDto[]>(
       durum ? `/api/Talep/benim?${queryString({ durum })}` : "/api/Talep/benim",
@@ -859,7 +1235,7 @@ export const yoremioApi = {
   upsertOffer: (
     token: string,
     talepId: number,
-    values: { birimFiyat?: number; mesaj: string },
+    values: OfferSubmitValues,
   ) =>
     request<OfferDto>(`/api/Talep/${talepId}/teklif`, {
       method: "POST",
@@ -892,20 +1268,111 @@ export const yoremioApi = {
       method: "DELETE",
     }),
 
+  ortakAlimlar: (
+    query: {
+      hedefSehir?: string;
+      menseiSehir?: string;
+      q?: string;
+      durum?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
+  ) =>
+    request<Paginated<OrtakAlimDto>>(
+      `/api/OrtakAlim?${queryString({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 12,
+        hedefSehir: query.hedefSehir,
+        menseiSehir: query.menseiSehir,
+        q: query.q,
+        durum: query.durum,
+      })}`,
+    ),
+  ortakAlimDetail: (id: number) => request<OrtakAlimDto>(`/api/OrtakAlim/${id}`),
+  createOrtakAlim: (token: string, values: OrtakAlimCreateValues) =>
+    request<OrtakAlimDto>("/api/OrtakAlim", {
+      method: "POST",
+      token,
+      body: JSON.stringify(values),
+    }),
+  approveOrtakAlim: (token: string, id: number) =>
+    request<OrtakAlimDto>(`/api/OrtakAlim/${id}/onayla`, {
+      method: "POST",
+      token,
+    }),
+  joinOrtakAlim: (token: string, id: number, values: OrtakAlimJoinValues = { katilimMiktari: 1 }) =>
+    request<OrtakAlimDto>(`/api/OrtakAlim/${id}/katil`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(values),
+    }),
+  leaveOrtakAlim: (token: string, id: number) =>
+    request<OrtakAlimDto>(`/api/OrtakAlim/${id}/katil`, {
+      method: "DELETE",
+      token,
+    }),
+  updateOrtakAlimStatus: (token: string, id: number, durum: string) =>
+    request<OrtakAlimDto>(`/api/OrtakAlim/${id}/durum`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ durum }),
+    }),
+
+  planliGonderimler: (
+    query: {
+      hedefSehir?: string;
+      menseiSehir?: string;
+      saticiId?: string;
+      take?: number;
+    } = {},
+  ) =>
+    request<PlanliGonderimDto[]>(
+      `/api/PlanliGonderim?${queryString({
+        hedefSehir: query.hedefSehir,
+        menseiSehir: query.menseiSehir,
+        saticiId: query.saticiId,
+        take: query.take ?? 20,
+      })}`,
+    ),
+  createPlanliGonderim: (token: string, values: PlanliGonderimCreateValues) =>
+    request<PlanliGonderimDto>("/api/PlanliGonderim", {
+      method: "POST",
+      token,
+      body: JSON.stringify(values),
+    }),
+  cancelPlanliGonderim: (token: string, id: number) =>
+    request<{ id: number; iptalEdildi: boolean }>(`/api/PlanliGonderim/${id}`, {
+      method: "DELETE",
+      token,
+    }),
+
   conversations: (token: string) =>
     request<ChatConversationDto[]>("/api/Chat/conversations", {
       token,
     }),
-  messages: (token: string, otherUserId: string, page = 1, pageSize = 50) =>
+  messages: (
+    token: string,
+    otherUserId: string,
+    page = 1,
+    pageSize = 50,
+    urunId?: number,
+    talepId?: number,
+  ) =>
     request<ChatConversationMessagesDto>(
-      `/api/Chat/messages/${otherUserId}?${queryString({ page, pageSize })}`,
+      `/api/Chat/messages/${otherUserId}?${queryString({ page, pageSize, urunId, talepId })}`,
       { token },
     ),
-  sendMessage: (token: string, receiverId: string, message: string) =>
+  sendMessage: (
+    token: string,
+    receiverId: string,
+    message: string,
+    urunId?: number,
+    talepId?: number,
+  ) =>
     request<ChatMessageDto>(`/api/Chat/messages/${receiverId}`, {
       method: "POST",
       token,
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, urunId, talepId }),
     }),
   markConversationRead: (token: string, otherUserId: string) =>
     request<{ markedCount: number; readAt: string }>(
@@ -951,12 +1418,21 @@ export const yoremioApi = {
   adminSetSellerVerification: (
     token: string,
     saticiId: string,
-    payload: { dogrulandiMi: boolean | null; not?: string },
+    payload: {
+      dogrulandiMi?: boolean | null;
+      isletmeDogrulandiMi?: boolean | null;
+      ureticiDogrulandiMi?: boolean | null;
+      not?: string;
+    },
   ) =>
     request<AdminUserDto>(`/api/Admin/saticilar/${saticiId}/dogrulama`, {
       method: "PATCH",
       token,
       body: JSON.stringify(payload),
+    }),
+  adminDemandGaps: (token: string, top = 20) =>
+    request<DemandGapDto[]>(`/api/Admin/talep-bosluklari?${queryString({ top })}`, {
+      token,
     }),
   adminSetSellerStatus: (
     token: string,
